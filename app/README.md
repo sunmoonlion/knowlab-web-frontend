@@ -4,7 +4,7 @@ SunmoonAI 的 Next Web 通用模板。B2~B4 期间它与当前 `tpl-backend`（N
 组成发布和验收单元；B5/B6 后默认配对同契约 FastAPI BFF，Nest 作为可选 profile。
 模板提供 App Router、明确的 public/authenticated 渲染边界、
 next-intl、Tailwind/shadcn UI、同源 `/api` 接入和自托管 standalone 构建。
-本仓库不包含 Info、Knowledge 或 Research 的领域页面和 DTO。
+本仓库不包含 Knowfeed、Knowbase 或 Research 的领域页面和 DTO。
 
 ## 本地开发
 
@@ -56,7 +56,7 @@ Ingress 或受控 Node server 对外提供服务。发布前必须同时记录�
   `REFERENCE_UI_ENABLED=true` 时启用；生产默认关闭，fixture 不代表真实 Run 成功。
 - BFF、session/cookie、SSE cursor/reconcile、Citation DTO 和缓存归属以
   ADR-001/002/004/005/014 为准，不在模板中伪造业务成功。
-- 迁移到 Info、Knowledge、Research 时必须原地替换现有仓库，保留领域页面并按
+- 迁移到 Knowfeed、Knowbase、Research 时必须原地替换现有仓库，保留领域页面并按
   迁移前 tag、候选镜像 digest、隔离部署和回滚证据串行执行。
 
 ## 参考
