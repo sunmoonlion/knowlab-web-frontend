@@ -6,7 +6,7 @@ const validSession = {
   authenticated: true,
   user: {
     actor_id: 'b42cf3bb-d63e-5df5-a884-9c34286f2608',
-    app: 'info',
+    app: 'knowfeed',
     surface: 'web',
     display_name: 'Template User',
     email: 'user@example.test',
@@ -34,7 +34,7 @@ describe('loadBrowserSession', () => {
         backendUrl: 'http://tpl-backend:8000',
         cookieHeader: 'sunmoonai_tpl_web_sid=opaque-session',
         correlationId: 'correlation-1234',
-        expectedApp: 'info',
+        expectedApp: 'knowfeed',
         fetchImpl: fetchImpl as typeof fetch,
       }),
     ).resolves.toMatchObject({
@@ -52,7 +52,7 @@ describe('loadBrowserSession', () => {
         backendUrl: 'http://tpl-backend:8000',
         cookieHeader: 'sunmoonai_tpl_web_sid=opaque-session',
         correlationId: 'correlation-1234',
-        expectedApp: 'info',
+        expectedApp: 'knowfeed',
         fetchImpl,
       }),
     ).resolves.toEqual(validSession)
@@ -78,7 +78,7 @@ describe('loadBrowserSession', () => {
         backendUrl: 'http://tpl-backend:8000',
         cookieHeader: '',
         correlationId: 'correlation-1234',
-        expectedApp: 'info',
+        expectedApp: 'knowfeed',
         fetchImpl,
       }),
     ).resolves.toBeNull()
@@ -95,7 +95,7 @@ describe('loadBrowserSession', () => {
         backendUrl: 'http://tpl-backend:8000',
         cookieHeader: '',
         correlationId: 'correlation-1234',
-        expectedApp: 'info',
+        expectedApp: 'knowfeed',
         fetchImpl,
       }),
     ).rejects.toMatchObject({ code: 'contract_invalid' } satisfies Partial<WebBackendError>)
@@ -108,7 +108,7 @@ describe('loadBrowserSession', () => {
         backendUrl: 'http://tpl-backend:8000',
         cookieHeader: '',
         correlationId: 'correlation-1234',
-        expectedApp: 'info',
+        expectedApp: 'knowfeed',
         fetchImpl,
       }),
     ).rejects.toMatchObject({ code: 'backend_unavailable' } satisfies Partial<WebBackendError>)

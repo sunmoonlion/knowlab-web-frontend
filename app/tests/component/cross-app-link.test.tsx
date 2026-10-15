@@ -11,7 +11,7 @@ vi.mock('next-intl', () => ({ useLocale: () => 'zh-CN' }))
 vi.mock('next/navigation', () => ({ useSearchParams: () => search }))
 vi.mock('@/lib/cross-app/destinations', () => ({
   destinations: {
-    'info.request': { target: 'info', segments: ['requests', 'new'], params: ['code'] },
+    'info.request': { target: 'knowfeed', segments: ['requests', 'new'], params: ['code'] },
     'elsewhere.page': { target: 'elsewhere', segments: ['page'] },
   },
 }))
@@ -30,7 +30,7 @@ function page(children: React.ReactNode) {
 
 const LINKS = {
   app: 'investment',
-  targets: { info: { web_base_url: 'https://info.example.test' } },
+  targets: { knowfeed: { web_base_url: 'https://knowfeed.example.test' } },
 }
 
 describe('CrossAppLink', () => {
@@ -50,7 +50,7 @@ describe('CrossAppLink', () => {
     const link = await screen.findByRole('link', { name: '申请入库' })
     expect(link).toHaveAttribute(
       'href',
-      'https://info.example.test/zh-CN/requests/new?code=600519&from=investment&ref=task%3A42',
+      'https://knowfeed.example.test/zh-CN/requests/new?code=600519&from=investment&ref=task%3A42',
     )
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
@@ -75,7 +75,7 @@ describe('CrossAppLink', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(
-        answer({ app: 'investment', targets: { info: { web_base_url: 'javascript:alert(1)' } } }),
+        answer({ app: 'investment', targets: { knowfeed: { web_base_url: 'javascript:alert(1)' } } }),
       )
     vi.stubGlobal('fetch', fetchMock)
     page(<CrossAppLink to={'info.request' as never}>申请入库</CrossAppLink>)
@@ -125,10 +125,10 @@ describe('ReturnToOrigin', () => {
   })
 
   it('shows nothing when the source has no way back registered', async () => {
-    search = new URLSearchParams({ from: 'knowledge' })
+    search = new URLSearchParams({ from: 'knowbase' })
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(answer({ app: 'knowledge', ref: null, return_url: null }))
+      .mockResolvedValue(answer({ app: 'knowbase', ref: null, return_url: null }))
     vi.stubGlobal('fetch', fetchMock)
     page(<ReturnToOrigin>回到原处</ReturnToOrigin>)
     await waitFor(() => expect(fetchMock).toHaveBeenCalled())

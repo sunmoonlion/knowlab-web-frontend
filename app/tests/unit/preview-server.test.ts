@@ -93,12 +93,12 @@ beforeAll(async () => {
       app: 'tpl',
       port: 0,
       nextPort,
-      apps: { info: 'http://localhost:3110', knowledge: 'http://localhost:3120' },
-      targets: ['info', 'elsewhere'],
+      apps: { knowfeed: 'http://localhost:3110', knowbase: 'http://localhost:3120' },
+      targets: ['knowfeed', 'elsewhere'],
       defaultScenario: 'default',
       sources: {
         investment: { return_url: 'http://localhost:3100/zh-CN/workbench?ref={ref}' },
-        knowledge: {},
+        knowbase: {},
       },
     },
     fixturesRoot: root,
@@ -226,7 +226,7 @@ describe('preview: moving between applications', () => {
     )
     expect(links).toEqual({
       app: 'tpl',
-      targets: { info: { web_base_url: 'http://localhost:3110' } },
+      targets: { knowfeed: { web_base_url: 'http://localhost:3110' } },
     })
     const origin = async (query: string) =>
       crossAppOriginSchema.parse(
@@ -237,8 +237,8 @@ describe('preview: moving between applications', () => {
       ref: 'task:42',
       return_url: 'http://localhost:3100/zh-CN/workbench?ref=task%3A42',
     })
-    expect(await origin('?from=knowledge&ref=bad%20ref')).toEqual({
-      app: 'knowledge',
+    expect(await origin('?from=knowbase&ref=bad%20ref')).toEqual({
+      app: 'knowbase',
       ref: null,
       return_url: null,
     })

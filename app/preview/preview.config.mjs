@@ -8,8 +8,8 @@ export const previewConfig = {
   nextPort: 3191,
   // 预览里别的应用的地址（都在本机）。别的应用的预览没开着，链接点过去就是打不开，属于正常
   apps: {
-    info: 'http://localhost:3110',
-    knowledge: 'http://localhost:3120',
+    knowfeed: 'http://localhost:3110',
+    knowbase: 'http://localhost:3120',
     investment: 'http://localhost:3100',
   },
   // 这个应用会带人去哪些应用；谁可以带人来、各自的回跳地址。和后端的两项配置同一个意思

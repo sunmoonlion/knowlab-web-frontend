@@ -38,7 +38,7 @@ describe('server environment', () => {
     expect(() =>
       parseServerEnv({
         NODE_ENV: 'production',
-        AUTH_APP: 'info',
+        AUTH_APP: 'knowfeed',
       }),
     ).toThrow(/required at production runtime/)
   })
@@ -66,7 +66,7 @@ describe('server environment', () => {
       parseServerEnv({
         NODE_ENV: 'production',
         DEPLOYMENT_ENV: 'test',
-        AUTH_APP: 'info',
+        AUTH_APP: 'knowfeed',
         APP_ORIGIN: 'http://127.0.0.1:3008',
         BACKEND_INTERNAL_URL: 'http://127.0.0.1:18080',
         DEPLOYMENT_ID: 'arch-v2-r2-web-e2e',
@@ -82,7 +82,7 @@ describe('server environment', () => {
       parseServerEnv({
         NODE_ENV: 'production',
         DEPLOYMENT_ENV: 'test',
-        AUTH_APP: 'info',
+        AUTH_APP: 'knowfeed',
         APP_ORIGIN: 'http://web.example.test',
         BACKEND_INTERNAL_URL: 'http://127.0.0.1:18080',
         DEPLOYMENT_ID: 'arch-v2-r2-web-e2e',
@@ -95,7 +95,7 @@ describe('server environment', () => {
       parseServerEnv({
         NODE_ENV: 'production',
         DEPLOYMENT_ENV: 'production',
-        AUTH_APP: 'info',
+        AUTH_APP: 'knowfeed',
         APP_ORIGIN: 'https://tpl.sunmoonai.com',
         BACKEND_INTERNAL_URL: 'http://tpl-backend:8000',
         DEPLOYMENT_ID: 'release-42',
@@ -120,7 +120,7 @@ describe('server environment', () => {
       parseServerEnv({
         NODE_ENV: 'production',
         DEPLOYMENT_ENV: 'production',
-        AUTH_APP: 'info',
+        AUTH_APP: 'knowfeed',
         APP_ORIGIN: 'https://tpl.sunmoonai.com',
         BACKEND_INTERNAL_URL: 'http://tpl-backend:8000',
         DEPLOYMENT_ID: 'release-42',
