@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { LogoutButton } from '@/components/auth/logout-button'
 import { ReferenceWorkspace } from '@/components/platform/reference-workspace'
@@ -44,6 +45,14 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
           {t('signedInAs', {
             name: session.user.display_name ?? session.user.email ?? session.user.actor_id,
           })}
+        </p>
+        <p className="mt-4">
+          <Link
+            href={`/${locale}/knowbots`}
+            className="text-sm font-medium underline-offset-4 hover:underline"
+          >
+            {tNav('knowbots')}
+          </Link>
         </p>
         {serverEnv.REFERENCE_UI_ENABLED ? (
           <ReferenceWorkspace

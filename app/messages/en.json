@@ -48,7 +48,8 @@
   "nav": {
     "home": "Home",
     "dashboard": "Dashboard",
-    "settings": "Settings"
+    "settings": "Settings",
+    "knowbots": "Knowbots in progress"
   },
   "interaction": {
     "loading": "Loading the reference run...",
@@ -79,6 +80,73 @@
       "reconciling": "Reconciling",
       "offline": "Reconnecting",
       "closed": "Complete"
+    }
+  },
+  "knowbotRequests": {
+    "title": "Knowbots in progress",
+    "intro": "A knowbot is built from your method and runs on your data; it belongs to you alone. After you submit an idea we turn the method into a draft and test it against your acceptance cases; once it passes it appears under My knowbots in knowmart.",
+    "newRequest": "Submit an idea",
+    "loading": "Loading…",
+    "loadFailed": "Could not load. Please refresh and try again.",
+    "empty": "You have not submitted an idea yet.",
+    "runtime": "Runs in: {runtime}",
+    "noDraftYet": "Received; we are turning it into a draft.",
+    "draft": "Version {version} · draft {revision}",
+    "status": {
+      "pending_test": "Waiting for test",
+      "testing": "Testing",
+      "passed": "Passed, delivering",
+      "failed": "Did not pass",
+      "delivered": "Delivered"
+    },
+    "deliveredHint": "It is under My knowbots in knowmart; you can summon it from the workbench.",
+    "report": "Test report",
+    "case": "Case {id}",
+    "caseStatus": {
+      "passed": "passed",
+      "failed": "failed",
+      "needs_human": "needs a person to decide",
+      "error": "run error"
+    },
+    "expectationsMet": "expectations met {met}/{total}",
+    "failedStep": "Step {step} failed: {checks}",
+    "form": {
+      "intro": "Write your method down clearly: the knowbot's logic comes only from what you write. Where something is missing we will ask you rather than fill it in.",
+      "title": "Name",
+      "runtime": "Where it runs",
+      "chooseRuntime": "Choose one",
+      "method": "Your method",
+      "sixQuestions": "Answer six questions",
+      "skill": "Paste a skill",
+      "q": {
+        "solves": "What problem does it solve?",
+        "not_solves": "What does it not solve?",
+        "inputs": "What are the inputs?",
+        "steps": "What are the steps, and which rule decides each step?",
+        "outputs": "What does the output look like?",
+        "correctness": "How do you know it is right?"
+      },
+      "skillText": "Skill text",
+      "cases": "Acceptance cases",
+      "casesHint": "Give a few examples whose answers you know: what to ask, and what an item in the result should be. Testing checks that it runs correctly, not the method itself.",
+      "question": "Case {n}: what to ask",
+      "artifact": "Artifact",
+      "path": "Which item",
+      "kind": "Compare",
+      "kinds": {
+        "equals": "equals",
+        "approx": "approximately",
+        "contains": "contains"
+      },
+      "value": "Should be",
+      "tolerance": "Tolerance (0.01 = 1%)",
+      "addExpectation": "Add an expectation",
+      "addCase": "Add a case",
+      "removeCase": "Remove this case",
+      "consent": "I agree that the data I upload may be used to test this knowbot. Test output is shown to no one and deleted after 7 days.",
+      "submit": "Submit",
+      "invalid": "Something did not pass the checks. Please make sure every field is filled in and numbers are valid.",
+      "failed": "Could not submit. Please try again later."
     }
   }
 }

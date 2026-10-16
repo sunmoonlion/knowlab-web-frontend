@@ -48,7 +48,8 @@
   "nav": {
     "home": "首页",
     "dashboard": "控制台",
-    "settings": "设置"
+    "settings": "设置",
+    "knowbots": "我在做的分身"
   },
   "interaction": {
     "loading": "正在加载参考运行…",
@@ -79,6 +80,73 @@
       "reconciling": "正在对账",
       "offline": "正在重连",
       "closed": "已结束"
+    }
+  },
+  "knowbotRequests": {
+    "title": "我在做的分身",
+    "intro": "分身是按你的方法、用你的数据做成的，只归你自己。你提交想法后，我们把方法做成草稿、按你给的验收用例测试；测试通过后出现在 knowmart「我的分身」里。",
+    "newRequest": "提交一个想法",
+    "loading": "正在读取……",
+    "loadFailed": "读取失败，请刷新再试。",
+    "empty": "你还没有提交过想法。",
+    "runtime": "运行在：{runtime}",
+    "noDraftYet": "已收到，正在做成草稿。",
+    "draft": "第 {version} 版 · 第 {revision} 稿",
+    "status": {
+      "pending_test": "待测试",
+      "testing": "测试中",
+      "passed": "测试通过，正在交付",
+      "failed": "测试未通过",
+      "delivered": "已交付"
+    },
+    "deliveredHint": "已在 knowmart「我的分身」里，可以去工作台请它。",
+    "report": "测试报告",
+    "case": "用例 {id}",
+    "caseStatus": {
+      "passed": "通过",
+      "failed": "未通过",
+      "needs_human": "需要人来决定",
+      "error": "运行出错"
+    },
+    "expectationsMet": "期望满足 {met}/{total}",
+    "failedStep": "第 {step} 步没过：{checks}",
+    "form": {
+      "intro": "把你的方法写清楚：分身的逻辑只来自你写的内容，空缺的地方我们会回头问你，不替你补。",
+      "title": "名字",
+      "runtime": "在哪里运行",
+      "chooseRuntime": "请选择",
+      "method": "你的方法",
+      "sixQuestions": "回答六个问题",
+      "skill": "粘贴一份 skill",
+      "q": {
+        "solves": "它解决什么问题？",
+        "not_solves": "它不解决什么？",
+        "inputs": "输入是什么？",
+        "steps": "分几步做，每一步按什么规则判断？",
+        "outputs": "输出长什么样？",
+        "correctness": "怎样算做对了？"
+      },
+      "skillText": "skill 原文",
+      "cases": "验收用例",
+      "casesHint": "给几个你知道答案的例子：问它什么，结果里哪一项应当是多少。测试只看运行是否正确，不评价方法本身。",
+      "question": "用例 {n}：问它什么",
+      "artifact": "交回物",
+      "path": "其中哪一项",
+      "kind": "怎么比",
+      "kinds": {
+        "equals": "等于",
+        "approx": "约等于",
+        "contains": "包含"
+      },
+      "value": "应当是",
+      "tolerance": "允许误差（如 0.01 即 1%）",
+      "addExpectation": "加一条期望",
+      "addCase": "加一个用例",
+      "removeCase": "删掉这个用例",
+      "consent": "我同意把我上传的数据用于测试这个分身。测试产出不给任何人看，7 天后删除。",
+      "submit": "提交",
+      "invalid": "有内容没通过检查，请看各项是否填全、数字是否正确。",
+      "failed": "提交没成功，请稍后再试。"
     }
   }
 }
