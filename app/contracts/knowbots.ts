@@ -75,6 +75,35 @@ export const runtimesSchema = z
   .object({ contract_version: z.literal(1), runtimes: z.array(z.string().regex(RUNTIME)) })
   .strict()
 
+const datasetSchema = z
+  .object({
+    dataset_id: z.string().uuid(),
+    name: z.string().min(1).max(200),
+    version: z.string(),
+    content_type: z.string(),
+    size_bytes: z.number().int().min(1),
+    sha256: z.string().regex(/^[0-9a-f]{64}$/),
+    created_at: z.string().nullable(),
+  })
+  .strict()
+
+export const myDataSchema = z
+  .object({
+    contract_version: z.literal(1),
+    datasets: z.array(datasetSchema),
+    used_bytes: z.number().int().min(0),
+    quota_bytes: z.number().int().min(1),
+    max_file_bytes: z.number().int().min(1),
+  })
+  .strict()
+
+export const uploadedSchema = z
+  .object({ contract_version: z.literal(1), dataset: datasetSchema })
+  .strict()
+
+export type Dataset = z.infer<typeof datasetSchema>
+export type MyData = z.infer<typeof myDataSchema>
+
 export const submittedSchema = z
   .object({ contract_version: z.literal(1), request_id: z.string().uuid() })
   .strict()

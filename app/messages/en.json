@@ -148,5 +148,28 @@
       "invalid": "Something did not pass the checks. Please make sure every field is filled in and numbers are valid.",
       "failed": "Could not submit. Please try again later."
     }
+  },
+  "knowbotData": {
+    "title": "My data",
+    "intro": "Your data is used only for your own knowbots and their tests, never for anyone else. PDF, Excel, CSV and text only; up to 50 MB per file and 1 GB in total.",
+    "loading": "Loading…",
+    "loadFailed": "Could not load. Please refresh and try again.",
+    "usage": "Used {used} of {quota}",
+    "empty": "No data uploaded yet.",
+    "delete": "Delete",
+    "choose": "Choose a file to upload",
+    "uploading": "Uploading…",
+    "errors": {
+      "dataset_type_not_allowed": "Only PDF, Excel, CSV and text files are accepted.",
+      "dataset_type_mismatch": "The file content does not match its type.",
+      "dataset_text_not_utf8": "Text files must be UTF-8.",
+      "dataset_too_large": "A file can be at most 50 MB.",
+      "dataset_quota_exceeded": "Your data can be at most 1 GB in total; delete what you no longer need.",
+      "dataset_empty": "The file is empty.",
+      "dataset_name_invalid": "The file name is not allowed.",
+      "dataset_in_use": "A knowbot in progress or delivered uses this data, so it cannot be deleted.",
+      "storage_unavailable": "Uploading data is not available yet.",
+      "other": "That did not work. Please try again later."
+    }
   }
 }

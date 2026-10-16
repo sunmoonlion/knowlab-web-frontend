@@ -148,5 +148,28 @@
       "invalid": "有内容没通过检查，请看各项是否填全、数字是否正确。",
       "failed": "提交没成功，请稍后再试。"
     }
+  },
+  "knowbotData": {
+    "title": "我的数据",
+    "intro": "你的数据只用于你自己的分身与测试，不给任何别人用。只收 PDF、Excel、CSV、文本，单个不超过 50 MB，一共不超过 1 GB。",
+    "loading": "正在读取……",
+    "loadFailed": "读取失败，请刷新再试。",
+    "usage": "已用 {used}，上限 {quota}",
+    "empty": "还没有上传数据。",
+    "delete": "删除",
+    "choose": "选择要上传的文件",
+    "uploading": "正在上传……",
+    "errors": {
+      "dataset_type_not_allowed": "只收 PDF、Excel、CSV、文本文件。",
+      "dataset_type_mismatch": "文件内容和它的类型对不上。",
+      "dataset_text_not_utf8": "文本文件要用 UTF-8 编码。",
+      "dataset_too_large": "单个文件不能超过 50 MB。",
+      "dataset_quota_exceeded": "你的数据一共不能超过 1 GB，先删掉不用的。",
+      "dataset_empty": "文件是空的。",
+      "dataset_name_invalid": "文件名不合要求。",
+      "dataset_in_use": "有在做的或已交付的分身用着这份数据，不能删。",
+      "storage_unavailable": "上传数据暂时不可用。",
+      "other": "没成功，请稍后再试。"
+    }
   }
 }
