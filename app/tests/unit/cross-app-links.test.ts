@@ -122,8 +122,8 @@ describe('cross-app links', () => {
 describe('cross-app contracts', () => {
   it('accepts what the backend sends', () => {
     expect(crossAppLinksSchema.parse(links)).toEqual(links)
-    expect(crossAppLinksSchema.parse({ app: 'tpl', targets: {} })).toEqual({
-      app: 'tpl',
+    expect(crossAppLinksSchema.parse({ app: 'knowlab', targets: {} })).toEqual({
+      app: 'knowlab',
       targets: {},
     })
     expect(crossAppOriginSchema.parse(null)).toBeNull()
@@ -150,7 +150,7 @@ describe('cross-app contracts', () => {
     ]) {
       expect(
         crossAppLinksSchema.safeParse({
-          app: 'tpl',
+          app: 'knowlab',
           targets: { knowfeed: { web_base_url: address } },
         }).success,
       ).toBe(false)
@@ -159,7 +159,7 @@ describe('cross-app contracts', () => {
           .success,
       ).toBe(false)
     }
-    expect(crossAppLinksSchema.safeParse({ app: 'tpl', targets: {}, token: 'x' }).success).toBe(
+    expect(crossAppLinksSchema.safeParse({ app: 'knowlab', targets: {}, token: 'x' }).success).toBe(
       false,
     )
   })

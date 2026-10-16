@@ -1,4 +1,4 @@
-# tpl-web-frontend — 局部编码规则
+# knowlab-web-frontend — 局部编码规则
 
 > 进入本目录时自动叠加。**本文件只约束局部编码。**
 > 项目全貌见 `../../k8s/docs/project-guide/overall-architecture.md`（§5 是前端形态）。
@@ -73,7 +73,7 @@ corepack pnpm dev
 
 ## 动手前
 
-1. 读对应后端路由（`../tpl-backend/app/app/interfaces/`）确认参数与响应结构
+1. 读对应后端路由（`../knowlab-backend/app/app/interfaces/`）确认参数与响应结构
 2. 契约以后端 DTO 与 `contracts/` 下的 zod 为准，**不维护手写的平行契约**
 3. 关键页面覆盖 loading / error / empty / success 四态
 4. 改 `next.config.ts` 的构建相关配置时同步检查 `../mybuild/Dockerfile`

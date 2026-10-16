@@ -90,7 +90,7 @@ beforeAll(async () => {
   const nextPort = await listen(upstream)
   preview = createPreviewServer({
     config: {
-      app: 'tpl',
+      app: 'knowlab',
       port: 0,
       nextPort,
       apps: { knowfeed: 'http://localhost:3110', knowbase: 'http://localhost:3120' },
@@ -118,7 +118,7 @@ describe('preview: signing in', () => {
     const got = await fetch(`${base}/api/auth/web/me`)
     expect(got.status).toBe(200)
     const session = browserSessionSchema.parse(await got.json())
-    expect(session.user.app).toBe('tpl')
+    expect(session.user.app).toBe('knowlab')
     expect(session.user.display_name).toBe('样例用户')
   })
 
@@ -225,7 +225,7 @@ describe('preview: moving between applications', () => {
       await (await fetch(`${base}/api/web/v1/cross-app/links`)).json(),
     )
     expect(links).toEqual({
-      app: 'tpl',
+      app: 'knowlab',
       targets: { knowfeed: { web_base_url: 'http://localhost:3110' } },
     })
     const origin = async (query: string) =>

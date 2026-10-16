@@ -1,6 +1,6 @@
-# tpl-web-frontend
+# knowlab-web-frontend
 
-SunmoonAI 的 Next Web 通用模板。B2~B4 期间它与当前 `tpl-backend`（Nest Web BFF）
+SunmoonAI 的 Next Web 通用模板。B2~B4 期间它与当前 `knowlab-backend`（Nest Web BFF）
 组成发布和验收单元；B5/B6 后默认配对同契约 FastAPI BFF，Nest 作为可选 profile。
 模板提供 App Router、明确的 public/authenticated 渲染边界、
 next-intl、Tailwind/shadcn UI、同源 `/api` 接入和自托管 standalone 构建。

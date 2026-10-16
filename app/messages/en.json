@@ -41,7 +41,7 @@
     "errorAuthFailed": "Sign-in could not finish (token exchange failed). Check backend logs for Casdoor/Redis errors and ensure the redirect URI in Casdoor matches CASDOOR_REDIRECT_URI exactly.",
     "errorNoCode": "No authorization code was returned. Click Login again from this page.",
     "errorOAuthGeneric": "Authorization was denied or cancelled. Please try again.",
-    "dashboardWelcome": "Welcome to tpl.",
+    "dashboardWelcome": "Welcome to knowlab.",
     "signedInAs": "Signed in as {name}",
     "signupSuccessHint": "Sign-up succeeded. Click Login below to enter this app."
   },

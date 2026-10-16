@@ -3,8 +3,8 @@
 
 set -e
 
-IMAGE_NAME="tpl-web-frontend:1.0.0"
-CONTAINER_NAME="tpl-web-frontend"
+IMAGE_NAME="knowlab-web-frontend:1.0.0"
+CONTAINER_NAME="knowlab-web-frontend"
 
 echo "🛑 停止并删除旧容器..."
 docker stop $CONTAINER_NAME 2>/dev/null || true

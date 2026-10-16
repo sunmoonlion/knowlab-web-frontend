@@ -1,5 +1,5 @@
 {
-  "name": "tpl-web-frontend",
+  "name": "knowlab-web-frontend",
   "version": "2.0.0",
   "private": true,
   "packageManager": "pnpm@10.24.0",

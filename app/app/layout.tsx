@@ -5,8 +5,8 @@ import { PlatformProviders } from '@/components/platform/providers'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'tpl App',
-  description: 'tpl web application',
+  title: 'knowlab App',
+  description: 'knowlab web application',
 }
 
 export default async function RootLayout({
