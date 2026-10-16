@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server'
 
 import { LogoutButton } from '@/components/auth/logout-button'
 import { MyData } from '@/components/knowbots/my-data'
+import { MyQuestions } from '@/components/knowbots/my-questions'
 import { MyRequests } from '@/components/knowbots/my-requests'
 import { requireBrowserSession } from '@/lib/server/auth-session'
 
@@ -50,6 +51,7 @@ export default async function KnowbotRequestsPage({
             {t('newRequest')}
           </Link>
         </p>
+        <MyQuestions csrfToken={session.csrf_token} />
         <MyRequests />
         <MyData csrfToken={session.csrf_token} />
       </main>

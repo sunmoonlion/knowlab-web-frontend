@@ -171,5 +171,13 @@
       "storage_unavailable": "Uploading data is not available yet.",
       "other": "That did not work. Please try again later."
     }
+  },
+  "knowbotQuestions": {
+    "title": "Questions for you",
+    "intro": "The test stopped where it needs your decision: this is a judgement in your method, so only you can answer. The test continues once you answer, and your answer goes into the next version.",
+    "failed": "Could not submit. Please try again.",
+    "where": "{title} · version {version}",
+    "ownWords": "Write your answer",
+    "answer": "Answer"
   }
 }

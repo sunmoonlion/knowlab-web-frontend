@@ -104,6 +104,33 @@ export const uploadedSchema = z
 export type Dataset = z.infer<typeof datasetSchema>
 export type MyData = z.infer<typeof myDataSchema>
 
+// 测试中转给我回答的问题（投资判断只能我自己答，C-L1）
+const myQuestionSchema = z
+  .object({
+    question_id: z.string().uuid(),
+    kind: z.enum(['question', 'ask_before']),
+    text: z.string().min(1).max(4000),
+    options: z.array(z.object({ id: z.string(), label: z.string() }).strict()),
+    allow_free_text: z.boolean(),
+    case_id: z.string(),
+    step_id: z.string().nullable(),
+    asked_at: z.string(),
+    title: z.string(),
+    version: z.string(),
+    revision: z.number().int(),
+  })
+  .strict()
+
+export const myQuestionsSchema = z
+  .object({ contract_version: z.literal(1), questions: z.array(myQuestionSchema) })
+  .strict()
+
+export const answeredSchema = z
+  .object({ contract_version: z.literal(1), question_id: z.string().uuid(), sent: z.boolean() })
+  .strict()
+
+export type MyQuestion = z.infer<typeof myQuestionSchema>
+
 export const submittedSchema = z
   .object({ contract_version: z.literal(1), request_id: z.string().uuid() })
   .strict()

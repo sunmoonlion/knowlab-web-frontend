@@ -171,5 +171,13 @@
       "storage_unavailable": "上传数据暂时不可用。",
       "other": "没成功，请稍后再试。"
     }
+  },
+  "knowbotQuestions": {
+    "title": "需要你回答的问题",
+    "intro": "测试跑到要你决定的地方停下了：这是你的方法上的判断，只能你自己答。答完测试接着跑，你的回答会记进下一版分身。",
+    "failed": "没有提交成功，请再试一次。",
+    "where": "{title} · 第 {version} 版",
+    "ownWords": "写下你的回答",
+    "answer": "回答"
   }
 }

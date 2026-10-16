@@ -3,7 +3,9 @@
 import type { z } from 'zod'
 
 import {
+  answeredSchema,
   myDataSchema,
+  myQuestionsSchema,
   myRequestsSchema,
   runtimesSchema,
   submittedSchema,
@@ -11,6 +13,7 @@ import {
   type Dataset,
   type KnowbotRequestIn,
   type MyData,
+  type MyQuestion,
   type MyRequests,
 } from '@/contracts/knowbots'
 import { ApiClientError, requestJson } from '@/lib/common/api-client'
@@ -87,4 +90,25 @@ export async function deleteDataset(datasetId: string, csrfToken: string): Promi
     method: 'DELETE',
     csrfToken,
   })
+}
+
+const QUESTIONS = '/api/web/v1/knowbot-questions'
+
+export async function fetchMyQuestions(): Promise<MyQuestion[]> {
+  return parse(myQuestionsSchema, await requestJson(QUESTIONS)).questions
+}
+
+export async function answerMyQuestion(
+  questionId: string,
+  answer: { option_id?: string; text?: string },
+  csrfToken: string,
+): Promise<void> {
+  parse(
+    answeredSchema,
+    await requestJson(`${QUESTIONS}/${encodeURIComponent(questionId)}/answer`, {
+      method: 'POST',
+      csrfToken,
+      body: answer,
+    }),
+  )
 }
