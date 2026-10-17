@@ -128,7 +128,7 @@
       },
       "skillText": "Skill text",
       "cases": "Acceptance cases",
-      "casesHint": "Give a few examples whose answers you know: what to ask, and what an item in the result should be. Testing checks that it runs correctly, not the method itself.",
+      "casesHint": "Give a few examples whose answers you know: what to ask, and what an item in the result should be. Only you can fill in the expected values (for example, figures you looked up in an annual report); we do not fill them in for you. Testing checks that it runs correctly, not the method itself.",
       "question": "Case {n}: what to ask",
       "artifact": "Artifact",
       "path": "Which item",
@@ -152,6 +152,7 @@
   "knowbotData": {
     "title": "My data",
     "intro": "Your data is used only for your own knowbots and their tests, never for anyone else. PDF, Excel, CSV and text only; up to 50 MB per file and 1 GB in total.",
+    "tableHint": "For numbers, upload tables where you can (Excel or CSV): reporting periods across the first row, line items down the first column, one number per cell. Your knowbot then takes figures cell by cell and the platform computes them, so results are exact and checkable. A PDF can only be read as text; use it to cross-check a few figures.",
     "loading": "Loading…",
     "loadFailed": "Could not load. Please refresh and try again.",
     "usage": "Used {used} of {quota}",

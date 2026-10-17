@@ -45,6 +45,7 @@ export function MyData({ csrfToken }: { csrfToken: string }) {
     <section className="mt-8 space-y-3" aria-label={t('title')}>
       <h2 className="font-medium">{t('title')}</h2>
       <p className="text-muted-foreground text-sm">{t('intro')}</p>
+      <p className="text-muted-foreground text-sm">{t('tableHint')}</p>
       {list.isPending ? (
         <p className="text-muted-foreground text-sm">{t('loading')}</p>
       ) : list.isError ? (
