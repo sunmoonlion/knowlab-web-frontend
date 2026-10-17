@@ -50,7 +50,7 @@ describe('我在做的分身', () => {
         {
           request_id: REQUEST,
           title: '财务分析与预测',
-          runtime: 'investment',
+          runtime: 'knowbench',
           created_at: '2026-10-16T00:00:00Z',
           drafts: [
             {
@@ -129,10 +129,10 @@ describe('提交一个想法', () => {
   }
 
   it('needs consent, then submits the method, cases and runtime and goes to the list', async () => {
-    vi.mocked(fetchRuntimes).mockResolvedValue(['investment'])
+    vi.mocked(fetchRuntimes).mockResolvedValue(['knowbench'])
     vi.mocked(submitRequest).mockResolvedValue(REQUEST)
     wrap(<RequestForm csrfToken={CSRF} />)
-    await waitFor(() => expect(screen.getByLabelText('在哪里运行')).toHaveValue('investment'))
+    await waitFor(() => expect(screen.getByLabelText('在哪里运行')).toHaveValue('knowbench'))
     fill()
     fireEvent.click(screen.getByText('加一条期望'))
     fireEvent.change(screen.getByLabelText('交回物'), { target: { value: 'summary' } })
@@ -150,7 +150,7 @@ describe('提交一个想法', () => {
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/knowbots'))
     const [body, token] = vi.mocked(submitRequest).mock.calls[0]
     expect(token).toBe(CSRF)
-    expect(body.runtime).toBe('investment')
+    expect(body.runtime).toBe('knowbench')
     expect(body.consent_test_data).toBe(true)
     expect(body.idea).toMatchObject({ kind: 'six_questions' })
     expect(body.cases).toEqual([
@@ -171,10 +171,10 @@ describe('提交一个想法', () => {
   })
 
   it('sends a skill instead of the six answers when chosen', async () => {
-    vi.mocked(fetchRuntimes).mockResolvedValue(['investment'])
+    vi.mocked(fetchRuntimes).mockResolvedValue(['knowbench'])
     vi.mocked(submitRequest).mockResolvedValue(REQUEST)
     wrap(<RequestForm csrfToken={CSRF} />)
-    await waitFor(() => expect(screen.getByLabelText('在哪里运行')).toHaveValue('investment'))
+    await waitFor(() => expect(screen.getByLabelText('在哪里运行')).toHaveValue('knowbench'))
     fireEvent.change(screen.getByLabelText('名字'), { target: { value: '财务分析' } })
     fireEvent.click(screen.getByLabelText('粘贴一份 skill'))
     expect(screen.queryByLabelText('它解决什么问题？')).toBeNull()
@@ -190,7 +190,7 @@ describe('提交一个想法', () => {
   })
 
   it('explains a rejected submission without leaving the page', async () => {
-    vi.mocked(fetchRuntimes).mockResolvedValue(['investment'])
+    vi.mocked(fetchRuntimes).mockResolvedValue(['knowbench'])
     vi.mocked(submitRequest).mockRejectedValue(
       new ApiClientError(422, {
         code: 'validation_error',
@@ -200,7 +200,7 @@ describe('提交一个想法', () => {
       }),
     )
     wrap(<RequestForm csrfToken={CSRF} />)
-    await waitFor(() => expect(screen.getByLabelText('在哪里运行')).toHaveValue('investment'))
+    await waitFor(() => expect(screen.getByLabelText('在哪里运行')).toHaveValue('knowbench'))
     fill()
     fireEvent.click(screen.getByLabelText(/我同意/))
     fireEvent.click(screen.getByRole('button', { name: '提交' }))

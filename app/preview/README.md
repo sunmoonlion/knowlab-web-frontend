@@ -59,7 +59,7 @@ pnpm preview --built    # 用构建好的那一份（先 pnpm build）
 
 | 应用       | 前门 | Next |
 | ---------- | ---- | ---- |
-| investment | 3100 | 3101 |
+| knowbench | 3100 | 3101 |
 | knowfeed   | 3110 | 3111 |
 | knowbase   | 3120 | 3121 |
 | 模板       | 3190 | 3191 |

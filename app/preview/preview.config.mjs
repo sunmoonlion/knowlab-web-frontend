@@ -10,7 +10,7 @@ export const previewConfig = {
   apps: {
     knowfeed: 'http://localhost:3110',
     knowbase: 'http://localhost:3120',
-    investment: 'http://localhost:3100',
+    knowbench: 'http://localhost:3100',
   },
   // 这个应用会带人去哪些应用；谁可以带人来、各自的回跳地址。和后端的两项配置同一个意思
   targets: [],

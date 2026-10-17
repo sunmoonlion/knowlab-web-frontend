@@ -29,7 +29,7 @@ function page(children: React.ReactNode) {
 }
 
 const LINKS = {
-  app: 'investment',
+  app: 'knowbench',
   targets: { knowfeed: { web_base_url: 'https://knowfeed.example.test' } },
 }
 
@@ -50,7 +50,7 @@ describe('CrossAppLink', () => {
     const link = await screen.findByRole('link', { name: '申请入库' })
     expect(link).toHaveAttribute(
       'href',
-      'https://knowfeed.example.test/zh-CN/requests/new?code=600519&from=investment&ref=task%3A42',
+      'https://knowfeed.example.test/zh-CN/requests/new?code=600519&from=knowbench&ref=task%3A42',
     )
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
@@ -75,7 +75,7 @@ describe('CrossAppLink', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(
-        answer({ app: 'investment', targets: { knowfeed: { web_base_url: 'javascript:alert(1)' } } }),
+        answer({ app: 'knowbench', targets: { knowfeed: { web_base_url: 'javascript:alert(1)' } } }),
       )
     vi.stubGlobal('fetch', fetchMock)
     page(<CrossAppLink to={'info.request' as never}>申请入库</CrossAppLink>)
@@ -92,15 +92,15 @@ describe('ReturnToOrigin', () => {
 
   it('uses the address the backend gives, never one from the address bar', async () => {
     search = new URLSearchParams({
-      from: 'investment',
+      from: 'knowbench',
       ref: 'task:42',
       return_url: 'https://evil.example.test/',
     })
     const fetchMock = vi.fn().mockResolvedValue(
       answer({
-        app: 'investment',
+        app: 'knowbench',
         ref: 'task:42',
-        return_url: 'https://investment.example.test/zh-CN/workbench/back?ref=task%3A42',
+        return_url: 'https://knowbench.example.test/zh-CN/workbench/back?ref=task%3A42',
       }),
     )
     vi.stubGlobal('fetch', fetchMock)
@@ -108,10 +108,10 @@ describe('ReturnToOrigin', () => {
     const link = await screen.findByRole('link', { name: '回到原处' })
     expect(link).toHaveAttribute(
       'href',
-      'https://investment.example.test/zh-CN/workbench/back?ref=task%3A42',
+      'https://knowbench.example.test/zh-CN/workbench/back?ref=task%3A42',
     )
     expect(fetchMock.mock.calls[0][0]).toBe(
-      '/api/web/v1/cross-app/origin?from=investment&ref=task%3A42',
+      '/api/web/v1/cross-app/origin?from=knowbench&ref=task%3A42',
     )
     expect(String(fetchMock.mock.calls[0][0])).not.toContain('evil')
   })

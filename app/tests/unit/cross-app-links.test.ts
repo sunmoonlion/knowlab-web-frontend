@@ -8,7 +8,7 @@ import {
 import { crossAppAnchorProps, crossAppHref, defineDestinations } from '@/lib/cross-app/links'
 
 const links: CrossAppLinks = {
-  app: 'investment',
+  app: 'knowbench',
   targets: {
     knowfeed: { web_base_url: 'https://knowfeed.example.test' },
     knowbase: { web_base_url: 'https://knowbase.example.test/' },
@@ -32,7 +32,7 @@ describe('cross-app links', () => {
         values: { code: '600519' },
         ref: 'task:42',
       }),
-    ).toBe('https://knowfeed.example.test/zh-CN/requests/new?code=600519&from=investment&ref=task%3A42')
+    ).toBe('https://knowfeed.example.test/zh-CN/requests/new?code=600519&from=knowbench&ref=task%3A42')
   })
 
   it('fills a path segment and escapes it', () => {
@@ -43,14 +43,14 @@ describe('cross-app links', () => {
         locale: 'en',
         values: { dataset: 'sh600276-financials/../x' },
       }),
-    ).toBe('https://knowbase.example.test/en/catalog/sh600276-financials%2F..%2Fx?from=investment')
+    ).toBe('https://knowbase.example.test/en/catalog/sh600276-financials%2F..%2Fx?from=knowbench')
   })
 
   it('drops a reference that breaks the rule instead of failing', () => {
     for (const ref of ['bad ref', 'a/b', 'x'.repeat(129), '', 'https://evil.example.test']) {
       expect(
         crossAppHref({ links, destination: destinations['knowledge.catalog'], locale: 'en', ref }),
-      ).toBe('https://knowbase.example.test/en/catalog?from=investment')
+      ).toBe('https://knowbase.example.test/en/catalog?from=knowbench')
     }
   })
 
@@ -62,7 +62,7 @@ describe('cross-app links', () => {
         locale: 'en',
         values: { code: undefined },
       }),
-    ).toBe('https://knowfeed.example.test/en/requests/new?from=investment')
+    ).toBe('https://knowfeed.example.test/en/requests/new?from=knowbench')
   })
 
   it('gives no link when the target application is not configured', () => {
@@ -129,11 +129,11 @@ describe('cross-app contracts', () => {
     expect(crossAppOriginSchema.parse(null)).toBeNull()
     expect(
       crossAppOriginSchema.parse({
-        app: 'investment',
+        app: 'knowbench',
         ref: 'task:42',
-        return_url: 'https://investment.example.test/zh-CN/workbench/back?ref=task%3A42',
+        return_url: 'https://knowbench.example.test/zh-CN/workbench/back?ref=task%3A42',
       }),
-    ).toMatchObject({ app: 'investment' })
+    ).toMatchObject({ app: 'knowbench' })
     expect(
       crossAppOriginSchema.parse({ app: 'knowbase', ref: null, return_url: null }),
     ).toMatchObject({ return_url: null })
@@ -155,7 +155,7 @@ describe('cross-app contracts', () => {
         }).success,
       ).toBe(false)
       expect(
-        crossAppOriginSchema.safeParse({ app: 'investment', ref: null, return_url: address })
+        crossAppOriginSchema.safeParse({ app: 'knowbench', ref: null, return_url: address })
           .success,
       ).toBe(false)
     }

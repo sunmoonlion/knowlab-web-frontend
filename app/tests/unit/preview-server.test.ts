@@ -97,7 +97,7 @@ beforeAll(async () => {
       targets: ['knowfeed', 'elsewhere'],
       defaultScenario: 'default',
       sources: {
-        investment: { return_url: 'http://localhost:3100/zh-CN/workbench?ref={ref}' },
+        knowbench: { return_url: 'http://localhost:3100/zh-CN/workbench?ref={ref}' },
         knowbase: {},
       },
     },
@@ -232,8 +232,8 @@ describe('preview: moving between applications', () => {
       crossAppOriginSchema.parse(
         await (await fetch(`${base}/api/web/v1/cross-app/origin${query}`)).json(),
       )
-    expect(await origin('?from=investment&ref=task:42')).toEqual({
-      app: 'investment',
+    expect(await origin('?from=knowbench&ref=task:42')).toEqual({
+      app: 'knowbench',
       ref: 'task:42',
       return_url: 'http://localhost:3100/zh-CN/workbench?ref=task%3A42',
     })
@@ -243,7 +243,7 @@ describe('preview: moving between applications', () => {
       return_url: null,
     })
     expect(await origin('?from=unknown')).toBeNull()
-    expect(await origin('?from=investment&return_url=https://evil.example.test')).toMatchObject({
+    expect(await origin('?from=knowbench&return_url=https://evil.example.test')).toMatchObject({
       return_url: 'http://localhost:3100/zh-CN/workbench?ref=',
     })
   })

@@ -5,8 +5,8 @@ import { loginPath, nextPath } from '@/lib/auth/next-path'
 describe('登录之后回到哪', () => {
   const fallback = '/zh-CN/dashboard'
   it('本站、本语言下的路径：原样回去，参数还在', () => {
-    expect(nextPath('zh-CN', '/zh-CN/requests/new?code=600585&from=investment', fallback)).toBe(
-      '/zh-CN/requests/new?code=600585&from=investment',
+    expect(nextPath('zh-CN', '/zh-CN/requests/new?code=600585&from=knowbench', fallback)).toBe(
+      '/zh-CN/requests/new?code=600585&from=knowbench',
     )
   })
   it('别的一律回默认页', () => {
