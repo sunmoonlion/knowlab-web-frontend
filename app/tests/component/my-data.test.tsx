@@ -80,7 +80,7 @@ describe('我的数据', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('只收 PDF、Excel、CSV、文本文件')
     fireEvent.click(screen.getByRole('button', { name: '删除' }))
     await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent('有在做的或已交付的分身用着这份数据'),
+      expect(screen.getByRole('alert')).toHaveTextContent('有在做的或已交付的专家用着这份数据'),
     )
     expect(deleteDataset).toHaveBeenCalledWith(DATASET.dataset_id, CSRF)
   })

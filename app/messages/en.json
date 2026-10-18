@@ -49,7 +49,7 @@
     "home": "Home",
     "dashboard": "Dashboard",
     "settings": "Settings",
-    "knowbots": "Knowbots in progress"
+    "knowbots": "Experts in progress"
   },
   "interaction": {
     "loading": "Loading the reference run...",
@@ -83,7 +83,7 @@
     }
   },
   "knowbotRequests": {
-    "title": "Knowbots in progress",
+    "title": "Experts in progress",
     "intro": "A knowbot is built from your method and runs on your data; it belongs to you alone. After you submit an idea we turn the method into a draft and test it against your acceptance cases; once it passes it appears under My knowbots in knowmart.",
     "newRequest": "Submit an idea",
     "loading": "Loading…",
@@ -99,7 +99,7 @@
       "failed": "Did not pass",
       "delivered": "Delivered"
     },
-    "deliveredHint": "It is under My knowbots in knowmart; you can summon it from the workbench.",
+    "deliveredHint": "It is in the knowmart expert catalog; you can summon it from the workbench.",
     "report": "Test report",
     "case": "Case {id}",
     "caseStatus": {
