@@ -88,9 +88,16 @@ function CaseRow({ result, t }: { result: CaseResult; t: Translate }) {
         </span>
       ) : null}
       {failedSteps.map((s) => (
-        <p key={s.step_id} className="text-muted-foreground">
-          {t('failedStep', { step: s.step_id, checks: s.failed_checks.join('、') || '—' })}
-        </p>
+        <div key={s.step_id} className="text-muted-foreground">
+          <p>{t('failedStep', { step: s.step_id, checks: s.failed_checks.join('、') || '—' })}</p>
+          {s.details?.length ? (
+            <ul className="list-disc pl-5 text-xs">
+              {s.details.map((d, i) => (
+                <li key={i}>{d}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       ))}
       {result.note ? <p className="text-muted-foreground">{result.note}</p> : null}
     </li>

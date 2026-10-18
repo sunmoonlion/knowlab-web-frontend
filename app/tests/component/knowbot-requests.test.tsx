@@ -68,7 +68,14 @@ describe('我在做的分身', () => {
                   {
                     case_id: 'c1',
                     status: 'failed',
-                    steps: [{ step_id: 's2', accepted: false, failed_checks: ['毛利率口径'] }],
+                    steps: [
+                      {
+                        step_id: 's2',
+                        accepted: false,
+                        failed_checks: ['毛利率口径'],
+                        details: ['毛利率口径: 用的是净利润'],
+                      },
+                    ],
                     expectations: [true, false],
                     note: null,
                   },
@@ -93,6 +100,7 @@ describe('我在做的分身', () => {
     expect(screen.getByText(/已交付/)).toBeInTheDocument()
     expect(screen.getByText(/测试未通过/)).toBeInTheDocument()
     expect(screen.getByText(/期望满足 1\/2/)).toBeInTheDocument()
+    expect(screen.getByText('毛利率口径: 用的是净利润')).toBeInTheDocument()
     expect(screen.getByText('第 s2 步没过：毛利率口径')).toBeInTheDocument()
     // 第 2 稿在前
     const drafts = screen.getAllByText(/第 1 版/)
