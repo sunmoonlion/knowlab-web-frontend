@@ -1,48 +1,107 @@
 'use client'
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import type { MyQuestion } from '@/contracts/knowbots'
-import { answerMyQuestion, fetchMyQuestions } from '@/lib/knowbots/client'
+import { answerMyQuestion } from '@/lib/knowbots/client'
 
-const KEY = ['web', 'knowbot-questions'] as const
+import { QUESTIONS_KEY, caseName, useMyQuestions } from './shared'
 
-// 测试中需要你回答的问题（SDD 0027 §3.4）：涉及你的方法上的判断，只能你自己答（C-L1）。
-// 答完测试接着跑；你的回答会记进下一版分身的规则出处。
-export function MyQuestions({ csrfToken }: { csrfToken: string }) {
-  const t = useTranslations('knowbotQuestions')
+// 测试中需要你回答的问题（SDD 0027 §3.4、0037 §四）：涉及你的方法上的判断，只能你自己答（C-L1）。
+// 答完测试接着跑；你的回答会记进下一个分身的规则出处。「待我回答」页按创意分组，创意页、分身页就地答。
+
+function useAnswer(csrfToken: string) {
   const client = useQueryClient()
-  const list = useQuery({ queryKey: KEY, queryFn: fetchMyQuestions })
   const [failed, setFailed] = useState(false)
   const answer = useMutation({
     mutationFn: ({ id, value }: { id: string; value: { option_id?: string; text?: string } }) =>
       answerMyQuestion(id, value, csrfToken),
     onSuccess: () => {
       setFailed(false)
-      return client.invalidateQueries({ queryKey: KEY })
+      return client.invalidateQueries({ queryKey: QUESTIONS_KEY })
     },
     onError: () => setFailed(true),
   })
-  if (list.isPending || list.isError || list.data.length === 0) return null
+  return { answer, failed }
+}
+
+/** 「待我回答」页：全部要我答的问题，按创意分组。 */
+export function MyQuestions({ csrfToken }: { csrfToken: string }) {
+  const t = useTranslations('knowbotQuestions')
+  const list = useMyQuestions()
+  const { answer, failed } = useAnswer(csrfToken)
+  if (list.isPending) return <p className="text-muted-foreground mt-6">{t('loading')}</p>
+  if (list.isError)
+    return (
+      <p className="text-destructive mt-6" role="alert">
+        {t('loadFailed')}
+      </p>
+    )
+  if (list.data.length === 0) return <p className="text-muted-foreground mt-6">{t('empty')}</p>
+  const groups = new Map<string, MyQuestion[]>()
+  for (const q of list.data) groups.set(q.title, [...(groups.get(q.title) ?? []), q])
   return (
-    <section
-      aria-label={t('title')}
-      className="mt-6 space-y-3 rounded-lg border border-amber-300 p-4"
-    >
-      <h2 className="font-medium">{t('title')}</h2>
+    <div className="mt-6 space-y-4">
       <p className="text-muted-foreground text-sm">{t('intro')}</p>
       {failed ? (
         <p className="text-destructive text-sm" role="alert">
           {t('failed')}
         </p>
       ) : null}
-      {list.data.map((q) => (
+      {[...groups].map(([title, questions]) => (
+        <section
+          key={title}
+          aria-label={title}
+          className="bg-card space-y-4 rounded-xl border p-4 shadow-sm"
+        >
+          <h2 className="font-medium">{title}</h2>
+          {questions.map((q) => (
+            <QuestionRow
+              key={q.question_id}
+              question={q}
+              busy={answer.isPending}
+              onAnswer={(value) => answer.mutate({ id: q.question_id, value })}
+            />
+          ))}
+        </section>
+      ))}
+    </div>
+  )
+}
+
+/** 创意页、分身页上就地答：只列这个创意或分身的问题，没有就什么都不显示。 */
+export function QuestionsHere({
+  questions,
+  csrfToken,
+  cases,
+}: {
+  questions: MyQuestion[]
+  csrfToken: string
+  cases?: Record<string, unknown>[]
+}) {
+  const t = useTranslations('knowbotQuestions')
+  const { answer, failed } = useAnswer(csrfToken)
+  if (questions.length === 0) return null
+  return (
+    <section
+      aria-label={t('title')}
+      className="space-y-3 rounded-xl border border-amber-300 p-4 shadow-sm"
+    >
+      <h3 className="font-medium">{t('title')}</h3>
+      <p className="text-muted-foreground text-sm">{t('intro')}</p>
+      {failed ? (
+        <p className="text-destructive text-sm" role="alert">
+          {t('failed')}
+        </p>
+      ) : null}
+      {questions.map((q) => (
         <QuestionRow
           key={q.question_id}
           question={q}
+          cases={cases}
           busy={answer.isPending}
           onAnswer={(value) => answer.mutate({ id: q.question_id, value })}
         />
@@ -53,18 +112,26 @@ export function MyQuestions({ csrfToken }: { csrfToken: string }) {
 
 function QuestionRow({
   question: q,
+  cases,
   busy,
   onAnswer,
 }: {
   question: MyQuestion
+  cases?: Record<string, unknown>[]
   busy: boolean
   onAnswer: (value: { option_id?: string; text?: string }) => void
 }) {
   const t = useTranslations('knowbotQuestions')
+  const tk = useTranslations('knowbots')
   const [text, setText] = useState('')
   return (
     <article className="space-y-2 text-sm">
-      <p className="text-muted-foreground">{t('where', { title: q.title, version: q.version })}</p>
+      <p className="text-muted-foreground">
+        {t('where', {
+          avatar: tk('avatar', { version: q.version, revision: q.revision }),
+          case: caseName(tk, q.case_id, cases),
+        })}
+      </p>
       <p className="whitespace-pre-wrap">{q.text}</p>
       {q.options.length > 0 ? (
         <div className="flex flex-wrap gap-2">

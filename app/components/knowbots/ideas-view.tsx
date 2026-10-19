@@ -1,0 +1,178 @@
+'use client'
+
+import { useQuery } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
+import { useState } from 'react'
+
+import { buttonVariants } from '@/components/ui/button'
+import { Link } from '@/i18n/navigation'
+import { fetchRequestDetail } from '@/lib/knowbots/client'
+
+import { Amendments } from './amendments'
+import { QuestionsHere } from './my-questions'
+import { AmendmentList, Cases, Method } from './reference'
+import {
+  AvatarBadge,
+  Card,
+  IdeaBadge,
+  Progress,
+  Row,
+  avatarName,
+  casesLine,
+  useMine,
+  useWhen,
+  type Avatar,
+  type Idea,
+} from './shared'
+import { SidePanel } from './side-panel'
+
+// 创意（SDD 0037 §四.3）：我交来的方法、用例，之后写的补充也挂在这里。
+// 主栏：走到哪、要我答的问题（就地答）、补充方法（写、看状态）、它的分身（点了去分身页）。
+
+export function IdeasView({ csrfToken, picked: initial }: { csrfToken: string; picked?: string }) {
+  const t = useTranslations('knowbots')
+  const when = useWhen()
+  const { ideas, avatars, error, pending } = useMine()
+  const [picked, setPicked] = useState<string | null>(initial ?? null)
+  const current = ideas.find((i) => i.request.request_id === picked) ?? ideas[0] ?? null
+
+  return (
+    <div className="mt-6 space-y-4">
+      <Link href="/ideas/new" className={buttonVariants()}>
+        {t('ideas.new')}
+      </Link>
+      {error ? (
+        <p className="text-destructive text-sm" role="alert">
+          {t('loadFailed')}
+        </p>
+      ) : pending ? (
+        <p className="text-muted-foreground text-sm">{t('loading')}</p>
+      ) : ideas.length === 0 ? (
+        <p className="text-muted-foreground text-sm">{t('ideas.empty')}</p>
+      ) : (
+        <div className="flex flex-col items-start gap-6 lg:flex-row">
+          <aside aria-label={t('ideas.list')} className="w-full space-y-2 lg:w-72 lg:shrink-0">
+            <ul className="space-y-2">
+              {ideas.map((idea) => {
+                const at = when(idea.request.created_at)
+                return (
+                  <li key={idea.request.request_id}>
+                    <Row
+                      selected={idea.request.request_id === current?.request.request_id}
+                      onPick={() => setPicked(idea.request.request_id)}
+                    >
+                      <span className="flex items-start justify-between gap-2">
+                        <span className="font-medium">{idea.request.title}</span>
+                        <IdeaBadge status={idea.status} />
+                      </span>
+                      {at ? (
+                        <span className="text-muted-foreground mt-1 block text-xs">
+                          {t('ideas.submittedAt', { at })}
+                        </span>
+                      ) : null}
+                    </Row>
+                  </li>
+                )
+              })}
+            </ul>
+          </aside>
+          {current ? (
+            <Workspace
+              key={current.request.request_id}
+              idea={current}
+              avatars={avatars.filter((a) => a.request.request_id === current.request.request_id)}
+              csrfToken={csrfToken}
+            />
+          ) : null}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Workspace({
+  idea,
+  avatars,
+  csrfToken,
+}: {
+  idea: Idea
+  avatars: Avatar[]
+  csrfToken: string
+}) {
+  const t = useTranslations('knowbots')
+  const { request, status } = idea
+  const detail = useQuery({
+    queryKey: ['web', 'knowbot-request', request.request_id],
+    queryFn: () => fetchRequestDetail(request.request_id),
+  })
+  const amendments = request.amendments ?? []
+  return (
+    <>
+      <section aria-label={request.title} className="min-w-0 flex-1 space-y-4">
+        <header className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-semibold">{request.title}</h2>
+            <IdeaBadge status={status} />
+          </div>
+          <Progress
+            steps={['submit', 'test', 'expert'].map((s) => t(`ideaSteps.${s}`))}
+            at={status === 'expert' ? 3 : 1}
+            bad={status === 'failed'}
+            label={t('progress')}
+          />
+          <p className="text-muted-foreground text-sm">{t(`ideas.next.${status}`)}</p>
+        </header>
+        <QuestionsHere
+          questions={idea.questions}
+          csrfToken={csrfToken}
+          cases={detail.data?.cases}
+        />
+        <Amendments requestId={request.request_id} written={amendments} csrfToken={csrfToken} />
+        <Card title={t('ideas.avatars')}>
+          {avatars.length === 0 ? (
+            <p className="text-muted-foreground">{t('ideas.noAvatar')}</p>
+          ) : (
+            <ul className="divide-y">
+              {avatars.map((a) => {
+                const line = casesLine(t, a.draft)
+                return (
+                  <li key={a.draft.draft_id} className="flex flex-wrap items-center gap-2 py-2">
+                    <Link
+                      href={{ pathname: '/avatars', query: { draft: a.draft.draft_id } }}
+                      className="font-medium underline underline-offset-2"
+                    >
+                      {avatarName(t, a.draft)}
+                    </Link>
+                    <AvatarBadge status={a.status} />
+                    {line ? <span className="text-muted-foreground text-xs">{line}</span> : null}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </Card>
+        {detail.isError ? <p className="text-destructive text-sm">{t('loadFailed')}</p> : null}
+      </section>
+      {detail.data ? (
+        <SidePanel
+          label={t('side.label')}
+          tabs={[
+            { key: 'method', label: t('tabs.method'), content: <Method detail={detail.data} /> },
+            {
+              key: 'cases',
+              label: t('tabs.cases'),
+              count: detail.data.cases.length,
+              content: <Cases cases={detail.data.cases} />,
+            },
+            {
+              key: 'amendments',
+              label: t('tabs.amendments'),
+              count: amendments.length,
+              content: <AmendmentList amendments={amendments} />,
+            },
+          ]}
+        />
+      ) : null}
+    </>
+  )
+}

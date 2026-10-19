@@ -10,7 +10,7 @@ import { useRouter } from '@/i18n/navigation'
 import { ApiClientError } from '@/lib/common/api-client'
 import { fetchRuntimes, submitRequest } from '@/lib/knowbots/client'
 
-import { MY_REQUESTS_KEY } from './my-requests'
+import { MY_REQUESTS_KEY } from './shared'
 
 const QUESTIONS = ['solves', 'not_solves', 'inputs', 'steps', 'outputs', 'correctness'] as const
 const FIELD = 'mt-1 w-full rounded-md border px-3 py-2 text-sm'
@@ -51,8 +51,8 @@ function toCases(cases: CaseDraft[]): CaseIn[] {
   }))
 }
 
-// 提交一个想法（SDD 0027）：方法用六问或一份 skill 写清楚，选运行方，给验收用例，同意数据用于测试。
-// 方法只来自用户（C-L1）；我们据此做成草稿、测试，测试通过后出现在 knowmart「我的分身」。
+// 提交一个创意（SDD 0027、0037）：方法用六问或一份 skill 写清楚，选运行方，给验收用例，同意数据用于测试。
+// 方法只来自用户（C-L1）；我们据此孵化分身、测试，测试通过后成为专家、出现在 knowmart。
 export function RequestForm({ csrfToken }: { csrfToken: string }) {
   const t = useTranslations('knowbotRequests')
   const router = useRouter()
@@ -88,7 +88,7 @@ export function RequestForm({ csrfToken }: { csrfToken: string }) {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: MY_REQUESTS_KEY })
-      router.push('/knowbots')
+      router.push('/ideas')
     },
     onError: (e) =>
       setError(

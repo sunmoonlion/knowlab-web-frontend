@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { NextIntlClientProvider } from 'next-intl'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -40,12 +40,32 @@ beforeEach(() => {
   vi.mocked(answerMyQuestion).mockReset().mockResolvedValue(undefined)
 })
 
-describe('需要你回答的问题', () => {
-  it('shows nothing when there is nothing to answer', async () => {
+describe('待我回答', () => {
+  it('says so when there is nothing to answer', async () => {
     vi.mocked(fetchMyQuestions).mockResolvedValue([])
-    const { container } = page()
-    await waitFor(() => expect(fetchMyQuestions).toHaveBeenCalled())
-    expect(container).toBeEmptyDOMElement()
+    page()
+    expect(await screen.findByText('现在没有要你回答的问题。')).toBeInTheDocument()
+  })
+
+  it('groups the questions by idea and says which avatar and case asked', async () => {
+    vi.mocked(fetchMyQuestions).mockResolvedValue([
+      Q,
+      {
+        ...Q,
+        question_id: '7b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10',
+        title: '估值',
+        text: '用哪个折现率？',
+        case_id: 'c2',
+        revision: 3,
+      },
+    ])
+    page()
+    const first = await screen.findByRole('region', { name: '财务分析与预测' })
+    expect(within(first).getByText('毛利率按哪个口径？')).toBeInTheDocument()
+    expect(within(first).getByText('分身 1.1 · 你的第 1 条用例')).toBeInTheDocument()
+    const second = screen.getByRole('region', { name: '估值' })
+    expect(within(second).getByText('用哪个折现率？')).toBeInTheDocument()
+    expect(within(second).getByText('分身 1.3 · 你的第 2 条用例')).toBeInTheDocument()
   })
 
   it('answers with an option or in my own words', async () => {

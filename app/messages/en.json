@@ -47,9 +47,18 @@
   },
   "nav": {
     "home": "Home",
-    "dashboard": "Dashboard",
+    "dashboard": "Home",
     "settings": "Settings",
-    "knowbots": "Experts in progress"
+    "questions": "Waiting for me",
+    "ideas": "Ideas",
+    "avatars": "Avatars",
+    "experts": "Experts",
+    "data": "My data",
+    "mainNavigation": "Main navigation",
+    "openMenu": "Open navigation",
+    "closeMenu": "Close navigation",
+    "expandMenu": "Expand navigation",
+    "collapseMenu": "Collapse navigation"
   },
   "interaction": {
     "loading": "Loading the reference run...",
@@ -83,33 +92,8 @@
     }
   },
   "knowbotRequests": {
-    "title": "Experts in progress",
-    "intro": "A knowbot is built from your method and runs on your data; it belongs to you alone. After you submit an idea we turn the method into a draft and test it against your acceptance cases; once it passes it appears under My knowbots in knowmart.",
     "newRequest": "Submit an idea",
     "loading": "Loading…",
-    "loadFailed": "Could not load. Please refresh and try again.",
-    "empty": "You have not submitted an idea yet.",
-    "runtime": "Runs in: {runtime}",
-    "noDraftYet": "Received; we are turning it into a draft.",
-    "draft": "Version {version} · draft {revision}",
-    "status": {
-      "pending_test": "Waiting for test",
-      "testing": "Testing",
-      "passed": "Passed, delivering",
-      "failed": "Did not pass",
-      "delivered": "Delivered"
-    },
-    "deliveredHint": "It is in the knowmart expert catalog; you can summon it from the workbench.",
-    "report": "Test report",
-    "case": "Case {id}",
-    "caseStatus": {
-      "passed": "passed",
-      "failed": "failed",
-      "needs_human": "needs a person to decide",
-      "error": "run error"
-    },
-    "expectationsMet": "expectations met {met}/{total}",
-    "failedStep": "Step {step} failed: {checks}",
     "form": {
       "intro": "Write your method down clearly: the knowbot's logic comes only from what you write. Where something is missing we will ask you rather than fill it in.",
       "title": "Name",
@@ -143,14 +127,14 @@
       "addExpectation": "Add an expectation",
       "addCase": "Add a case",
       "removeCase": "Remove this case",
-      "consent": "I agree that the data I upload may be used to test this knowbot. Test output is shown to no one and deleted after 7 days.",
+      "consent": "I agree that the data I upload may be used to test this knowbot. The write-ups and step results of a test are shown only to you and to the staff running the test: you use them to accept the knowbot, the staff to check it works correctly. They are not shown to anyone else or used for anything else.",
       "submit": "Submit",
       "invalid": "Something did not pass the checks. Please make sure every field is filled in and numbers are valid.",
       "failed": "Could not submit. Please try again later."
     },
     "amend": {
       "title": "Amend the method",
-      "intro": "If a test result makes you want to change a step, write it here: which step, what it should become, and why. Write the method only, no technical detail. We will change the next draft accordingly and test it again. What you write cannot be edited; to take it back, write another one.",
+      "intro": "If a test result makes you want to change a step, write it here: which step, what it should become, and why. Write the method only, no technical detail. We will hatch the next avatar accordingly and test it again. What you write cannot be edited; to take it back, write another one.",
       "open": "Write an amendment",
       "label": "Your amendment",
       "submit": "Submit",
@@ -159,9 +143,10 @@
       "written": "Amendments I wrote",
       "status": {
         "open": "waiting",
-        "used": "used in draft {revision}",
+        "used": "used in avatar {revision}",
         "declined": "not followed: {reason}"
-      }
+      },
+      "none": "No amendments written yet."
     }
   },
   "knowbotData": {
@@ -190,10 +175,173 @@
   },
   "knowbotQuestions": {
     "title": "Questions for you",
-    "intro": "The test stopped where it needs your decision: this is a judgement in your method, so only you can answer. The test continues once you answer, and your answer goes into the next version.",
+    "intro": "The test stopped where it needs your decision: this is a judgement in your method, so only you can answer. The test continues once you answer, and your answer goes into the next avatar.",
     "failed": "Could not submit. Please try again.",
-    "where": "{title} · version {version}",
+    "where": "{avatar} · {case}",
     "ownWords": "Write your answer",
-    "answer": "Answer"
+    "answer": "Answer",
+    "loading": "Loading…",
+    "loadFailed": "Could not load. Please refresh and try again.",
+    "empty": "Nothing is waiting for your answer."
+  },
+  "knowbots": {
+    "loading": "Loading…",
+    "loadFailed": "Could not load. Please refresh and try again.",
+    "avatar": "Avatar {version}.{revision}",
+    "caseN": "Your case {n}",
+    "caseId": "Case {id}",
+    "casesPassed": "{met}/{total} cases passed",
+    "progress": "Progress",
+    "ideaStatus": {
+      "hatching": "Submitted, waiting for us to hatch",
+      "working": "Avatar in progress",
+      "waiting": "Waiting for your answer",
+      "failed": "Did not pass, being revised",
+      "expert": "Expert ready"
+    },
+    "avatarStatus": {
+      "hatching": "Hatching",
+      "pending": "Waiting for test",
+      "testing": "Testing",
+      "waiting": "Waiting for your answer",
+      "failed": "Did not pass",
+      "passed": "Passed",
+      "delivered": "Became an expert"
+    },
+    "ideaSteps": {
+      "submit": "Submitted",
+      "test": "Avatar testing",
+      "expert": "Expert"
+    },
+    "avatarSteps": {
+      "hatch": "Hatch",
+      "review": "Check",
+      "test": "Test",
+      "expert": "Become an expert"
+    },
+    "side": {
+      "label": "My method and cases",
+      "expand": "Expand my method and cases",
+      "collapse": "Collapse",
+      "resize": "Drag to resize",
+      "open": "My method and cases"
+    },
+    "tabs": {
+      "method": "My method",
+      "cases": "My cases",
+      "amendments": "My amendments",
+      "rules": "Where my words are used"
+    },
+    "cases": {
+      "none": "No cases.",
+      "noExpectation": "No expectations written.",
+      "where": "Artifact · item",
+      "tolerance": "Tolerance"
+    },
+    "rules": {
+      "none": "This avatar lists no rule sources.",
+      "intro": "Each rule of this avatar, and which of your words it comes from:",
+      "from": "From what you wrote: {ref}"
+    },
+    "home": {
+      "title": "Home",
+      "intro": "Where things stand and what you need to do.",
+      "questions": "Waiting for me",
+      "questionsNone": "Nothing is waiting for your answer.",
+      "questionsSome": "{n, plural, one {# question is} other {# questions are}} waiting for you: the test is paused there and continues once you answer.",
+      "toQuestions": "Answer them",
+      "ideas": "Ideas in progress",
+      "ideasNone": "No ideas in progress.",
+      "allIdeas": "All ideas",
+      "results": "Latest test results",
+      "resultsNone": "No avatar has finished testing yet.",
+      "experts": "Experts",
+      "expertsNone": "No experts made yet."
+    },
+    "ideas": {
+      "title": "Ideas",
+      "intro": "The methods and acceptance cases you submitted. We hatch avatars from them and test them; one that passes becomes an expert that belongs to you alone.",
+      "new": "Submit an idea",
+      "empty": "You have not submitted an idea yet.",
+      "list": "My ideas",
+      "submittedAt": "Submitted {at}",
+      "avatars": "Its avatars",
+      "noAvatar": "No avatar yet: we are hatching the first one from your method.",
+      "next": {
+        "hatching": "Received. We are hatching the first avatar from your method.",
+        "working": "An avatar is in progress: once hatched it is checked and tested; results appear on the Avatars page.",
+        "waiting": "The test is paused where it needs your decision. Please answer the questions below first.",
+        "failed": "The latest avatar did not pass. Look at its test results; to change a step, write an amendment and we will hatch the next avatar from it.",
+        "expert": "An expert has been made; you can summon it from the workbench."
+      }
+    },
+    "avatars": {
+      "title": "Avatars",
+      "intro": "Hatched from your idea and taken to testing. If one does not pass, we hatch the next avatar from your amendments.",
+      "empty": "No avatars yet. After you submit an idea we hatch the first one from your method.",
+      "list": "Avatars",
+      "superseded": "A newer avatar exists",
+      "toIdea": "See its idea",
+      "done": "{done} cases finished.",
+      "doneOf": "{done}/{total} cases finished.",
+      "now": {
+        "hatching": "We are hatching it from your method.",
+        "pending": "Hatched. Testing starts after we check it.",
+        "testing": "The test is running; results appear here when it finishes.",
+        "waiting": "The test is paused where it needs your decision and continues once you answer.",
+        "failed": "Did not pass: see the reason under each case below. To change a step, write an amendment on the Ideas page and we will hatch the next avatar from it.",
+        "passed": "Passed. It is being handed to knowmart to become an expert.",
+        "delivered": "It has become an expert; you can summon it from the workbench."
+      }
+    },
+    "results": {
+      "title": "Test results",
+      "finishedAt": "Finished {at}"
+    },
+    "result": {
+      "passed": "passed",
+      "failed": "did not pass",
+      "needs_human": "needs a person to decide",
+      "error": "platform error",
+      "platformError": "This time the platform failed, not your method. We will test it again.",
+      "expectationsMet": "{met}/{total} expectations met",
+      "question": "You asked: {question}",
+      "failedStep": "{step} did not pass",
+      "noReason": "What this step returned did not meet the requirements."
+    },
+    "outputs": {
+      "deliverable": "Write-up",
+      "truncated": "The write-up is long; only the beginning is shown.",
+      "noDeliverable": "This case has no write-up.",
+      "noDeliverableWhy": "This case has no write-up: {why}",
+      "none": "No write-up was collected for this test.",
+      "loadFailed": "Could not load the write-up. Please refresh and try again.",
+      "steps": "Results of each step",
+      "step": "Step {n} · {title}",
+      "stepN": "Step {n}",
+      "raw": "Last reply as returned",
+      "omitted": "This step's result was too large ({bytes} bytes) to bring back.",
+      "outcome": {
+        "accepted": "passed",
+        "rejected": "did not pass",
+        "failed": "error",
+        "over_budget": "stopped: over budget",
+        "cancelled": "stopped",
+        "running": "running",
+        "not_reached": "not reached"
+      }
+    },
+    "experts": {
+      "title": "Experts",
+      "intro": "Experts that passed testing and were delivered. Built from your method on your data; they belong to you alone.",
+      "empty": "No experts made yet. An avatar that passes testing becomes an expert.",
+      "list": "Experts",
+      "version": "Version {version}",
+      "deliveredAt": "Delivered {at}",
+      "fromIdea": "From idea: ",
+      "fromAvatar": "From avatar: ",
+      "hint": "Summon it from the knowbench workbench: look for \"{name}\" when choosing an expert.",
+      "versions": "Versions made from this idea"
+    }
   }
 }

@@ -13,7 +13,8 @@ export default async function CommonToolkitPage({
   const { locale } = await params
   await requireBrowserSession(locale)
   return (
-    <main className="mx-auto max-w-6xl space-y-6 p-8">
+    // 外壳已有 <main>（SDD 0037）：这里不再套一层
+    <div className="mx-auto max-w-6xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Frontend Common Kernel</h1>
         <p className="text-muted-foreground mt-2">
@@ -21,6 +22,6 @@ export default async function CommonToolkitPage({
         </p>
       </div>
       <FeedbackProvider><CommonReference /></FeedbackProvider>
-    </main>
+    </div>
   )
 }

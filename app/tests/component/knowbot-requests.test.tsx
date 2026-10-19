@@ -1,186 +1,195 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { NextIntlClientProvider } from 'next-intl'
-import type { ReactNode } from 'react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { MyRequests } from '@/components/knowbots/my-requests'
-import type { Amendment } from '@/contracts/knowbots'
+import { IdeasView } from '@/components/knowbots/ideas-view'
 import { RequestForm } from '@/components/knowbots/request-form'
 import { ApiClientError } from '@/lib/common/api-client'
-import { amendRequest, fetchMyRequests, fetchRuntimes, submitRequest } from '@/lib/knowbots/client'
-import messages from '@/messages/zh-CN.json'
+import {
+  amendRequest,
+  answerMyQuestion,
+  fetchMyQuestions,
+  fetchMyRequests,
+  fetchRequestDetail,
+  fetchRuntimes,
+  submitRequest,
+} from '@/lib/knowbots/client'
 
-const router = vi.hoisted(() => ({ push: vi.fn() }))
+import {
+  CSRF,
+  DRAFT,
+  DRAFT2,
+  REQUEST,
+  detail,
+  draft,
+  mine,
+  question,
+  renderWith,
+  request,
+} from './knowbot-fixtures'
+
+const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }))
 
 vi.mock('@/lib/knowbots/client', () => ({
   amendRequest: vi.fn(),
+  answerMyQuestion: vi.fn(),
+  fetchMyQuestions: vi.fn(),
   fetchMyRequests: vi.fn(),
+  fetchRequestDetail: vi.fn(),
   fetchRuntimes: vi.fn(),
   submitRequest: vi.fn(),
 }))
-vi.mock('@/i18n/navigation', () => ({ useRouter: () => router }))
+vi.mock('@/i18n/navigation', async () => ({
+  ...(await import('./knowbot-fixtures')).linkMock(),
+  useRouter: () => router,
+}))
 
-const CSRF = 'csrf-token-value-that-is-long-enough-1234'
-const REQUEST = '0b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10'
-const DRAFT1 = '1b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10'
-const DRAFT2 = '2b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10'
-
-function wrap(node: ReactNode) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
-    <QueryClientProvider client={client}>
-      <NextIntlClientProvider locale="zh-CN" messages={messages}>
-        {node}
-      </NextIntlClientProvider>
-    </QueryClientProvider>,
-  )
-}
+const OTHER = '9b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10'
 
 beforeEach(() => {
-  vi.mocked(fetchMyRequests).mockReset()
-  vi.mocked(amendRequest).mockReset()
-  vi.mocked(fetchRuntimes).mockReset()
-  vi.mocked(submitRequest).mockReset()
+  for (const fn of [
+    amendRequest,
+    answerMyQuestion,
+    fetchMyQuestions,
+    fetchMyRequests,
+    fetchRequestDetail,
+    fetchRuntimes,
+    submitRequest,
+  ])
+    vi.mocked(fn).mockReset()
+  vi.mocked(fetchMyQuestions).mockResolvedValue([])
+  vi.mocked(fetchRequestDetail).mockResolvedValue(detail())
   router.push.mockReset()
 })
 
-describe('我在做的分身', () => {
-  it('shows each draft with its status and the run-correctness report only', async () => {
-    vi.mocked(fetchMyRequests).mockResolvedValue({
-      contract_version: 1,
-      requests: [
-        {
-          request_id: REQUEST,
-          title: '财务分析与预测',
-          runtime: 'knowbench',
-          created_at: '2026-10-16T00:00:00Z',
+describe('创意', () => {
+  it('lists my ideas with one user-facing status each and opens the newest', async () => {
+    vi.mocked(fetchMyRequests).mockResolvedValue(
+      mine(
+        request({
           drafts: [
-            {
-              draft_id: DRAFT1,
-              revision: 1,
-              version: '1',
-              status: 'failed',
-              name: '财务分析与预测',
-              knowbot_id: null,
-              report: {
-                status: 'failed',
-                finished_at: null,
-                cost: null,
-                cases: [
-                  {
-                    case_id: 'c1',
-                    status: 'failed',
-                    steps: [
-                      {
-                        step_id: 's2',
-                        accepted: false,
-                        failed_checks: ['毛利率口径'],
-                        details: ['毛利率口径: 用的是净利润'],
-                      },
-                    ],
-                    expectations: [true, false],
-                    note: null,
-                  },
-                ],
-              },
-            },
-            {
-              draft_id: DRAFT2,
-              revision: 2,
-              version: '1',
-              status: 'delivered',
-              name: '财务分析与预测',
-              knowbot_id: 'kb-1',
-              report: null,
-            },
+            draft({ status: 'failed' }),
+            draft({ draft_id: DRAFT2, revision: 2, status: 'delivered', knowbot_id: 'kb-1' }),
           ],
-        },
-      ],
-    })
-    wrap(<MyRequests csrfToken={CSRF} />)
-    expect(await screen.findByText('财务分析与预测')).toBeInTheDocument()
-    expect(screen.getByText(/已交付/)).toBeInTheDocument()
-    expect(screen.getByText(/测试未通过/)).toBeInTheDocument()
-    expect(screen.getByText(/期望满足 1\/2/)).toBeInTheDocument()
-    expect(screen.getByText('毛利率口径: 用的是净利润')).toBeInTheDocument()
-    expect(screen.getByText('第 s2 步没过：毛利率口径')).toBeInTheDocument()
-    // 第 2 稿在前
-    const drafts = screen.getAllByText(/第 1 版/)
-    expect(drafts[0].textContent).toContain('第 2 稿')
+        }),
+        request({
+          request_id: OTHER,
+          title: '估值',
+          created_at: '2026-10-17T10:00:00Z',
+          drafts: [],
+        }),
+      ),
+    )
+    renderWith(<IdeasView csrfToken={CSRF} />)
+    const list = await screen.findByRole('complementary', { name: '我的创意' })
+    const rows = within(list).getAllByRole('button')
+    expect(rows[0]).toHaveTextContent('财务分析与预测')
+    expect(rows[0]).toHaveTextContent('已出专家')
+    expect(rows[1]).toHaveTextContent('估值')
+    expect(rows[1]).toHaveTextContent('已提交，等我们孵化')
+    // 详情：它的分身，新的在前，点了去分身页那一个
+    const avatars = screen.getByRole('region', { name: '它的分身' })
+    const links = within(avatars).getAllByRole('link')
+    expect(links[0]).toHaveTextContent('分身 1.2')
+    expect(links[0]).toHaveAttribute('href', `/avatars?draft=${DRAFT2}`)
+    expect(links[1]).toHaveTextContent('分身 1.1')
+    expect(within(avatars).getByText('没通过')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '提交一个创意' })).toHaveAttribute('href', '/ideas/new')
+    // 右边：我的方法、我的用例（白话，不放原样 JSON）
+    expect(await screen.findByRole('tab', { name: '我的方法' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: /我的用例/ }))
+    expect(screen.getByText('你的第 1 条用例')).toBeInTheDocument()
+    expect(screen.getByText('茅台近三年营收？')).toBeInTheDocument()
+    expect(screen.getByText('约等于')).toBeInTheDocument()
+  })
+
+  it('opens the idea named in the address and shows its questions to answer in place', async () => {
+    vi.mocked(fetchMyRequests).mockResolvedValue(
+      mine(
+        request({ drafts: [draft({ status: 'testing' })] }),
+        request({ request_id: OTHER, title: '估值', created_at: '2026-10-19T10:00:00Z' }),
+      ),
+    )
+    vi.mocked(fetchMyQuestions).mockResolvedValue([question()])
+    vi.mocked(answerMyQuestion).mockResolvedValue(undefined)
+    renderWith(<IdeasView csrfToken={CSRF} picked={REQUEST} />)
+    const main = await screen.findByRole('region', { name: '财务分析与预测' })
+    expect(within(main).getAllByText('等你回答').length).toBeGreaterThan(0)
+    expect(within(main).getByText('毛利率按哪个口径？')).toBeInTheDocument()
+    expect(within(main).getByText('分身 1.1 · 你的第 1 条用例')).toBeInTheDocument()
+    fireEvent.click(within(main).getByRole('button', { name: '营业收入减营业成本' }))
+    await waitFor(() =>
+      expect(answerMyQuestion).toHaveBeenCalledWith(
+        question().question_id,
+        { option_id: 'gross' },
+        CSRF,
+      ),
+    )
   })
 
   it('shows empty and failed states', async () => {
-    vi.mocked(fetchMyRequests).mockResolvedValueOnce({ contract_version: 1, requests: [] })
-    const { unmount } = wrap(<MyRequests csrfToken={CSRF} />)
-    expect(await screen.findByText('你还没有提交过想法。')).toBeInTheDocument()
+    vi.mocked(fetchMyRequests).mockResolvedValueOnce(mine())
+    const { unmount } = renderWith(<IdeasView csrfToken={CSRF} />)
+    expect(await screen.findByText('你还没有提交过创意。')).toBeInTheDocument()
     unmount()
     vi.mocked(fetchMyRequests).mockRejectedValueOnce(new Error('down'))
-    wrap(<MyRequests csrfToken={CSRF} />)
+    renderWith(<IdeasView csrfToken={CSRF} />)
     expect(await screen.findByRole('alert')).toHaveTextContent('读取失败')
   })
 })
 
 describe('补充方法', () => {
   const AMENDED = '3b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10'
-  const request = (amendments?: Amendment[]) => ({
-    contract_version: 1 as const,
-    requests: [
-      {
-        request_id: REQUEST,
-        title: '财务分析与预测',
-        runtime: 'knowbench',
-        created_at: '2026-10-16T00:00:00Z',
-        drafts: [],
-        ...(amendments ? { amendments } : {}),
-      },
-    ],
-  })
 
   it('shows what I wrote with its status', async () => {
     vi.mocked(fetchMyRequests).mockResolvedValue(
-      request([
-        {
-          amendment_id: AMENDED,
-          text: '第 6 步改成对照管理层讨论',
-          created_at: '2026-10-19T00:00:00Z',
-          status: 'used',
-          used_in_revision: 3,
-          declined_reason: null,
-          declined_at: null,
-        },
-        {
-          amendment_id: DRAFT1,
-          text: '给出买入建议',
-          created_at: '2026-10-19T00:00:00Z',
-          status: 'declined',
-          used_in_revision: null,
-          declined_reason: '平台不给买卖建议',
-          declined_at: '2026-10-19T01:00:00Z',
-        },
-        {
-          amendment_id: DRAFT2,
-          text: '第 7 步多一种假设',
-          created_at: '2026-10-19T02:00:00Z',
-          status: 'open',
-          used_in_revision: null,
-          declined_reason: null,
-          declined_at: null,
-        },
-      ]),
+      mine(
+        request({
+          amendments: [
+            {
+              amendment_id: AMENDED,
+              text: '第 6 步改成对照管理层讨论',
+              created_at: '2026-10-19T00:00:00Z',
+              status: 'used',
+              used_in_revision: 3,
+              declined_reason: null,
+              declined_at: null,
+            },
+            {
+              amendment_id: DRAFT,
+              text: '给出买入建议',
+              created_at: '2026-10-19T00:00:00Z',
+              status: 'declined',
+              used_in_revision: null,
+              declined_reason: '平台不给买卖建议',
+              declined_at: '2026-10-19T01:00:00Z',
+            },
+            {
+              amendment_id: DRAFT2,
+              text: '第 7 步多一种假设',
+              created_at: '2026-10-19T02:00:00Z',
+              status: 'open',
+              used_in_revision: null,
+              declined_reason: null,
+              declined_at: null,
+            },
+          ],
+        }),
+      ),
     )
-    wrap(<MyRequests csrfToken={CSRF} />)
-    expect(await screen.findByText('第 6 步改成对照管理层讨论')).toBeInTheDocument()
-    expect(screen.getByText('已用进第 3 稿')).toBeInTheDocument()
-    expect(screen.getByText('没照做：平台不给买卖建议')).toBeInTheDocument()
-    expect(screen.getByText('待处理')).toBeInTheDocument()
+    renderWith(<IdeasView csrfToken={CSRF} />)
+    const section = await screen.findByRole('region', { name: '补充方法' })
+    expect(within(section).getByText('第 6 步改成对照管理层讨论')).toBeInTheDocument()
+    expect(within(section).getByText('已用进第 3 个分身')).toBeInTheDocument()
+    expect(within(section).getByText('没照做：平台不给买卖建议')).toBeInTheDocument()
+    expect(within(section).getByText('待处理')).toBeInTheDocument()
   })
 
   it('writes an amendment with the session token and reloads the list', async () => {
-    vi.mocked(fetchMyRequests).mockResolvedValue(request())
+    vi.mocked(fetchMyRequests).mockResolvedValue(mine(request()))
     vi.mocked(amendRequest).mockResolvedValue(AMENDED)
-    wrap(<MyRequests csrfToken={CSRF} />)
+    renderWith(<IdeasView csrfToken={CSRF} />)
     fireEvent.click(await screen.findByRole('button', { name: '写一条补充' }))
+    expect(screen.getByText(/我们照着孵化下一个分身/)).toBeInTheDocument()
     const submit = screen.getByRole('button', { name: '提交补充' })
     expect(submit).toBeDisabled()
     fireEvent.change(screen.getByLabelText('补充的内容'), {
@@ -195,9 +204,9 @@ describe('补充方法', () => {
   })
 
   it('keeps the text and says so when submitting fails', async () => {
-    vi.mocked(fetchMyRequests).mockResolvedValue(request())
+    vi.mocked(fetchMyRequests).mockResolvedValue(mine(request()))
     vi.mocked(amendRequest).mockRejectedValue(new Error('down'))
-    wrap(<MyRequests csrfToken={CSRF} />)
+    renderWith(<IdeasView csrfToken={CSRF} />)
     fireEvent.click(await screen.findByRole('button', { name: '写一条补充' }))
     fireEvent.change(screen.getByLabelText('补充的内容'), { target: { value: '改第 6 步' } })
     fireEvent.click(screen.getByRole('button', { name: '提交补充' }))
@@ -206,7 +215,7 @@ describe('补充方法', () => {
   })
 })
 
-describe('提交一个想法', () => {
+describe('提交一个创意', () => {
   function fill() {
     fireEvent.change(screen.getByLabelText('名字'), { target: { value: '财务分析' } })
     for (const label of [
@@ -224,10 +233,10 @@ describe('提交一个想法', () => {
     })
   }
 
-  it('needs consent, then submits the method, cases and runtime and goes to the list', async () => {
+  it('needs consent, then submits the method, cases and runtime and goes back to ideas', async () => {
     vi.mocked(fetchRuntimes).mockResolvedValue(['knowbench'])
     vi.mocked(submitRequest).mockResolvedValue(REQUEST)
-    wrap(<RequestForm csrfToken={CSRF} />)
+    renderWith(<RequestForm csrfToken={CSRF} />)
     await waitFor(() => expect(screen.getByLabelText('在哪里运行')).toHaveValue('knowbench'))
     fill()
     fireEvent.click(screen.getByText('加一条期望'))
@@ -243,7 +252,7 @@ describe('提交一个想法', () => {
     fireEvent.click(screen.getByLabelText(/我同意/))
     expect(submit).toBeEnabled()
     fireEvent.click(submit)
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/knowbots'))
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/ideas'))
     const [body, token] = vi.mocked(submitRequest).mock.calls[0]
     expect(token).toBe(CSRF)
     expect(body.runtime).toBe('knowbench')
@@ -269,7 +278,7 @@ describe('提交一个想法', () => {
   it('sends a skill instead of the six answers when chosen', async () => {
     vi.mocked(fetchRuntimes).mockResolvedValue(['knowbench'])
     vi.mocked(submitRequest).mockResolvedValue(REQUEST)
-    wrap(<RequestForm csrfToken={CSRF} />)
+    renderWith(<RequestForm csrfToken={CSRF} />)
     await waitFor(() => expect(screen.getByLabelText('在哪里运行')).toHaveValue('knowbench'))
     fireEvent.change(screen.getByLabelText('名字'), { target: { value: '财务分析' } })
     fireEvent.click(screen.getByLabelText('粘贴一份 skill'))
@@ -295,7 +304,7 @@ describe('提交一个想法', () => {
         correlation_id: 'c',
       }),
     )
-    wrap(<RequestForm csrfToken={CSRF} />)
+    renderWith(<RequestForm csrfToken={CSRF} />)
     await waitFor(() => expect(screen.getByLabelText('在哪里运行')).toHaveValue('knowbench'))
     fill()
     fireEvent.click(screen.getByLabelText(/我同意/))

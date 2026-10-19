@@ -47,9 +47,18 @@
   },
   "nav": {
     "home": "首页",
-    "dashboard": "控制台",
+    "dashboard": "首页",
     "settings": "设置",
-    "knowbots": "我在做的专家"
+    "questions": "待我回答",
+    "ideas": "创意",
+    "avatars": "分身",
+    "experts": "专家",
+    "data": "我的数据",
+    "mainNavigation": "主导航",
+    "openMenu": "打开导航",
+    "closeMenu": "关上导航",
+    "expandMenu": "展开导航",
+    "collapseMenu": "收起导航"
   },
   "interaction": {
     "loading": "正在加载参考运行…",
@@ -83,33 +92,8 @@
     }
   },
   "knowbotRequests": {
-    "title": "我在做的专家",
-    "intro": "专家是按你的方法、用你的数据做成的，只归你自己。你提交想法后，我们把方法做成草稿、按你给的验收用例测试；测试通过后出现在 knowmart 的专家目录里。",
-    "newRequest": "提交一个想法",
+    "newRequest": "提交一个创意",
     "loading": "正在读取……",
-    "loadFailed": "读取失败，请刷新再试。",
-    "empty": "你还没有提交过想法。",
-    "runtime": "运行在：{runtime}",
-    "noDraftYet": "已收到，正在做成草稿。",
-    "draft": "第 {version} 版 · 第 {revision} 稿",
-    "status": {
-      "pending_test": "待测试",
-      "testing": "测试中",
-      "passed": "测试通过，正在交付",
-      "failed": "测试未通过",
-      "delivered": "已交付"
-    },
-    "deliveredHint": "已在 knowmart 的专家目录里，可以去工作台请它。",
-    "report": "测试报告",
-    "case": "用例 {id}",
-    "caseStatus": {
-      "passed": "通过",
-      "failed": "未通过",
-      "needs_human": "需要人来决定",
-      "error": "运行出错"
-    },
-    "expectationsMet": "期望满足 {met}/{total}",
-    "failedStep": "第 {step} 步没过：{checks}",
     "form": {
       "intro": "把你的方法写清楚：专家的逻辑只来自你写的内容，空缺的地方我们会回头问你，不替你补。",
       "title": "名字",
@@ -143,14 +127,14 @@
       "addExpectation": "加一条期望",
       "addCase": "加一个用例",
       "removeCase": "删掉这个用例",
-      "consent": "我同意把我上传的数据用于测试这位专家。测试产出不给任何人看，7 天后删除。",
+      "consent": "我同意把我上传的数据用于测试这位专家。测试跑出的成稿与各步结果只给你自己和做测试的工作人员看：你用来验收，工作人员用来验证专家做得对不对；不给别人，不作别的用途。",
       "submit": "提交",
       "invalid": "有内容没通过检查，请看各项是否填全、数字是否正确。",
       "failed": "提交没成功，请稍后再试。"
     },
     "amend": {
       "title": "补充方法",
-      "intro": "看了测试结果想改某一步，就写在这里：哪一步、改成什么、为什么。只写方法，不用写技术细节。我们照着改出下一稿，再测试。写下后不能改，要撤回就再写一条。",
+      "intro": "看了测试结果想改某一步，就写在这里：哪一步、改成什么、为什么。只写方法，不用写技术细节。我们照着孵化下一个分身，再测试。写下后不能改，要撤回就再写一条。",
       "open": "写一条补充",
       "label": "补充的内容",
       "submit": "提交补充",
@@ -159,9 +143,10 @@
       "written": "我写过的补充",
       "status": {
         "open": "待处理",
-        "used": "已用进第 {revision} 稿",
+        "used": "已用进第 {revision} 个分身",
         "declined": "没照做：{reason}"
-      }
+      },
+      "none": "还没有写过补充。"
     }
   },
   "knowbotData": {
@@ -190,10 +175,173 @@
   },
   "knowbotQuestions": {
     "title": "需要你回答的问题",
-    "intro": "测试跑到要你决定的地方停下了：这是你的方法上的判断，只能你自己答。答完测试接着跑，你的回答会记进这位专家的下一版。",
+    "intro": "测试跑到要你决定的地方停下了：这是你的方法上的判断，只能你自己答。答完测试接着跑，你的回答会记进下一个分身。",
     "failed": "没有提交成功，请再试一次。",
-    "where": "{title} · 第 {version} 版",
+    "where": "{avatar} · {case}",
     "ownWords": "写下你的回答",
-    "answer": "回答"
+    "answer": "回答",
+    "loading": "正在读取……",
+    "loadFailed": "读取失败，请刷新再试。",
+    "empty": "现在没有要你回答的问题。"
+  },
+  "knowbots": {
+    "loading": "正在读取……",
+    "loadFailed": "读取失败，请刷新再试。",
+    "avatar": "分身 {version}.{revision}",
+    "caseN": "你的第 {n} 条用例",
+    "caseId": "用例 {id}",
+    "casesPassed": "{met}/{total} 条用例通过",
+    "progress": "走到哪了",
+    "ideaStatus": {
+      "hatching": "已提交，等我们孵化",
+      "working": "分身在做",
+      "waiting": "等你回答",
+      "failed": "没通过，在改",
+      "expert": "已出专家"
+    },
+    "avatarStatus": {
+      "hatching": "孵化中",
+      "pending": "等测试",
+      "testing": "测试中",
+      "waiting": "等你回答",
+      "failed": "没通过",
+      "passed": "通过",
+      "delivered": "已成专家"
+    },
+    "ideaSteps": {
+      "submit": "提交",
+      "test": "分身测试",
+      "expert": "专家"
+    },
+    "avatarSteps": {
+      "hatch": "孵化",
+      "review": "核对",
+      "test": "测试",
+      "expert": "成为专家"
+    },
+    "side": {
+      "label": "我的方法与用例",
+      "expand": "展开我的方法与用例",
+      "collapse": "收起",
+      "resize": "拖动调整宽度",
+      "open": "我的方法与用例"
+    },
+    "tabs": {
+      "method": "我的方法",
+      "cases": "我的用例",
+      "amendments": "我的补充",
+      "rules": "我的话用在了哪"
+    },
+    "cases": {
+      "none": "没有用例。",
+      "noExpectation": "没有写期望。",
+      "where": "交回物 · 其中哪一项",
+      "tolerance": "允许误差"
+    },
+    "rules": {
+      "none": "这个分身没有写规则出处。",
+      "intro": "这个分身的每条规则，出自你写的哪句话：",
+      "from": "出自你写的：{ref}"
+    },
+    "home": {
+      "title": "首页",
+      "intro": "到哪了、要你做什么，都在这里。",
+      "questions": "待我回答",
+      "questionsNone": "现在没有要你回答的问题。",
+      "questionsSome": "有 {n} 个问题等你回答：测试停在那里，答完接着跑。",
+      "toQuestions": "去回答",
+      "ideas": "进行中的创意",
+      "ideasNone": "没有进行中的创意。",
+      "allIdeas": "全部创意",
+      "results": "最近的测试结果",
+      "resultsNone": "还没有测完的分身。",
+      "experts": "专家",
+      "expertsNone": "还没有做出来的专家。"
+    },
+    "ideas": {
+      "title": "创意",
+      "intro": "你交来的方法和验收用例。我们照着孵化分身去测试，测试通过的成为专家，只归你自己。",
+      "new": "提交一个创意",
+      "empty": "你还没有提交过创意。",
+      "list": "我的创意",
+      "submittedAt": "{at} 提交",
+      "avatars": "它的分身",
+      "noAvatar": "还没有分身：我们在照你的方法孵化第一个。",
+      "next": {
+        "hatching": "已收到，我们在照你的方法孵化第一个分身。",
+        "working": "分身在做：孵出后核对、测试，测完结果在分身页。",
+        "waiting": "测试停在要你决定的地方，请先回答下面的问题。",
+        "failed": "最新的分身没通过。看它的测试结果；想改哪一步就写一条补充，我们照着孵化下一个分身。",
+        "expert": "已经做出专家，可以去工作台请它。"
+      }
+    },
+    "avatars": {
+      "title": "分身",
+      "intro": "照你的创意孵化出来、拿去测试的那一个。没通过就照你的补充孵化下一个分身。",
+      "empty": "还没有分身。提交创意后，我们照你的方法孵化第一个。",
+      "list": "分身",
+      "superseded": "已有更新的分身",
+      "toIdea": "看它的创意",
+      "done": "已跑完 {done} 条用例。",
+      "doneOf": "已跑完 {done}/{total} 条用例。",
+      "now": {
+        "hatching": "我们在照你的方法孵化。",
+        "pending": "分身已孵出，我们核对过后开始测试。",
+        "testing": "测试在跑，跑完这里出结果。",
+        "waiting": "测试停在要你决定的地方，答完接着跑。",
+        "failed": "没通过：看下面每条用例的原因。想改哪一步，就去创意页写一条补充，我们照着孵化下一个分身。",
+        "passed": "测试通过，正在交给 knowmart 成为专家。",
+        "delivered": "已成为专家，可以去工作台请它。"
+      }
+    },
+    "results": {
+      "title": "测试结果",
+      "finishedAt": "{at} 测完"
+    },
+    "result": {
+      "passed": "通过",
+      "failed": "没通过",
+      "needs_human": "要人来决定",
+      "error": "平台出错",
+      "platformError": "这次是平台出了错，不是你方法的问题，我们会重测",
+      "expectationsMet": "期望对上了 {met}/{total} 条",
+      "question": "你问的：{question}",
+      "failedStep": "{step} 没过",
+      "noReason": "这一步交回的结果没达到要求。"
+    },
+    "outputs": {
+      "deliverable": "成稿",
+      "truncated": "成稿太长，只显示前面一部分。",
+      "noDeliverable": "这条用例没有成稿。",
+      "noDeliverableWhy": "这条用例没有成稿：{why}",
+      "none": "这次测试没有取到成稿。",
+      "loadFailed": "成稿没读出来，请刷新再试。",
+      "steps": "每一步的结果",
+      "step": "第 {n} 步 · {title}",
+      "stepN": "第 {n} 步",
+      "raw": "最后一次交回的原文",
+      "omitted": "这一步的结果太大（{bytes} 字节），没有带回。",
+      "outcome": {
+        "accepted": "通过",
+        "rejected": "没通过",
+        "failed": "出错",
+        "over_budget": "超出预算，停下了",
+        "cancelled": "停下了",
+        "running": "进行中",
+        "not_reached": "没走到"
+      }
+    },
+    "experts": {
+      "title": "专家",
+      "intro": "测试通过、交付了的专家，按你的方法、用你的数据做成，只归你自己。",
+      "empty": "还没有做出来的专家。分身测试通过后就成为专家。",
+      "list": "专家",
+      "version": "第 {version} 版",
+      "deliveredAt": "{at} 交付",
+      "fromIdea": "出自创意：",
+      "fromAvatar": "出自分身：",
+      "hint": "去 knowbench 工作台请它：在工作台选专家时找「{name}」。",
+      "versions": "这个创意做出来的各版"
+    }
   }
 }

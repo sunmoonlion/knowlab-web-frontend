@@ -5,17 +5,25 @@ import type { z } from 'zod'
 import {
   amendedSchema,
   answeredSchema,
+  draftDetailSchema,
   myDataSchema,
+  myKnowbotsSchema,
   myQuestionsSchema,
   myRequestsSchema,
+  outputsSchema,
+  requestDetailSchema,
   runtimesSchema,
   submittedSchema,
   uploadedSchema,
   type Dataset,
+  type DraftDetail,
+  type Knowbot,
   type KnowbotRequestIn,
   type MyData,
   type MyQuestion,
   type MyRequests,
+  type Outputs,
+  type RequestDetail,
 } from '@/contracts/knowbots'
 import { ApiClientError, requestJson } from '@/lib/common/api-client'
 
@@ -37,7 +45,35 @@ export async function fetchMyRequests(): Promise<MyRequests> {
   return parse(myRequestsSchema, await requestJson('/api/web/v1/knowbot-requests'))
 }
 
-// 给自己的想法写一条补充方法（SDD 0035）：写下后不能改，要撤回就再写一条
+const enc = encodeURIComponent
+
+// 我的一个创意：方法原文与用例（SDD 0037）；不是自己的回 404
+export async function fetchRequestDetail(requestId: string): Promise<RequestDetail> {
+  return parse(
+    requestDetailSchema,
+    await requestJson(`/api/web/v1/knowbot-requests/${enc(requestId)}`),
+  )
+}
+
+// 我的一个分身：状态、测试结果、规则出处
+export async function fetchDraftDetail(draftId: string): Promise<DraftDetail> {
+  return parse(draftDetailSchema, await requestJson(`/api/web/v1/knowbot-drafts/${enc(draftId)}`))
+}
+
+// 这个分身最近一次测试每条用例的成稿与各步交回物
+export async function fetchOutputs(draftId: string): Promise<Outputs> {
+  return parse(
+    outputsSchema,
+    await requestJson(`/api/web/v1/knowbot-drafts/${enc(draftId)}/outputs`),
+  )
+}
+
+// 做出来的专家（交付了的各版）
+export async function fetchMyKnowbots(): Promise<Knowbot[]> {
+  return parse(myKnowbotsSchema, await requestJson('/api/web/v1/knowbots')).knowbots
+}
+
+// 给自己的创意写一条补充方法（SDD 0035）：写下后不能改，要撤回就再写一条
 export async function amendRequest(
   requestId: string,
   text: string,
