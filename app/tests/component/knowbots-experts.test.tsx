@@ -57,12 +57,14 @@ describe('专家', () => {
       }),
     ])
     renderWith(<ExpertsView />)
-    const list = await screen.findByRole('complementary', { name: '专家' })
-    const rows = within(list).getAllByRole('button')
-    expect(rows[0]).toHaveTextContent('茅台财务体检 2')
-    expect(rows[1]).toHaveTextContent('茅台财务体检')
+    const box = await screen.findByRole('button', { name: '专家' })
+    expect(box).toHaveTextContent('茅台财务体检 2')
+    fireEvent.click(box)
+    const options = screen.getAllByRole('option')
+    expect(options[0]).toHaveTextContent('茅台财务体检 2')
+    expect(options[1]).toHaveTextContent('茅台财务体检')
     expect(screen.queryByText(/我的专家/)).toBeNull()
-    fireEvent.click(rows[1])
+    fireEvent.click(options[1])
     const main = screen.getByRole('region', { name: '茅台财务体检' })
     expect(within(main).getByRole('link', { name: '财务分析与预测' })).toHaveAttribute(
       'href',

@@ -8,12 +8,12 @@ import { Link } from '@/i18n/navigation'
 import { fetchDraftDetail, fetchRequestDetail } from '@/lib/knowbots/client'
 
 import { QuestionsHere } from './my-questions'
+import { Picker, rememberPick, type PickerGroup } from './picker'
 import { Cases, Method, RuleSources } from './reference'
 import {
   AvatarBadge,
   Card,
   Progress,
-  Row,
   avatarName,
   useMine,
   type Avatar,
@@ -35,9 +35,14 @@ const STEP_AT: Record<AvatarStatus, number> = {
   delivered: 4,
 }
 
-// 列表里谁排前面：等我答的、在测的，其余照创意与分身的先后
-function rank(a: Avatar): number {
-  return a.status === 'waiting' ? 0 : a.status === 'testing' ? 1 : 2
+// 选择框里怎么分组：等你回答的在前，然后在做的、已成专家的，最后是旧的（已有更新的分身）
+type Group = 'mine' | 'working' | 'expert' | 'history'
+const GROUPS: readonly Group[] = ['mine', 'working', 'expert', 'history']
+
+function groupOf(a: Avatar): Group {
+  if (a.status === 'waiting') return 'mine'
+  if (!a.latest) return 'history'
+  return a.status === 'delivered' ? 'expert' : 'working'
 }
 
 export function AvatarsView({
@@ -50,8 +55,23 @@ export function AvatarsView({
   const t = useTranslations('knowbots')
   const { avatars, error, pending } = useMine()
   const [picked, setPicked] = useState<string | null>(initial ?? null)
-  const sorted = [...avatars].sort((a, b) => rank(a) - rank(b))
-  const current = sorted.find((a) => a.draft.draft_id === picked) ?? sorted[0] ?? null
+  const groups: PickerGroup[] = GROUPS.map((g) => ({
+    key: g,
+    label: t(`picker.groups.${g}`),
+    items: avatars
+      .filter((a) => groupOf(a) === g)
+      .map((a) => ({
+        id: a.draft.draft_id,
+        title: `${avatarName(t, a.draft)} · ${a.request.title}`,
+        badge: <AvatarBadge status={a.status} />,
+      })),
+  }))
+  // 没点名的：等你回答的第一件，没有就在做的
+  const first = groups.flatMap((g) => g.items)[0]?.id
+  const current =
+    avatars.find((a) => a.draft.draft_id === picked) ??
+    avatars.find((a) => a.draft.draft_id === first) ??
+    null
 
   return (
     <div className="mt-6 space-y-4">
@@ -61,38 +81,25 @@ export function AvatarsView({
         </p>
       ) : pending ? (
         <p className="text-muted-foreground text-sm">{t('loading')}</p>
-      ) : sorted.length === 0 ? (
+      ) : avatars.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t('avatars.empty')}</p>
       ) : (
-        <div className="flex flex-col items-start gap-6 lg:flex-row">
-          <aside aria-label={t('avatars.list')} className="w-full space-y-2 lg:w-72 lg:shrink-0">
-            <ul className="space-y-2">
-              {sorted.map((a) => (
-                <li key={a.draft.draft_id}>
-                  <Row
-                    selected={a.draft.draft_id === current?.draft.draft_id}
-                    onPick={() => setPicked(a.draft.draft_id)}
-                  >
-                    <span className="flex items-start justify-between gap-2">
-                      <span className="font-medium">
-                        {avatarName(t, a.draft)} · {a.request.title}
-                      </span>
-                      <AvatarBadge status={a.status} />
-                    </span>
-                    {a.latest ? null : (
-                      <span className="text-muted-foreground mt-1 block text-xs">
-                        {t('avatars.superseded')}
-                      </span>
-                    )}
-                  </Row>
-                </li>
-              ))}
-            </ul>
-          </aside>
+        <>
+          <Picker
+            label={t('avatars.list')}
+            groups={groups}
+            value={current?.draft.draft_id ?? null}
+            onPick={(id) => {
+              setPicked(id)
+              rememberPick({ draft: id })
+            }}
+          />
           {current ? (
-            <Workspace key={current.draft.draft_id} avatar={current} csrfToken={csrfToken} />
+            <div className="flex flex-col items-start gap-6 lg:flex-row">
+              <Workspace key={current.draft.draft_id} avatar={current} csrfToken={csrfToken} />
+            </div>
           ) : null}
-        </div>
+        </>
       )}
     </div>
   )

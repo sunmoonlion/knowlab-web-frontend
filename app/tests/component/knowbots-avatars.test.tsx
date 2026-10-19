@@ -107,13 +107,20 @@ describe('分身', () => {
       ),
     )
     renderPage()
-    const list = await screen.findByRole('complementary', { name: '分身' })
-    const rows = within(list).getAllByRole('button')
-    expect(rows[0]).toHaveTextContent('分身 1.2 · 财务分析与预测')
-    expect(rows[0]).toHaveTextContent('测试中')
-    expect(rows[1]).toHaveTextContent('分身 1.1 · 财务分析与预测')
-    expect(rows[1]).toHaveTextContent('没通过')
-    expect(rows[1]).toHaveTextContent('已有更新的分身')
+    const box = await screen.findByRole('button', { name: '分身' })
+    expect(box).toHaveTextContent('分身 1.2 · 财务分析与预测')
+    expect(screen.queryByRole('complementary', { name: '分身' })).toBeNull()
+    fireEvent.click(box)
+    const groups = within(screen.getByRole('listbox', { name: '分身' })).getAllByRole('group')
+    expect(groups.map((g) => g.getAttribute('aria-label'))).toEqual([
+      '在做',
+      '旧的分身（已有更新的）',
+    ])
+    expect(within(groups[0]).getByRole('option')).toHaveTextContent('分身 1.2 · 财务分析与预测')
+    expect(within(groups[0]).getByRole('option')).toHaveTextContent('测试中')
+    expect(within(groups[1]).getByRole('option')).toHaveTextContent('分身 1.1 · 财务分析与预测')
+    expect(within(groups[1]).getByRole('option')).toHaveTextContent('没通过')
+    fireEvent.keyDown(screen.getByRole('searchbox', { name: '搜名字' }), { key: 'Escape' })
     // 测试中只给一句，不给管理端那样的细进度
     expect(screen.getByText('测试在跑，跑完这里出结果。')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '看它的创意' })).toHaveAttribute(
