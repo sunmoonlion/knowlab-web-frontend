@@ -3,6 +3,7 @@
 import type { z } from 'zod'
 
 import {
+  amendedSchema,
   answeredSchema,
   myDataSchema,
   myQuestionsSchema,
@@ -34,6 +35,19 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
 
 export async function fetchMyRequests(): Promise<MyRequests> {
   return parse(myRequestsSchema, await requestJson('/api/web/v1/knowbot-requests'))
+}
+
+// 给自己的想法写一条补充方法（SDD 0035）：写下后不能改，要撤回就再写一条
+export async function amendRequest(
+  requestId: string,
+  text: string,
+  csrfToken: string,
+): Promise<string> {
+  const answer = await requestJson(
+    `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/amendments`,
+    { method: 'POST', csrfToken, body: { text } },
+  )
+  return parse(amendedSchema, answer).amendment_id
 }
 
 export async function fetchRuntimes(): Promise<string[]> {

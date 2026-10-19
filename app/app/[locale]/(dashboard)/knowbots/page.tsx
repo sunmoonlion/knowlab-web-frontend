@@ -59,7 +59,7 @@ export default async function KnowbotRequestsPage({
           </Link>
         </p>
         <MyQuestions csrfToken={session.csrf_token} />
-        <MyRequests />
+        <MyRequests csrfToken={session.csrf_token} />
         <MyData csrfToken={session.csrf_token} />
       </main>
     </div>

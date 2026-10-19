@@ -59,6 +59,19 @@ const draftSchema = z
   })
   .strict()
 
+// 我给这个想法写的补充方法（SDD 0035）：原话写下后不能改；状态由各稿推出来
+const amendmentSchema = z
+  .object({
+    amendment_id: z.string().uuid(),
+    text: z.string().min(1).max(4000),
+    created_at: z.string().nullable(),
+    status: z.enum(['open', 'used', 'declined']),
+    used_in_revision: z.number().int().min(1).nullable(),
+    declined_reason: z.string().max(500).nullable(),
+    declined_at: z.string().nullable(),
+  })
+  .strict()
+
 const requestSchema = z
   .object({
     request_id: z.string().uuid(),
@@ -66,7 +79,13 @@ const requestSchema = z
     runtime: z.string().regex(RUNTIME),
     created_at: z.string().nullable(),
     drafts: z.array(draftSchema),
+    // 后端先发、网页后发都要能读：旧后端没有这一项
+    amendments: z.array(amendmentSchema).max(200).optional(),
   })
+  .strict()
+
+export const amendedSchema = z
+  .object({ contract_version: z.literal(1), amendment_id: z.string().uuid() })
   .strict()
 
 export const myRequestsSchema = z
@@ -166,3 +185,4 @@ export type MyRequests = z.infer<typeof myRequestsSchema>
 export type KnowbotRequest = z.infer<typeof requestSchema>
 export type KnowbotDraft = z.infer<typeof draftSchema>
 export type CaseResult = z.infer<typeof caseResultSchema>
+export type Amendment = z.infer<typeof amendmentSchema>

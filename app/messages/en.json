@@ -147,6 +147,21 @@
       "submit": "Submit",
       "invalid": "Something did not pass the checks. Please make sure every field is filled in and numbers are valid.",
       "failed": "Could not submit. Please try again later."
+    },
+    "amend": {
+      "title": "Amend the method",
+      "intro": "If a test result makes you want to change a step, write it here: which step, what it should become, and why. Write the method only, no technical detail. We will change the next draft accordingly and test it again. What you write cannot be edited; to take it back, write another one.",
+      "open": "Write an amendment",
+      "label": "Your amendment",
+      "submit": "Submit",
+      "cancel": "Cancel",
+      "failed": "It was not submitted. Please try again later.",
+      "written": "Amendments I wrote",
+      "status": {
+        "open": "waiting",
+        "used": "used in draft {revision}",
+        "declined": "not followed: {reason}"
+      }
     }
   },
   "knowbotData": {
