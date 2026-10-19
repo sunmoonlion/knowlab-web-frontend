@@ -1,12 +1,13 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
-import { buttonVariants } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
+import type { KnowbotRequest } from '@/contracts/knowbots'
 import { Link } from '@/i18n/navigation'
-import { fetchRequestDetail } from '@/lib/knowbots/client'
+import { acceptConsent, fetchRequestDetail } from '@/lib/knowbots/client'
 
 import { Amendments } from './amendments'
 import { QuestionsHere } from './my-questions'
@@ -115,13 +116,15 @@ function Workspace({
             <IdeaBadge status={status} />
           </div>
           <Progress
-            steps={['submit', 'test', 'expert'].map((s) => t(`ideaSteps.${s}`))}
-            at={status === 'expert' ? 3 : 1}
+            steps={['submit', 'hatch', 'test', 'expert'].map((s) => t(`ideaSteps.${s}`))}
+            // 还没有分身：在孵化；有分身在测或没通过：在测试；出了专家：都走完
+            at={status === 'expert' ? 4 : avatars.length === 0 ? 1 : 2}
             bad={status === 'failed'}
             label={t('progress')}
           />
           <p className="text-muted-foreground text-sm">{t(`ideas.next.${status}`)}</p>
         </header>
+        <ConsentNotice request={request} csrfToken={csrfToken} />
         <QuestionsHere
           questions={idea.questions}
           csrfToken={csrfToken}
@@ -174,5 +177,31 @@ function Workspace({
         />
       ) : null}
     </>
+  )
+}
+
+/** 这个创意是在旧的测试数据说明下提交的：同意新说明之前，测试产出不取、不显示（审读 10-19）。 */
+function ConsentNotice({ request, csrfToken }: { request: KnowbotRequest; csrfToken: string }) {
+  const t = useTranslations('knowbots')
+  const client = useQueryClient()
+  const accept = useMutation({
+    mutationFn: () => acceptConsent(request.request_id, csrfToken),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['web'] }),
+  })
+  if (!request.consent_version || !request.consent_current) return null
+  if (request.consent_version >= request.consent_current) return null
+  return (
+    <div className="space-y-2 rounded-lg border border-amber-300 p-4 text-sm" role="status">
+      <p>{t('consent.needed')}</p>
+      <p className="text-muted-foreground">{t('consent.text')}</p>
+      {accept.isError ? (
+        <p className="text-destructive" role="alert">
+          {t('consent.failed')}
+        </p>
+      ) : null}
+      <Button size="sm" disabled={accept.isPending} onClick={() => accept.mutate()}>
+        {t('consent.accept')}
+      </Button>
+    </div>
   )
 }

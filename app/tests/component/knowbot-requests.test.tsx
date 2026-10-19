@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { IdeasView } from '@/components/knowbots/ideas-view'
+import messages from '@/messages/zh-CN.json'
 import { RequestForm } from '@/components/knowbots/request-form'
 import { ApiClientError } from '@/lib/common/api-client'
 import {
@@ -30,6 +31,7 @@ import {
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }))
 
 vi.mock('@/lib/knowbots/client', () => ({
+  acceptConsent: vi.fn(),
   amendRequest: vi.fn(),
   answerMyQuestion: vi.fn(),
   fetchMyQuestions: vi.fn(),
@@ -124,6 +126,27 @@ describe('创意', () => {
         CSRF,
       ),
     )
+  })
+
+  it('an idea under the old notice asks for consent before outputs are shown (SDD 0037)', async () => {
+    const { acceptConsent } = await import('@/lib/knowbots/client')
+    vi.mocked(acceptConsent).mockReset().mockResolvedValue(undefined)
+    vi.mocked(fetchMyRequests).mockResolvedValue(
+      mine(request({ consent_version: 1, consent_current: 2 })),
+    )
+    renderWith(<IdeasView csrfToken={CSRF} picked={REQUEST} />)
+    expect(await screen.findByText(messages.knowbots.consent.needed)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: messages.knowbots.consent.accept }))
+    await waitFor(() => expect(acceptConsent).toHaveBeenCalledWith(REQUEST, CSRF))
+  })
+
+  it('an idea under the current notice shows no consent line', async () => {
+    vi.mocked(fetchMyRequests).mockResolvedValue(
+      mine(request({ consent_version: 2, consent_current: 2 })),
+    )
+    renderWith(<IdeasView csrfToken={CSRF} picked={REQUEST} />)
+    expect(await screen.findByRole('heading', { level: 2 })).toBeInTheDocument()
+    expect(screen.queryByText(messages.knowbots.consent.needed)).toBeNull()
   })
 
   it('shows empty and failed states', async () => {

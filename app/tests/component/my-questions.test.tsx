@@ -4,10 +4,14 @@ import { NextIntlClientProvider } from 'next-intl'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { MyQuestions } from '@/components/knowbots/my-questions'
-import { answerMyQuestion, fetchMyQuestions } from '@/lib/knowbots/client'
+import { answerMyQuestion, fetchMyQuestions, fetchMyRequests } from '@/lib/knowbots/client'
 import messages from '@/messages/zh-CN.json'
 
-vi.mock('@/lib/knowbots/client', () => ({ fetchMyQuestions: vi.fn(), answerMyQuestion: vi.fn() }))
+vi.mock('@/lib/knowbots/client', () => ({
+  fetchMyQuestions: vi.fn(),
+  fetchMyRequests: vi.fn(),
+  answerMyQuestion: vi.fn(),
+}))
 
 const CSRF = 'csrf-token-value-that-is-long-enough-1234'
 const Q = {
@@ -36,6 +40,7 @@ function page() {
 }
 
 beforeEach(() => {
+  vi.mocked(fetchMyRequests).mockReset().mockResolvedValue({ contract_version: 1, requests: [] })
   vi.mocked(fetchMyQuestions).mockReset()
   vi.mocked(answerMyQuestion).mockReset().mockResolvedValue(undefined)
 })
@@ -66,6 +71,47 @@ describe('待我回答', () => {
     const second = screen.getByRole('region', { name: '估值' })
     expect(within(second).getByText('用哪个折现率？')).toBeInTheDocument()
     expect(within(second).getByText('分身 1.3 · 你的第 2 条用例')).toBeInTheDocument()
+  })
+
+  it('keeps two ideas with the same title apart by which avatar asked', async () => {
+    const A = '1b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10'
+    const B = '2b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10'
+    const draftOf = (draft_id: string) => ({
+      draft_id,
+      revision: 1,
+      version: '1',
+      status: 'testing' as const,
+      name: null,
+      report: null,
+      knowbot_id: null,
+    })
+    vi.mocked(fetchMyRequests).mockResolvedValue({
+      contract_version: 1,
+      requests: [
+        {
+          request_id: '3b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10',
+          title: '财务分析与预测',
+          runtime: 'knowbench',
+          created_at: null,
+          drafts: [draftOf(A)],
+        },
+        {
+          request_id: '4b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10',
+          title: '财务分析与预测',
+          runtime: 'knowbench',
+          created_at: null,
+          drafts: [draftOf(B)],
+        },
+      ],
+    })
+    vi.mocked(fetchMyQuestions).mockResolvedValue([
+      { ...Q, draft_id: A },
+      { ...Q, question_id: '7b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10', text: '取几年？', draft_id: B },
+    ])
+    page()
+    await waitFor(() =>
+      expect(screen.getAllByRole('region', { name: '财务分析与预测' })).toHaveLength(2),
+    )
   })
 
   it('answers with an option or in my own words', async () => {

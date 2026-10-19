@@ -1,14 +1,14 @@
 'use client'
 
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import type { MyQuestion } from '@/contracts/knowbots'
-import { answerMyQuestion } from '@/lib/knowbots/client'
+import { answerMyQuestion, fetchMyRequests } from '@/lib/knowbots/client'
 
-import { QUESTIONS_KEY, caseName, useMyQuestions } from './shared'
+import { MY_REQUESTS_KEY, QUESTIONS_KEY, caseName, useMyQuestions } from './shared'
 
 // 测试中需要你回答的问题（SDD 0027 §3.4、0037 §四）：涉及你的方法上的判断，只能你自己答（C-L1）。
 // 答完测试接着跑；你的回答会记进下一个分身的规则出处。「待我回答」页按创意分组，创意页、分身页就地答。
@@ -32,6 +32,7 @@ function useAnswer(csrfToken: string) {
 export function MyQuestions({ csrfToken }: { csrfToken: string }) {
   const t = useTranslations('knowbotQuestions')
   const list = useMyQuestions()
+  const requests = useQuery({ queryKey: MY_REQUESTS_KEY, queryFn: fetchMyRequests })
   const { answer, failed } = useAnswer(csrfToken)
   if (list.isPending) return <p className="text-muted-foreground mt-6">{t('loading')}</p>
   if (list.isError)
@@ -41,8 +42,19 @@ export function MyQuestions({ csrfToken }: { csrfToken: string }) {
       </p>
     )
   if (list.data.length === 0) return <p className="text-muted-foreground mt-6">{t('empty')}</p>
-  const groups = new Map<string, MyQuestion[]>()
-  for (const q of list.data) groups.set(q.title, [...(groups.get(q.title) ?? []), q])
+  // 按创意分组：问题带着是哪个分身的（draft_id），反查它的创意；两个创意同名也分得开
+  const ideaOf = new Map(
+    (requests.data?.requests ?? []).flatMap((r) =>
+      r.drafts.map((d) => [d.draft_id, r.request_id] as const),
+    ),
+  )
+  const groups = new Map<string, { title: string; questions: MyQuestion[] }>()
+  for (const q of list.data) {
+    const key = (q.draft_id && ideaOf.get(q.draft_id)) || `title:${q.title}`
+    const group = groups.get(key) ?? { title: q.title, questions: [] }
+    group.questions.push(q)
+    groups.set(key, group)
+  }
   return (
     <div className="mt-6 space-y-4">
       <p className="text-muted-foreground text-sm">{t('intro')}</p>
@@ -51,9 +63,9 @@ export function MyQuestions({ csrfToken }: { csrfToken: string }) {
           {t('failed')}
         </p>
       ) : null}
-      {[...groups].map(([title, questions]) => (
+      {[...groups].map(([key, { title, questions }]) => (
         <section
-          key={title}
+          key={key}
           aria-label={title}
           className="bg-card space-y-4 rounded-xl border p-4 shadow-sm"
         >

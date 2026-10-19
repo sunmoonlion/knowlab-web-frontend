@@ -127,7 +127,7 @@
       "addExpectation": "Add an expectation",
       "addCase": "Add a case",
       "removeCase": "Remove this case",
-      "consent": "I agree that the data I upload may be used to test this knowbot. The write-ups and step results of a test are shown only to you and to the staff running the test: you use them to accept the knowbot, the staff to check it works correctly. They are not shown to anyone else or used for anything else.",
+      "consent": "I agree that the data I upload may be used to test this knowbot. The write-ups and step results of a test are shown only to me and to the staff running the test: I use them to accept the knowbot, the staff to check it works correctly. They are not used for training, not shown to other users and not used for anything else. They are deleted 90 days after the avatar is delivered or replaced by a newer one.",
       "submit": "Submit",
       "invalid": "Something did not pass the checks. Please make sure every field is filled in and numbers are valid.",
       "failed": "Could not submit. Please try again later."
@@ -210,6 +210,7 @@
     },
     "ideaSteps": {
       "submit": "Submitted",
+      "hatch": "Hatch",
       "test": "Avatar testing",
       "expert": "Expert"
     },
@@ -342,6 +343,13 @@
       "fromAvatar": "From avatar: ",
       "hint": "Summon it from the knowbench workbench: look for \"{name}\" when choosing an expert.",
       "versions": "Versions made from this idea"
+    },
+    "consent": {
+      "needed": "This idea was submitted under the old test-data notice. Accept the new notice to see the write-ups and step results of its tests.",
+      "text": "New notice: the write-ups and step results of a test are shown only to you and to the staff running the test — you use them to accept the knowbot, the staff to check it works correctly. They are not used for training, not shown to other users and not used for anything else. They are deleted 90 days after the avatar is delivered or replaced by a newer one.",
+      "accept": "Accept the new notice",
+      "failed": "That did not work; please try again later.",
+      "hidden": "This idea has not accepted the new test-data notice, so write-ups and step results are hidden for now. Accept it on the idea page."
     }
   }
 }

@@ -49,6 +49,7 @@ export function TestResults({
   })
   if (!report || done === 0) return null
   const finished = when(report.finished_at)
+  const consentNeeded = Boolean(outputs.data?.consent_needed)
   return (
     <section className="space-y-3" aria-label={t('results.title')}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -59,6 +60,11 @@ export function TestResults({
           </p>
         ) : null}
       </div>
+      {consentNeeded ? (
+        <p className="text-sm text-amber-800 dark:text-amber-300" role="status">
+          {t('consent.hidden')}
+        </p>
+      ) : null}
       {report.cases.map((c) => {
         const found = outputs.data?.cases.find((o) => o.case_id === c.case_id)
         return (

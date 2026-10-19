@@ -60,6 +60,14 @@ export async function fetchDraftDetail(draftId: string): Promise<DraftDetail> {
   return parse(draftDetailSchema, await requestJson(`/api/web/v1/knowbot-drafts/${enc(draftId)}`))
 }
 
+// 同意新一版测试数据说明（SDD 0037）：之后测试的成稿与各步结果才取、才显示
+export async function acceptConsent(requestId: string, csrfToken: string): Promise<void> {
+  await requestJson(`/api/web/v1/knowbot-requests/${enc(requestId)}/consent`, {
+    method: 'POST',
+    csrfToken,
+  })
+}
+
 // 这个分身最近一次测试每条用例的成稿与各步交回物
 export async function fetchOutputs(draftId: string): Promise<Outputs> {
   return parse(
