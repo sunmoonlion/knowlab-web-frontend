@@ -220,17 +220,6 @@
       "test": "测试",
       "expert": "成为专家"
     },
-    "picker": {
-      "search": "搜名字",
-      "none": "选一个",
-      "noMatch": "没有对得上的。",
-      "groups": {
-        "mine": "等你回答",
-        "working": "在做",
-        "expert": "已出专家",
-        "history": "旧的分身（已有更新的）"
-      }
-    },
     "side": {
       "label": "我的方法与用例",
       "expand": "展开我的方法与用例",

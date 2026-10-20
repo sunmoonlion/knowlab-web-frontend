@@ -220,17 +220,6 @@
       "test": "Test",
       "expert": "Become an expert"
     },
-    "picker": {
-      "search": "Search by name",
-      "none": "Pick one",
-      "noMatch": "Nothing matches.",
-      "groups": {
-        "mine": "Waiting for you",
-        "working": "In progress",
-        "expert": "Became experts",
-        "history": "Older avatars (superseded)"
-      }
-    },
     "side": {
       "label": "My method and cases",
       "expand": "Expand my method and cases",

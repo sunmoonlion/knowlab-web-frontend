@@ -233,6 +233,31 @@ export function Progress({
   )
 }
 
+/** 列表里的一行。 */
+export function Row({
+  selected,
+  onPick,
+  children,
+}: {
+  selected: boolean
+  onPick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      aria-current={selected ? 'true' : undefined}
+      onClick={onPick}
+      className={cn(
+        'bg-card w-full rounded-lg border p-3 text-left text-sm transition-colors',
+        selected ? 'border-primary ring-primary/30 ring-2' : 'hover:bg-accent',
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
 /** 主栏里的一块。 */
 export function Card({
   title,

@@ -11,13 +11,13 @@ import { acceptConsent, fetchRequestDetail } from '@/lib/knowbots/client'
 
 import { Amendments } from './amendments'
 import { QuestionsHere } from './my-questions'
-import { Picker, rememberPick, type PickerGroup } from './picker'
 import { AmendmentList, Cases, Method } from './reference'
 import {
   AvatarBadge,
   Card,
   IdeaBadge,
   Progress,
+  Row,
   avatarName,
   casesLine,
   useMine,
@@ -29,61 +29,19 @@ import { SidePanel } from './side-panel'
 
 // 创意（SDD 0037 §四.3）：我交来的方法、用例，之后写的补充也挂在这里。
 // 主栏：走到哪、要我答的问题（就地答）、补充方法（写、看状态）、它的分身（点了去分身页）。
-// 选哪个创意用页面顶上的选择框，中间整块是它的详情。
-
-// 选择框里怎么分组：等你回答的在前，然后在做的，最后已出专家的
-type Group = 'mine' | 'working' | 'expert'
-const GROUPS: readonly Group[] = ['mine', 'working', 'expert']
-
-function groupOf(idea: Idea): Group {
-  return idea.status === 'waiting' ? 'mine' : idea.status === 'expert' ? 'expert' : 'working'
-}
 
 export function IdeasView({ csrfToken, picked: initial }: { csrfToken: string; picked?: string }) {
   const t = useTranslations('knowbots')
   const when = useWhen()
   const { ideas, avatars, error, pending } = useMine()
   const [picked, setPicked] = useState<string | null>(initial ?? null)
-  const groups: PickerGroup[] = GROUPS.map((g) => ({
-    key: g,
-    label: t(`picker.groups.${g}`),
-    items: ideas
-      .filter((i) => groupOf(i) === g)
-      .map((i) => {
-        const at = when(i.request.created_at)
-        return {
-          id: i.request.request_id,
-          title: i.request.title,
-          sub: at ? t('ideas.submittedAt', { at }) : undefined,
-          badge: <IdeaBadge status={i.status} />,
-        }
-      }),
-  }))
-  // 没点名的：等你回答的第一件，没有就最近的
-  const first = groups.flatMap((g) => g.items)[0]?.id
-  const current =
-    ideas.find((i) => i.request.request_id === picked) ??
-    ideas.find((i) => i.request.request_id === first) ??
-    null
+  const current = ideas.find((i) => i.request.request_id === picked) ?? ideas[0] ?? null
 
   return (
     <div className="mt-6 space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        {ideas.length > 0 ? (
-          <Picker
-            label={t('ideas.list')}
-            groups={groups}
-            value={current?.request.request_id ?? null}
-            onPick={(id) => {
-              setPicked(id)
-              rememberPick({ request: id })
-            }}
-          />
-        ) : null}
-        <Link href="/ideas/new" className={buttonVariants()}>
-          {t('ideas.new')}
-        </Link>
-      </div>
+      <Link href="/ideas/new" className={buttonVariants()}>
+        {t('ideas.new')}
+      </Link>
       {error ? (
         <p className="text-destructive text-sm" role="alert">
           {t('loadFailed')}
@@ -92,16 +50,43 @@ export function IdeasView({ csrfToken, picked: initial }: { csrfToken: string; p
         <p className="text-muted-foreground text-sm">{t('loading')}</p>
       ) : ideas.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t('ideas.empty')}</p>
-      ) : current ? (
+      ) : (
         <div className="flex flex-col items-start gap-6 lg:flex-row">
-          <Workspace
-            key={current.request.request_id}
-            idea={current}
-            avatars={avatars.filter((a) => a.request.request_id === current.request.request_id)}
-            csrfToken={csrfToken}
-          />
+          <aside aria-label={t('ideas.list')} className="w-full space-y-2 lg:w-72 lg:shrink-0">
+            <ul className="space-y-2">
+              {ideas.map((idea) => {
+                const at = when(idea.request.created_at)
+                return (
+                  <li key={idea.request.request_id}>
+                    <Row
+                      selected={idea.request.request_id === current?.request.request_id}
+                      onPick={() => setPicked(idea.request.request_id)}
+                    >
+                      <span className="flex items-start justify-between gap-2">
+                        <span className="font-medium">{idea.request.title}</span>
+                        <IdeaBadge status={idea.status} />
+                      </span>
+                      {at ? (
+                        <span className="text-muted-foreground mt-1 block text-xs">
+                          {t('ideas.submittedAt', { at })}
+                        </span>
+                      ) : null}
+                    </Row>
+                  </li>
+                )
+              })}
+            </ul>
+          </aside>
+          {current ? (
+            <Workspace
+              key={current.request.request_id}
+              idea={current}
+              avatars={avatars.filter((a) => a.request.request_id === current.request.request_id)}
+              csrfToken={csrfToken}
+            />
+          ) : null}
         </div>
-      ) : null}
+      )}
     </div>
   )
 }
