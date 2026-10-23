@@ -1,17 +1,17 @@
 'use client'
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import type { MyQuestion } from '@/contracts/knowbots'
-import { answerMyQuestion, fetchMyRequests } from '@/lib/knowbots/client'
+import { answerMyQuestion } from '@/lib/knowbots/client'
 
-import { MY_REQUESTS_KEY, QUESTIONS_KEY, caseName, useMyQuestions } from './shared'
+import { KEY, caseName } from './shared'
 
-// 测试中需要你回答的问题（SDD 0027 §3.4、0037 §四）：涉及你的方法上的判断，只能你自己答（C-L1）。
-// 答完测试接着跑；你的回答会记进下一个分身的规则出处。「待我回答」页按创意分组，创意页、分身页就地答。
+// 测试中需要你回答的问题（SDD 0027 §3.4、0037 第八节）：涉及你的方法上的判断，只能你自己答
+// （C-L1）。答完测试接着跑；你的回答会记进下一位准专家的规则出处。在「审核」里答。
 
 function useAnswer(csrfToken: string) {
   const client = useQueryClient()
@@ -21,70 +21,14 @@ function useAnswer(csrfToken: string) {
       answerMyQuestion(id, value, csrfToken),
     onSuccess: () => {
       setFailed(false)
-      return client.invalidateQueries({ queryKey: QUESTIONS_KEY })
+      return client.invalidateQueries({ queryKey: KEY })
     },
     onError: () => setFailed(true),
   })
   return { answer, failed }
 }
 
-/** 「待我回答」页：全部要我答的问题，按创意分组。 */
-export function MyQuestions({ csrfToken }: { csrfToken: string }) {
-  const t = useTranslations('knowbotQuestions')
-  const list = useMyQuestions()
-  const requests = useQuery({ queryKey: MY_REQUESTS_KEY, queryFn: fetchMyRequests })
-  const { answer, failed } = useAnswer(csrfToken)
-  if (list.isPending) return <p className="text-muted-foreground mt-6">{t('loading')}</p>
-  if (list.isError)
-    return (
-      <p className="text-destructive mt-6" role="alert">
-        {t('loadFailed')}
-      </p>
-    )
-  if (list.data.length === 0) return <p className="text-muted-foreground mt-6">{t('empty')}</p>
-  // 按创意分组：问题带着是哪个分身的（draft_id），反查它的创意；两个创意同名也分得开
-  const ideaOf = new Map(
-    (requests.data?.requests ?? []).flatMap((r) =>
-      r.drafts.map((d) => [d.draft_id, r.request_id] as const),
-    ),
-  )
-  const groups = new Map<string, { title: string; questions: MyQuestion[] }>()
-  for (const q of list.data) {
-    const key = (q.draft_id && ideaOf.get(q.draft_id)) || `title:${q.title}`
-    const group = groups.get(key) ?? { title: q.title, questions: [] }
-    group.questions.push(q)
-    groups.set(key, group)
-  }
-  return (
-    <div className="mt-6 space-y-4">
-      <p className="text-muted-foreground text-sm">{t('intro')}</p>
-      {failed ? (
-        <p className="text-destructive text-sm" role="alert">
-          {t('failed')}
-        </p>
-      ) : null}
-      {[...groups].map(([key, { title, questions }]) => (
-        <section
-          key={key}
-          aria-label={title}
-          className="bg-card space-y-4 rounded-xl border p-4 shadow-sm"
-        >
-          <h2 className="font-medium">{title}</h2>
-          {questions.map((q) => (
-            <QuestionRow
-              key={q.question_id}
-              question={q}
-              busy={answer.isPending}
-              onAnswer={(value) => answer.mutate({ id: q.question_id, value })}
-            />
-          ))}
-        </section>
-      ))}
-    </div>
-  )
-}
-
-/** 创意页、分身页上就地答：只列这个创意或分身的问题，没有就什么都不显示。 */
+/** 「审核」里就地答：只列给进来的问题，没有就什么都不显示。 */
 export function QuestionsHere({
   questions,
   csrfToken,
@@ -140,7 +84,7 @@ function QuestionRow({
     <article className="space-y-2 text-sm">
       <p className="text-muted-foreground">
         {t('where', {
-          avatar: tk('avatar', { version: q.version, revision: q.revision }),
+          draft: tk('draftLabel', { label: q.label }),
           case: caseName(tk, q.case_id, cases),
         })}
       </p>

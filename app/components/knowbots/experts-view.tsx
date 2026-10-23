@@ -1,125 +1,193 @@
 'use client'
 
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
-import type { Knowbot } from '@/contracts/knowbots'
+import { Button } from '@/components/ui/button'
+import type { ExpertItem } from '@/contracts/knowbots'
 import { Link } from '@/i18n/navigation'
+import { fetchDetail, fetchExperts, stopExpert } from '@/lib/knowbots/client'
 
-import { Card, Row, avatarName, useMyKnowbots, useWhen } from './shared'
+import { Badge, Card, ColumnLayout, EXPERT_TONE, KEY, useWhen } from './shared'
+import { SidePanel } from './side-panel'
+import { TestResults } from './test-results'
 
-// 专家（SDD 0037 §四.3）：测试通过、交付了的各版。列表直接写专家的名字，不叫「我的专家」（所有者 2026-10-18）。
+// 专家（SDD 0037 第八节）：成品，唯一不是过程的一栏，只列交回了我的各版。新交回的去「审核」
+// 定要不要；要了的等我们审核，审过就能在 knowbench 工作台请；能用的可以停用。
 // 请专家在 knowbench 工作台；这个应用还没有登记去工作台的链接，只写一句怎么去。
 
-function expertName(k: Knowbot): string {
-  return k.name ?? k.title
-}
+const FILTERS = ['new', 'accepted', 'usable', 'stopped', 'not_listed'] as const
+type Filter = (typeof FILTERS)[number]
 
-function newer(a: Knowbot, b: Knowbot): number {
-  return (b.delivered_at ?? '').localeCompare(a.delivered_at ?? '')
-}
-
-export function ExpertsView({ picked: initial }: { picked?: string }) {
+export function ExpertsView({
+  csrfToken,
+  picked: initial,
+}: {
+  csrfToken: string
+  picked?: string
+}) {
   const t = useTranslations('knowbots')
-  const when = useWhen()
-  const list = useMyKnowbots()
+  const list = useQuery({ queryKey: [...KEY, 'experts'], queryFn: fetchExperts })
   const [picked, setPicked] = useState<string | null>(initial ?? null)
-  const experts = [...(list.data ?? [])].sort(newer)
-  const current = experts.find((k) => k.draft_id === picked) ?? experts[0] ?? null
-
+  const items = list.data ?? []
   return (
-    <div className="mt-6 space-y-4">
-      {list.isError ? (
-        <p className="text-destructive text-sm" role="alert">
-          {t('loadFailed')}
-        </p>
-      ) : list.isPending ? (
-        <p className="text-muted-foreground text-sm">{t('loading')}</p>
-      ) : experts.length === 0 ? (
-        <p className="text-muted-foreground text-sm">{t('experts.empty')}</p>
-      ) : (
-        <div className="flex flex-col items-start gap-6 lg:flex-row">
-          <aside aria-label={t('experts.list')} className="w-full space-y-2 lg:w-72 lg:shrink-0">
-            <ul className="space-y-2">
-              {experts.map((k) => {
-                const at = when(k.delivered_at)
-                return (
-                  <li key={k.draft_id}>
-                    <Row
-                      selected={k.draft_id === current?.draft_id}
-                      onPick={() => setPicked(k.draft_id)}
-                    >
-                      <span className="font-medium">{expertName(k)}</span>
-                      <span className="text-muted-foreground mt-1 block text-xs">
-                        {t('experts.version', { version: k.version })}
-                        {at ? ` · ${t('experts.deliveredAt', { at })}` : ''}
-                      </span>
-                    </Row>
-                  </li>
-                )
-              })}
-            </ul>
-          </aside>
-          {current ? (
-            <Detail
-              key={current.draft_id}
-              expert={current}
-              versions={experts.filter((k) => k.request_id === current.request_id)}
-            />
-          ) : null}
-        </div>
+    <ColumnLayout<Filter, ExpertItem>
+      title={t('columns.experts')}
+      filters={FILTERS}
+      defaultFilter={items.some((i) => i.category === 'new') ? 'new' : 'usable'}
+      items={items}
+      categoryOf={(item) => item.category}
+      keyOf={(item) => item.expert_id}
+      picked={picked}
+      onPick={setPicked}
+      empty={items.length === 0 ? t('experts.empty') : t('empty')}
+      failed={list.isError}
+      pending={list.isPending}
+      renderRow={(item) => (
+        <>
+          <span className="flex items-start justify-between gap-2">
+            <span className="font-medium">{item.name ?? item.title}</span>
+            <Badge tone={EXPERT_TONE[item.stage]}>{t(`expertStage.${item.stage}`)}</Badge>
+          </span>
+          <span className="text-muted-foreground mt-1 block text-xs">
+            {t('expertVersion', { version: item.version })}
+          </span>
+        </>
       )}
-    </div>
+    >
+      {(current) =>
+        current ? (
+          <ExpertPage
+            key={current.expert_id}
+            item={current}
+            versions={items.filter((i) => i.request_id === current.request_id)}
+            csrfToken={csrfToken}
+          />
+        ) : null
+      }
+    </ColumnLayout>
   )
 }
 
-function Detail({ expert, versions }: { expert: Knowbot; versions: Knowbot[] }) {
+function ExpertPage({
+  item,
+  versions,
+  csrfToken,
+}: {
+  item: ExpertItem
+  versions: ExpertItem[]
+  csrfToken: string
+}) {
   const t = useTranslations('knowbots')
   const when = useWhen()
-  const at = when(expert.delivered_at)
+  const client = useQueryClient()
+  const [reason, setReason] = useState('')
+  const detail = useQuery({
+    queryKey: [...KEY, 'detail', item.request_id],
+    queryFn: () => fetchDetail(item.request_id),
+  })
+  const test = detail.data?.tests.find((x) => x.test_id === item.test_id)
+  const draft = detail.data?.drafts.find((d) => d.draft_id === item.draft_id)
+  const version = detail.data?.versions.find((v) => v.version === draft?.request_version)
+  const stop = useMutation({
+    mutationFn: () => stopExpert(item.expert_id, reason.trim(), csrfToken),
+    onSuccess: () => client.invalidateQueries({ queryKey: KEY }),
+  })
   return (
-    <section aria-label={expertName(expert)} className="min-w-0 flex-1 space-y-4">
-      <header className="space-y-1">
-        <h2 className="text-lg font-semibold">{expertName(expert)}</h2>
-        <p className="text-muted-foreground text-sm">
-          {t('experts.version', { version: expert.version })}
-          {at ? ` · ${t('experts.deliveredAt', { at })}` : ''}
-        </p>
-      </header>
-      <Card>
-        <p>
-          {t('experts.fromIdea')}
-          <Link
-            href={{ pathname: '/ideas', query: { request: expert.request_id } }}
-            className="underline underline-offset-2"
-          >
-            {expert.title}
+    <>
+      <section aria-label={item.name ?? item.title} className="min-w-0 flex-1 space-y-4">
+        <header className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-semibold">
+              {item.name ?? item.title} · {t('expertVersion', { version: item.version })}
+            </h2>
+            <Badge tone={EXPERT_TONE[item.stage]}>{t(`expertStage.${item.stage}`)}</Badge>
+          </div>
+          <Link href={`/names/${item.request_id}`} className="text-sm underline underline-offset-2">
+            {t('toName')}
           </Link>
-        </p>
-        <p>
-          {t('experts.fromAvatar')}
-          <Link
-            href={{ pathname: '/avatars', query: { draft: expert.draft_id } }}
-            className="underline underline-offset-2"
-          >
-            {avatarName(t, expert)}
-          </Link>
-        </p>
-        <p className="text-muted-foreground">{t('experts.hint', { name: expertName(expert) })}</p>
-      </Card>
-      <Card title={t('experts.versions')}>
-        <ul className="space-y-1">
-          {versions.map((v) => {
-            const vAt = when(v.delivered_at)
-            return (
-              <li key={v.draft_id}>
-                {t('experts.version', { version: v.version })} · {avatarName(t, v)}
-                {vAt ? ` · ${t('experts.deliveredAt', { at: vAt })}` : ''}
-              </li>
-            )
-          })}
-        </ul>
-      </Card>
-    </section>
+        </header>
+        <Card>
+          <p>
+            {item.stage === 'rejected'
+              ? t('experts.now.rejected', { reason: item.review_reason ?? '' })
+              : t(`experts.now.${item.stage}`)}
+          </p>
+          {item.trial ? (
+            <p className="text-muted-foreground text-xs">{t('experts.trial')}</p>
+          ) : null}
+          {item.stage === 'awaiting_user' ? (
+            <Link
+              href={{ pathname: '/review', query: { item: item.expert_id } }}
+              className="font-medium underline underline-offset-2"
+            >
+              {t('experts.toReview')}
+            </Link>
+          ) : null}
+          {item.stage === 'listed' ? (
+            <>
+              <p className="text-muted-foreground">
+                {t('experts.hint', { name: item.name ?? item.title })}
+              </p>
+              <label className="block">
+                {t('experts.stopReason')}
+                <input
+                  className="mt-1 w-full rounded-md border px-3 py-2"
+                  maxLength={500}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+              </label>
+              {stop.isError ? (
+                <p className="text-destructive" role="alert">
+                  {t('experts.stopFailed')}
+                </p>
+              ) : null}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={stop.isPending || !reason.trim()}
+                onClick={() => stop.mutate()}
+              >
+                {t('experts.stop')}
+              </Button>
+            </>
+          ) : null}
+          {item.stopped_at ? (
+            <p className="text-muted-foreground text-xs">
+              {t('experts.stoppedAt', {
+                at: when(item.stopped_at) ?? '—',
+                reason: item.stop_reason ?? '',
+              })}
+            </p>
+          ) : null}
+        </Card>
+        {test ? <TestResults test={test} cases={version?.cases} /> : null}
+      </section>
+      <SidePanel
+        label={t('experts.versions')}
+        tabs={[
+          {
+            key: 'versions',
+            label: t('experts.versions'),
+            count: versions.length,
+            content: (
+              <ul className="space-y-2">
+                {versions.map((v) => (
+                  <li key={v.expert_id} className="flex flex-wrap items-center gap-2">
+                    <span className={v.expert_id === item.expert_id ? 'font-medium' : undefined}>
+                      {t('expertVersion', { version: v.version })}
+                    </span>
+                    <Badge tone={EXPERT_TONE[v.stage]}>{t(`expertStage.${v.stage}`)}</Badge>
+                    <span className="text-muted-foreground text-xs">{when(v.returned_at)}</span>
+                  </li>
+                ))}
+              </ul>
+            ),
+          },
+        ]}
+      />
+    </>
   )
 }

@@ -2,16 +2,14 @@
 
 import { useTranslations } from 'next-intl'
 
-import type { Amendment, DraftDetail, RequestDetail } from '@/contracts/knowbots'
+import type { Amendment, Draft, Idea } from '@/contracts/knowbots'
 
-import { amendmentStatus } from './amendments'
 import { caseName, caseQuestion } from './shared'
 
-// 右边「我的方法与用例」栏的页签内容（SDD 0037 §四）：都是用户自己交来的东西，用用户的说法，不放原始 JSON。
+// 我交来的方法、用例，和准专家的规则出处（SDD 0037 第八节）：都用用户的说法，不放原始 JSON。
 
-export function Method({ detail }: { detail: RequestDetail }) {
+export function Method({ idea }: { idea: Idea }) {
   const t = useTranslations('knowbotRequests')
-  const { idea } = detail
   if (idea.kind === 'skill')
     return (
       <pre className="bg-muted overflow-x-auto rounded-md p-3 whitespace-pre-wrap">
@@ -40,7 +38,7 @@ type Expectation = {
 
 const KINDS = ['equals', 'approx', 'contains'] as const
 
-export function Cases({ cases }: { cases: RequestDetail['cases'] }) {
+export function Cases({ cases }: { cases: Record<string, unknown>[] }) {
   const t = useTranslations('knowbots')
   const tForm = useTranslations('knowbotRequests.form')
   if (cases.length === 0) return <p className="text-muted-foreground">{t('cases.none')}</p>
@@ -94,7 +92,7 @@ export function Cases({ cases }: { cases: RequestDetail['cases'] }) {
   )
 }
 
-/** 我写过的补充（只看；写新的在创意页主栏）。 */
+/** 我以前写过的补充（SDD 0035，已取消）：只看。以后改方法就是改创意、出新版本。 */
 export function AmendmentList({ amendments }: { amendments: Amendment[] }) {
   const t = useTranslations('knowbotRequests')
   if (amendments.length === 0) return <p className="text-muted-foreground">{t('amend.none')}</p>
@@ -103,15 +101,21 @@ export function AmendmentList({ amendments }: { amendments: Amendment[] }) {
       {amendments.map((a) => (
         <li key={a.amendment_id}>
           <p className="whitespace-pre-wrap">{a.text}</p>
-          <p className="text-muted-foreground text-xs">{amendmentStatus(a, t)}</p>
+          <p className="text-muted-foreground text-xs">
+            {a.status === 'used'
+              ? t('amend.status.used', { revision: a.used_in_revision ?? 0 })
+              : a.status === 'declined'
+                ? t('amend.status.declined', { reason: a.declined_reason ?? '' })
+                : t('amend.status.open')}
+          </p>
         </li>
       ))}
     </ul>
   )
 }
 
-/** 我的话用在了哪：这个分身的每条规则，出自我写的哪句话。 */
-export function RuleSources({ draft }: { draft: DraftDetail }) {
+/** 我的话用在了哪：这位准专家的每条规则，出自我写的哪句话。 */
+export function RuleSources({ draft }: { draft: Draft }) {
   const t = useTranslations('knowbots')
   if (draft.rule_sources.length === 0)
     return <p className="text-muted-foreground">{t('rules.none')}</p>

@@ -49,16 +49,15 @@
     "home": "Home",
     "dashboard": "Home",
     "settings": "Settings",
-    "questions": "Waiting for me",
-    "ideas": "Ideas",
-    "avatars": "Avatars",
     "experts": "Experts",
     "data": "Knowledge base",
     "mainNavigation": "Main navigation",
     "openMenu": "Open navigation",
     "closeMenu": "Close navigation",
     "expandMenu": "Expand navigation",
-    "collapseMenu": "Collapse navigation"
+    "collapseMenu": "Collapse navigation",
+    "applications": "Applications",
+    "review": "Review"
   },
   "interaction": {
     "loading": "Loading the reference run...",
@@ -127,23 +126,16 @@
       "addExpectation": "Add an expectation",
       "addCase": "Add a case",
       "removeCase": "Remove this case",
-      "consent": "I agree that the data I upload may be used to test this knowbot. The write-ups and step results of a test are shown only to me and to the staff running the test: I use them to accept the knowbot, the staff to check it works correctly. They are not used for training, not shown to other users and not used for anything else. They are deleted 90 days after the avatar is delivered or replaced by a newer one.",
+      "consent": "I agree that the data I upload may be used to test this knowbot. The write-ups and step results of a test are shown only to me and to the staff running the test: I use them to accept the knowbot, the staff to check it works correctly. They are not used for training, not shown to other users and not used for anything else. They are deleted 90 days after the candidate is listed or replaced by a newer one.",
       "submit": "Submit",
       "invalid": "Something did not pass the checks. Please make sure every field is filled in and numbers are valid.",
-      "failed": "Could not submit. Please try again later."
+      "failed": "Could not submit. Please try again later.",
+      "submitRevision": "Hand in the revision (new version)"
     },
     "amend": {
-      "title": "Amend the method",
-      "intro": "If a test result makes you want to change a step, write it here: which step, what it should become, and why. Write the method only, no technical detail. We will hatch the next avatar accordingly and test it again. What you write cannot be edited; to take it back, write another one.",
-      "open": "Write an amendment",
-      "label": "Your amendment",
-      "submit": "Submit",
-      "cancel": "Cancel",
-      "failed": "It was not submitted. Please try again later.",
-      "written": "Amendments I wrote",
       "status": {
-        "open": "waiting",
-        "used": "used in avatar {revision}",
+        "open": "not used",
+        "used": "used in draft {revision}",
         "declined": "not followed: {reason}"
       },
       "none": "No amendments written yet."
@@ -180,126 +172,17 @@
   },
   "knowbotQuestions": {
     "title": "Questions for you",
-    "intro": "The test stopped where it needs your decision: this is a judgement in your method, so only you can answer. The test continues once you answer, and your answer goes into the next avatar.",
+    "intro": "The test stopped where it needs your decision: this is a judgement in your method, so only you can answer. The test continues once you answer, and your answer goes into the next candidate.",
     "failed": "Could not submit. Please try again.",
-    "where": "{avatar} · {case}",
+    "where": "{draft} · {case}",
     "ownWords": "Write your answer",
-    "answer": "Answer",
-    "loading": "Loading…",
-    "loadFailed": "Could not load. Please refresh and try again.",
-    "empty": "Nothing is waiting for your answer."
+    "answer": "Answer"
   },
   "knowbots": {
     "loading": "Loading…",
     "loadFailed": "Could not load. Please refresh and try again.",
-    "avatar": "Avatar {version}.{revision}",
     "caseN": "Your case {n}",
     "caseId": "Case {id}",
-    "casesPassed": "{met}/{total} cases passed",
-    "progress": "Progress",
-    "ideaStatus": {
-      "hatching": "Submitted, waiting for us to hatch",
-      "working": "Avatar in progress",
-      "waiting": "Waiting for your answer",
-      "failed": "Did not pass, being revised",
-      "expert": "Expert ready"
-    },
-    "avatarStatus": {
-      "hatching": "Hatching",
-      "pending": "Waiting for test",
-      "testing": "Testing",
-      "waiting": "Waiting for your answer",
-      "failed": "Did not pass",
-      "passed": "Passed",
-      "delivered": "Became an expert"
-    },
-    "ideaSteps": {
-      "submit": "Submitted",
-      "hatch": "Hatch",
-      "test": "Avatar testing",
-      "expert": "Expert"
-    },
-    "avatarSteps": {
-      "hatch": "Hatch",
-      "review": "Check",
-      "test": "Test",
-      "expert": "Become an expert"
-    },
-    "side": {
-      "label": "My method and cases",
-      "expand": "Expand my method and cases",
-      "collapse": "Collapse",
-      "resize": "Drag to resize",
-      "open": "My method and cases"
-    },
-    "tabs": {
-      "method": "My method",
-      "cases": "My cases",
-      "amendments": "My amendments",
-      "rules": "Where my words are used"
-    },
-    "cases": {
-      "none": "No cases.",
-      "noExpectation": "No expectations written.",
-      "where": "Artifact · item",
-      "tolerance": "Tolerance"
-    },
-    "rules": {
-      "none": "This avatar lists no rule sources.",
-      "intro": "Each rule of this avatar, and which of your words it comes from:",
-      "from": "From what you wrote: {ref}"
-    },
-    "home": {
-      "title": "Home",
-      "intro": "Where things stand and what you need to do.",
-      "questions": "Waiting for me",
-      "questionsNone": "Nothing is waiting for your answer.",
-      "questionsSome": "{n, plural, one {# question is} other {# questions are}} waiting for you: the test is paused there and continues once you answer.",
-      "toQuestions": "Answer them",
-      "ideas": "Ideas in progress",
-      "ideasNone": "No ideas in progress.",
-      "allIdeas": "All ideas",
-      "results": "Latest test results",
-      "resultsNone": "No avatar has finished testing yet.",
-      "experts": "Experts",
-      "expertsNone": "No experts made yet."
-    },
-    "ideas": {
-      "title": "Ideas",
-      "intro": "The methods and acceptance cases you submitted. We hatch avatars from them and test them; one that passes becomes an expert that belongs to you alone.",
-      "new": "Submit an idea",
-      "empty": "You have not submitted an idea yet.",
-      "list": "My ideas",
-      "submittedAt": "Submitted {at}",
-      "avatars": "Its avatars",
-      "noAvatar": "No avatar yet: we are hatching the first one from your method.",
-      "next": {
-        "hatching": "Received. We are hatching the first avatar from your method.",
-        "working": "An avatar is in progress: once hatched it is checked and tested; results appear on the Avatars page.",
-        "waiting": "The test is paused where it needs your decision. Please answer the questions below first.",
-        "failed": "The latest avatar did not pass. Look at its test results; to change a step, write an amendment and we will hatch the next avatar from it.",
-        "expert": "An expert has been made; you can summon it from the workbench."
-      }
-    },
-    "avatars": {
-      "title": "Avatars",
-      "intro": "Hatched from your idea and taken to testing. If one does not pass, we hatch the next avatar from your amendments.",
-      "empty": "No avatars yet. After you submit an idea we hatch the first one from your method.",
-      "list": "Avatars",
-      "superseded": "A newer avatar exists",
-      "toIdea": "See its idea",
-      "done": "{done} cases finished.",
-      "doneOf": "{done}/{total} cases finished.",
-      "now": {
-        "hatching": "We are hatching it from your method.",
-        "pending": "Hatched. Testing starts after we check it.",
-        "testing": "The test is running; results appear here when it finishes.",
-        "waiting": "The test is paused where it needs your decision and continues once you answer.",
-        "failed": "Did not pass: see the reason under each case below. To change a step, write an amendment on the Ideas page and we will hatch the next avatar from it.",
-        "passed": "Passed. It is being handed to knowmart to become an expert.",
-        "delivered": "It has become an expert; you can summon it from the workbench."
-      }
-    },
     "results": {
       "title": "Test results",
       "finishedAt": "Finished {at}"
@@ -337,24 +220,188 @@
         "not_reached": "not reached"
       }
     },
-    "experts": {
-      "title": "Experts",
-      "intro": "Experts that passed testing and were delivered. Built from your method on your data; they belong to you alone.",
-      "empty": "No experts made yet. An avatar that passes testing becomes an expert.",
-      "list": "Experts",
-      "version": "Version {version}",
-      "deliveredAt": "Delivered {at}",
-      "fromIdea": "From idea: ",
-      "fromAvatar": "From avatar: ",
-      "hint": "Summon it from the knowbench workbench: look for \"{name}\" when choosing an expert.",
-      "versions": "Versions made from this idea"
-    },
     "consent": {
       "needed": "This idea was submitted under the old test-data notice. Accept the new notice to see the write-ups and step results of its tests.",
-      "text": "New notice: the write-ups and step results of a test are shown only to you and to the staff running the test — you use them to accept the knowbot, the staff to check it works correctly. They are not used for training, not shown to other users and not used for anything else. They are deleted 90 days after the avatar is delivered or replaced by a newer one.",
+      "text": "New notice: the write-ups and step results of a test are shown only to you and to the staff running the test — you use them to accept the knowbot, the staff to check it works correctly. They are not used for training, not shown to other users and not used for anything else. They are deleted 90 days after the candidate is listed or replaced by a newer one.",
       "accept": "Accept the new notice",
       "failed": "That did not work; please try again later.",
-      "hidden": "This idea has not accepted the new test-data notice, so write-ups and step results are hidden for now. Accept it on the idea page."
+      "hidden": "This idea has not accepted the new test-data notice, so write-ups and step results are hidden for now. Accept it under Applications."
+    },
+    "cases": {
+      "none": "No cases.",
+      "noExpectation": "No expectations written.",
+      "where": "Artifact · item",
+      "tolerance": "Tolerance"
+    },
+    "rules": {
+      "none": "This candidate lists no rule sources.",
+      "intro": "Each rule of this candidate, and which of your words it comes from:",
+      "from": "From what you wrote: {ref}"
+    },
+    "side": {
+      "label": "My method and cases",
+      "expand": "Expand my method and cases",
+      "collapse": "Collapse",
+      "resize": "Drag to resize",
+      "open": "My method and cases"
+    },
+    "category": "Categories",
+    "empty": "Nothing in this category.",
+    "toName": "Everything about this name",
+    "columns": {
+      "applications": "Applications",
+      "review": "Review",
+      "experts": "Experts"
+    },
+    "categories": {
+      "working": "In progress",
+      "has_expert": "Has an expert",
+      "rejected": "Not accepted",
+      "answer": "To answer",
+      "review": "To review",
+      "decide": "To decide",
+      "new": "Newly returned",
+      "accepted": "Accepted by you, waiting for our review",
+      "usable": "Usable",
+      "stopped": "Stopped",
+      "not_listed": "Not listed"
+    },
+    "ideaVersion": "idea v{version}",
+    "draftLabel": "candidate {label}",
+    "testNumber": "test {number}",
+    "expertVersion": "expert version {version}",
+    "summary": {
+      "accepted": "accepted",
+      "rejected": "not accepted",
+      "acceptancePending": "waiting for us to accept"
+    },
+    "testStatus": {
+      "queued": "queued",
+      "running": "running",
+      "waiting": "waiting for you",
+      "passed": "passed",
+      "failed": "did not pass",
+      "platform_error": "platform error (we will retest)"
+    },
+    "expertStage": {
+      "to_return": "passed the test",
+      "awaiting_user": "waiting for your decision",
+      "declined": "declined by you",
+      "to_review": "accepted by you, waiting for our review",
+      "rejected": "did not pass our review",
+      "to_deliver": "approved, being listed",
+      "listed": "usable",
+      "stopped": "stopped"
+    },
+    "applications": {
+      "title": "Applications",
+      "intro": "The methods and acceptance cases you handed in. Each change makes a new version under the same name; once we accept it we incubate and test it, and what passes is an expert that belongs only to you.",
+      "new": "Apply with an idea",
+      "empty": "You have not applied yet.",
+      "now": "Latest version",
+      "pending": "Idea v{version} is in; waiting for us to accept it.",
+      "accepted": "Idea v{version} is accepted: we incubate and test from it, and anything we need from you shows up in Review.",
+      "rejected": "Idea v{version} was not accepted: {reason}. Change it and hand it in again as a new version.",
+      "revise": "Revise the idea",
+      "reviseHint": "A revision is a new version; old versions stay, and a test already running is not affected.",
+      "reviseFrom": "“{title}”: start from idea v{version}; handing it in makes a new version."
+    },
+    "review": {
+      "title": "Review",
+      "intro": "Everything waiting for you: questions from tests, candidates to review, and whether to take the version that passed.",
+      "empty": "Nothing waiting for you in this category.",
+      "allDone": "Nothing is waiting for you.",
+      "history": "What you answered and decided",
+      "noHistory": "Nothing yet.",
+      "draftTitle": "Where my words are used",
+      "draftHint": "This candidate was written from your method. Check each rule is what you meant: if so, press Fine; if not, say what is wrong and we will incubate again.",
+      "fromVersion": "It follows your idea v{version}",
+      "note": "Your comment (required if not fine)",
+      "ok": "Fine",
+      "notOk": "Not right",
+      "failed": "Could not submit. Please try again.",
+      "expertTitle": "Take this version?",
+      "expertHint": "This version passed its test. Read the write-ups and results below: take it and, once we review it, it is listed and you can ask it in the knowbench workbench; decline and this version is not listed.",
+      "accept": "Take this version",
+      "decline": "Decline",
+      "draftOk": "candidate {label}: you said fine ({at})",
+      "draftNotOk": "candidate {label}: you said not right ({at})",
+      "expertAccepted": "version {version}: you took it ({at})",
+      "expertDeclined": "version {version}: you declined it ({at})",
+      "answered": "You answered: {answer} ({at})"
+    },
+    "experts": {
+      "title": "Experts",
+      "intro": "The versions that passed and were returned to you; they belong only to you. Those you took and we reviewed can be asked in the knowbench workbench.",
+      "empty": "No expert has been returned to you yet.",
+      "versions": "Versions of this name",
+      "hint": "Ask it in the knowbench workbench: look for “{name}” when choosing an expert.",
+      "trial": "This version was listed in the trial period (before the two gates existed).",
+      "toReview": "Decide in Review",
+      "stopReason": "Why you stop it",
+      "stop": "Stop this version",
+      "stopFailed": "Could not stop it. Please try again later.",
+      "stoppedAt": "stopped {at}: {reason}",
+      "now": {
+        "to_return": "It passed; once it is returned to you, decide in Review.",
+        "awaiting_user": "It passed; waiting for you to decide whether to take this version.",
+        "declined": "You declined this version; it is not listed.",
+        "to_review": "You took it; waiting for our review. Once reviewed you can ask it.",
+        "rejected": "It did not pass our review and is not listed: {reason}",
+        "to_deliver": "Reviewed; being listed now.",
+        "listed": "Ready to use.",
+        "stopped": "This version is stopped."
+      }
+    },
+    "name": {
+      "title": "Name",
+      "intro": "The life of one name: the latest of each process, and the record in time order.",
+      "timeline": "Record",
+      "summary": "Latest of each process",
+      "backfilled": "Earlier tests left no record."
+    },
+    "event": {
+      "submitted": "You applied: idea v1",
+      "revised": "You revised: idea v{version}",
+      "accepted": "We accepted idea v{version}",
+      "rejected": "Idea v{version} was not accepted",
+      "draft": "Candidate {label} incubated from idea v{version}",
+      "reviewRequested": "You were asked to review candidate {label}",
+      "reviewOk": "You said candidate {label} is fine",
+      "reviewNotOk": "You said candidate {label} is not right",
+      "testStarted": "Candidate {label} started testing (test {number})",
+      "testFinished": "Test {number}: {status}",
+      "expert": "Test {number} passed: expert version {version}",
+      "returned": "Expert version {version} returned to you",
+      "userAccepted": "You took version {version}",
+      "userDeclined": "You declined version {version}",
+      "approved": "We reviewed version {version}",
+      "reviewRejected": "Version {version} did not pass our review",
+      "listed": "Version {version} is listed and usable",
+      "stopped": "Version {version} stopped"
+    },
+    "home": {
+      "title": "Home",
+      "intro": "Where things stand and what needs you, all here.",
+      "passed": "Your idea “{title}” passed its test: go and confirm",
+      "todo": "Waiting for you",
+      "todoNone": "Nothing is waiting for you.",
+      "todoSome": "{n} things are waiting for you:",
+      "reviewDraft": "review candidate {label}",
+      "decideExpert": "decide on version {version}",
+      "toReview": "Go to Review",
+      "applications": "Applications in progress",
+      "applicationsNone": "No applications in progress.",
+      "allApplications": "All applications",
+      "experts": "Usable experts",
+      "expertsNone": "No usable expert yet."
+    },
+    "tabs": {
+      "method": "My method",
+      "cases": "My cases",
+      "amendments": "Amendments I wrote before",
+      "rules": "Where my words are used",
+      "versions": "Idea versions"
     }
   }
 }

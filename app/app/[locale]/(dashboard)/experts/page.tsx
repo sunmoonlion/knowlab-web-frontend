@@ -14,8 +14,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : undefined)
 
-// 专家（SDD 0037 §四.3）：?draft=<id> 打开那一版
-export default async function ExpertsPage({
+// SDD 0037 第八节：?item=<哪一条> 打开那一条
+export default async function Page({
   params,
   searchParams,
 }: {
@@ -24,13 +24,13 @@ export default async function ExpertsPage({
 }) {
   const { locale } = await params
   const query = await searchParams
-  await requireBrowserSession(locale, `/${locale}/experts`)
+  const session = await requireBrowserSession(locale, `/${locale}/experts`)
   const t = await getTranslations('knowbots.experts')
   return (
     <>
       <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
       <p className="text-muted-foreground mt-2">{t('intro')}</p>
-      <ExpertsView picked={one(query.draft)} />
+      <ExpertsView csrfToken={session.csrf_token} picked={one(query.item)} />
     </>
   )
 }

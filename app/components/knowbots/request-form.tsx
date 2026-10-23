@@ -5,12 +5,19 @@ import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import type { CaseIn, ExpectationIn, KnowbotRequestIn, SixAnswers } from '@/contracts/knowbots'
+import type {
+  CaseIn,
+  ExpectationIn,
+  IdeaIn,
+  KnowbotRequestIn,
+  SixAnswers,
+  Version,
+} from '@/contracts/knowbots'
 import { useRouter } from '@/i18n/navigation'
 import { ApiClientError } from '@/lib/common/api-client'
-import { fetchRuntimes, submitRequest } from '@/lib/knowbots/client'
+import { fetchRuntimes, reviseRequest, submitRequest } from '@/lib/knowbots/client'
 
-import { MY_REQUESTS_KEY } from './shared'
+import { KEY } from './shared'
 
 const QUESTIONS = ['solves', 'not_solves', 'inputs', 'steps', 'outputs', 'correctness'] as const
 const FIELD = 'mt-1 w-full rounded-md border px-3 py-2 text-sm'
@@ -22,7 +29,12 @@ type ExpectationDraft = {
   value: string
   tolerance: string
 }
-type CaseDraft = { question: string; expectations: ExpectationDraft[] }
+// answers：开步前提问预先给好的答案（改创意时照原样带上）
+type CaseDraft = {
+  question: string
+  expectations: ExpectationDraft[]
+  answers?: Record<string, string>
+}
 
 const emptyCase = (): CaseDraft => ({ question: '', expectations: [] })
 const emptyExpectation = (): ExpectationDraft => ({
@@ -36,7 +48,10 @@ const emptyExpectation = (): ExpectationDraft => ({
 function toCases(cases: CaseDraft[]): CaseIn[] {
   return cases.map((c, i) => ({
     case_id: `c${i + 1}`,
-    input: { question: c.question.trim() },
+    input:
+      c.answers && Object.keys(c.answers).length > 0
+        ? { question: c.question.trim(), answers: c.answers }
+        : { question: c.question.trim() },
     expectations: c.expectations.map((e) =>
       e.kind === 'approx'
         ? {
@@ -51,44 +66,89 @@ function toCases(cases: CaseDraft[]): CaseIn[] {
   }))
 }
 
-// 提交一个创意（SDD 0027、0037）：方法用六问或一份 skill 写清楚，选运行方，给验收用例，同意数据用于测试。
-// 方法只来自用户（C-L1）；我们据此孵化分身、测试，测试通过后成为专家、出现在 knowmart。
-export function RequestForm({ csrfToken }: { csrfToken: string }) {
+/** 改创意时从上一版带过来的用例。 */
+function fromVersion(version: Version): CaseDraft[] {
+  return version.cases.map((raw) => {
+    const input = (raw.input ?? {}) as { question?: unknown; answers?: unknown }
+    const expectations = Array.isArray(raw.expectations)
+      ? (raw.expectations as Record<string, unknown>[])
+      : []
+    const answers =
+      input.answers && typeof input.answers === 'object'
+        ? (input.answers as Record<string, string>)
+        : undefined
+    return {
+      question: typeof input.question === 'string' ? input.question : '',
+      answers,
+      expectations: expectations.map((e) => ({
+        artifact: String(e.artifact ?? ''),
+        path: String(e.path ?? ''),
+        kind: (['equals', 'approx', 'contains'].includes(String(e.kind))
+          ? e.kind
+          : 'equals') as ExpectationIn['kind'],
+        value: String(e.value ?? ''),
+        tolerance: e.tolerance == null ? '' : String(e.tolerance),
+      })),
+    }
+  })
+}
+
+const NO_ANSWERS: SixAnswers = {
+  solves: '',
+  not_solves: '',
+  inputs: '',
+  steps: '',
+  outputs: '',
+  correctness: '',
+}
+
+// 提交一个创意（SDD 0027、0037）：方法用六问或一份 skill 写清楚，选运行方，给验收用例，同意数据用于
+// 测试。方法只来自用户（C-L1）；我们受理后孵化准专家、测试，测试通过即是专家，你同意、我们审过才上架。
+// 给了 revise 就是改创意：名称、运行方不变，从上一版带过来改，交了出一个新版本。
+export function RequestForm({
+  csrfToken,
+  revise,
+}: {
+  csrfToken: string
+  revise?: { requestId: string; version: Version }
+}) {
   const t = useTranslations('knowbotRequests')
   const router = useRouter()
   const queryClient = useQueryClient()
-  const runtimes = useQuery({ queryKey: ['web', 'knowbot-runtimes'], queryFn: fetchRuntimes })
+  const runtimes = useQuery({
+    queryKey: ['web', 'knowbot-runtimes'],
+    queryFn: fetchRuntimes,
+    enabled: !revise,
+  })
+  const before = revise?.version.idea
   const [title, setTitle] = useState('')
   const [runtime, setRuntime] = useState('')
-  const [kind, setKind] = useState<'six_questions' | 'skill'>('six_questions')
-  const [answers, setAnswers] = useState<SixAnswers>({
-    solves: '',
-    not_solves: '',
-    inputs: '',
-    steps: '',
-    outputs: '',
-    correctness: '',
-  })
-  const [skill, setSkill] = useState('')
-  const [cases, setCases] = useState<CaseDraft[]>([emptyCase()])
+  const [kind, setKind] = useState<'six_questions' | 'skill'>(before?.kind ?? 'six_questions')
+  const [answers, setAnswers] = useState<SixAnswers>(
+    before?.kind === 'six_questions' ? before.answers : NO_ANSWERS,
+  )
+  const [skill, setSkill] = useState(before?.kind === 'skill' ? before.skill : '')
+  const [cases, setCases] = useState<CaseDraft[]>(
+    revise ? fromVersion(revise.version) : [emptyCase()],
+  )
   const [consent, setConsent] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const chosenRuntime = runtime || (runtimes.data?.length === 1 ? runtimes.data[0] : '')
   const submit = useMutation({
-    mutationFn: () => {
-      const body: KnowbotRequestIn = {
-        title: title.trim(),
-        runtime: chosenRuntime,
-        idea: kind === 'skill' ? { kind, skill } : { kind, answers },
-        cases: toCases(cases),
-        consent_test_data: true,
+    mutationFn: async () => {
+      const idea: IdeaIn = kind === 'skill' ? { kind, skill } : { kind, answers }
+      const revision = { idea, cases: toCases(cases), consent_test_data: true as const }
+      if (revise) {
+        await reviseRequest(revise.requestId, revision, csrfToken)
+        return revise.requestId
       }
+      const body: KnowbotRequestIn = { title: title.trim(), runtime: chosenRuntime, ...revision }
       return submitRequest(body, csrfToken)
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: MY_REQUESTS_KEY })
-      router.push('/ideas')
+    onSuccess: async (requestId) => {
+      await queryClient.invalidateQueries({ queryKey: KEY })
+      router.push(`/applications?item=${requestId}`)
     },
     onError: (e) =>
       setError(
@@ -110,35 +170,39 @@ export function RequestForm({ csrfToken }: { csrfToken: string }) {
         submit.mutate()
       }}
     >
-      <label className="block text-sm font-medium">
-        {t('form.title')}
-        <input
-          className={FIELD}
-          value={title}
-          maxLength={80}
-          required
-          onChange={(e) => setTitle(e.target.value)}
-        />
-      </label>
+      {revise ? null : (
+        <>
+          <label className="block text-sm font-medium">
+            {t('form.title')}
+            <input
+              className={FIELD}
+              value={title}
+              maxLength={80}
+              required
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </label>
 
-      <label className="block text-sm font-medium">
-        {t('form.runtime')}
-        <select
-          className={FIELD}
-          value={chosenRuntime}
-          required
-          onChange={(e) => setRuntime(e.target.value)}
-        >
-          <option value="" disabled>
-            {runtimes.isPending ? t('loading') : t('form.chooseRuntime')}
-          </option>
-          {(runtimes.data ?? []).map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </label>
+          <label className="block text-sm font-medium">
+            {t('form.runtime')}
+            <select
+              className={FIELD}
+              value={chosenRuntime}
+              required
+              onChange={(e) => setRuntime(e.target.value)}
+            >
+              <option value="" disabled>
+                {runtimes.isPending ? t('loading') : t('form.chooseRuntime')}
+              </option>
+              {(runtimes.data ?? []).map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      )}
 
       <fieldset className="space-y-3">
         <legend className="text-sm font-medium">{t('form.method')}</legend>
@@ -224,8 +288,8 @@ export function RequestForm({ csrfToken }: { csrfToken: string }) {
           {error}
         </p>
       ) : null}
-      <Button type="submit" disabled={!consent || !chosenRuntime || submit.isPending}>
-        {t('form.submit')}
+      <Button type="submit" disabled={!consent || (!revise && !chosenRuntime) || submit.isPending}>
+        {revise ? t('form.submitRevision') : t('form.submit')}
       </Button>
     </form>
   )

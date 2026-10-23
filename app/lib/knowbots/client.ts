@@ -3,27 +3,32 @@
 import type { z } from 'zod'
 
 import {
-  amendedSchema,
-  answeredSchema,
-  draftDetailSchema,
+  applicationsSchema,
+  countsSchema,
+  detailSchema,
+  expertMovedSchema,
+  expertsSchema,
+  inboxSchema,
   myDataSchema,
-  myKnowbotsSchema,
-  myQuestionsSchema,
-  myRequestsSchema,
   outputsSchema,
-  requestDetailSchema,
+  questionsSchema,
+  reviewedSchema,
   runtimesSchema,
+  sentSchema,
   submittedSchema,
   uploadedSchema,
+  type Application,
+  type Counts,
   type Dataset,
-  type DraftDetail,
-  type Knowbot,
+  type Detail,
+  type ExpertItem,
+  type ExpertStage,
+  type Inbox,
   type KnowbotRequestIn,
   type MyData,
   type MyQuestion,
-  type MyRequests,
   type Outputs,
-  type RequestDetail,
+  type RevisionIn,
 } from '@/contracts/knowbots'
 import { ApiClientError, requestJson } from '@/lib/common/api-client'
 
@@ -41,65 +46,39 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   return parsed.data
 }
 
-export async function fetchMyRequests(): Promise<MyRequests> {
-  return parse(myRequestsSchema, await requestJson('/api/web/v1/knowbot-requests'))
-}
-
+const BASE = '/api/web/v1'
 const enc = encodeURIComponent
 
-// 我的一个创意：方法原文与用例（SDD 0037）；不是自己的回 404
-export async function fetchRequestDetail(requestId: string): Promise<RequestDetail> {
-  return parse(
-    requestDetailSchema,
-    await requestJson(`/api/web/v1/knowbot-requests/${enc(requestId)}`),
-  )
+// ---------- 三栏与详情页（SDD 0037 第八、第九节） ----------
+export async function fetchCounts(): Promise<Counts> {
+  const { inbox, experts_new } = parse(countsSchema, await requestJson(`${BASE}/knowbot-counts`))
+  return { inbox, experts_new }
 }
 
-// 我的一个分身：状态、测试结果、规则出处
-export async function fetchDraftDetail(draftId: string): Promise<DraftDetail> {
-  return parse(draftDetailSchema, await requestJson(`/api/web/v1/knowbot-drafts/${enc(draftId)}`))
+export async function fetchApplications(): Promise<Application[]> {
+  return parse(applicationsSchema, await requestJson(`${BASE}/knowbot-board/applications`)).items
 }
 
-// 同意新一版测试数据说明（SDD 0037）：之后测试的成稿与各步结果才取、才显示
-export async function acceptConsent(requestId: string, csrfToken: string): Promise<void> {
-  await requestJson(`/api/web/v1/knowbot-requests/${enc(requestId)}/consent`, {
-    method: 'POST',
-    csrfToken,
-  })
+export async function fetchInbox(): Promise<Inbox> {
+  return parse(inboxSchema, await requestJson(`${BASE}/knowbot-board/inbox`))
 }
 
-// 这个分身最近一次测试每条用例的成稿与各步交回物
-export async function fetchOutputs(draftId: string): Promise<Outputs> {
-  return parse(
-    outputsSchema,
-    await requestJson(`/api/web/v1/knowbot-drafts/${enc(draftId)}/outputs`),
-  )
+export async function fetchExperts(): Promise<ExpertItem[]> {
+  return parse(expertsSchema, await requestJson(`${BASE}/knowbot-board/experts`)).items
 }
 
-// 做出来的专家（交付了的各版）
-export async function fetchMyKnowbots(): Promise<Knowbot[]> {
-  return parse(myKnowbotsSchema, await requestJson('/api/web/v1/knowbots')).knowbots
+// 我的一个名称的详情页；不是自己的回 404
+export async function fetchDetail(requestId: string): Promise<Detail> {
+  return parse(detailSchema, await requestJson(`${BASE}/knowbot-requests/${enc(requestId)}`))
 }
 
-// 给自己的创意写一条补充方法（SDD 0035）：写下后不能改，要撤回就再写一条
-export async function amendRequest(
-  requestId: string,
-  text: string,
-  csrfToken: string,
-): Promise<string> {
-  const answer = await requestJson(
-    `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/amendments`,
-    { method: 'POST', csrfToken, body: { text } },
-  )
-  return parse(amendedSchema, answer).amendment_id
-}
-
+// ---------- 申请与修改 ----------
 export async function fetchRuntimes(): Promise<string[]> {
-  return parse(runtimesSchema, await requestJson('/api/web/v1/knowbot-runtimes')).runtimes
+  return parse(runtimesSchema, await requestJson(`${BASE}/knowbot-runtimes`)).runtimes
 }
 
 export async function submitRequest(body: KnowbotRequestIn, csrfToken: string): Promise<string> {
-  const answer = await requestJson('/api/web/v1/knowbot-requests', {
+  const answer = await requestJson(`${BASE}/knowbot-requests`, {
     method: 'POST',
     csrfToken,
     body,
@@ -107,7 +86,78 @@ export async function submitRequest(body: KnowbotRequestIn, csrfToken: string): 
   return parse(submittedSchema, answer).request_id
 }
 
-const DATASETS = '/api/web/v1/knowbot-datasets'
+// 改创意：出一个新版本（名称不变，旧版本不变）
+export async function reviseRequest(
+  requestId: string,
+  body: RevisionIn,
+  csrfToken: string,
+): Promise<number> {
+  const answer = await requestJson(`${BASE}/knowbot-requests/${enc(requestId)}/versions`, {
+    method: 'POST',
+    csrfToken,
+    body,
+  })
+  return parse(submittedSchema, answer).version
+}
+
+// 同意新一版测试数据说明（SDD 0037）：之后测试的成稿与各步结果才取、才显示
+export async function acceptConsent(requestId: string, csrfToken: string): Promise<void> {
+  await requestJson(`${BASE}/knowbot-requests/${enc(requestId)}/consent`, {
+    method: 'POST',
+    csrfToken,
+  })
+}
+
+// ---------- 审核：准专家、专家 ----------
+export async function reviewDraft(
+  draftId: string,
+  body: { ok: boolean; note: string },
+  csrfToken: string,
+): Promise<void> {
+  parse(
+    reviewedSchema,
+    await requestJson(`${BASE}/knowbot-drafts/${enc(draftId)}/review`, {
+      method: 'POST',
+      csrfToken,
+      body,
+    }),
+  )
+}
+
+// 用户同意门：要这一版 / 不要
+export async function decideExpert(
+  expertId: string,
+  accept: boolean,
+  csrfToken: string,
+): Promise<ExpertStage> {
+  const answer = await requestJson(`${BASE}/knowbot-experts/${enc(expertId)}/decision`, {
+    method: 'POST',
+    csrfToken,
+    body: { accept },
+  })
+  return parse(expertMovedSchema, answer).stage
+}
+
+export async function stopExpert(
+  expertId: string,
+  reason: string,
+  csrfToken: string,
+): Promise<ExpertStage> {
+  const answer = await requestJson(`${BASE}/knowbot-experts/${enc(expertId)}/stop`, {
+    method: 'POST',
+    csrfToken,
+    body: { reason },
+  })
+  return parse(expertMovedSchema, answer).stage
+}
+
+// 一次测试每条用例的成稿与各步交回物（验收依据，C-L3）
+export async function fetchOutputs(testId: string): Promise<Outputs> {
+  return parse(outputsSchema, await requestJson(`${BASE}/knowbot-tests/${enc(testId)}/outputs`))
+}
+
+// ---------- 知识库 ----------
+const DATASETS = `${BASE}/knowbot-datasets`
 
 export async function fetchMyData(): Promise<MyData> {
   return parse(myDataSchema, await requestJson(DATASETS))
@@ -144,16 +194,14 @@ export async function uploadDataset(file: File, csrfToken: string): Promise<Data
 }
 
 export async function deleteDataset(datasetId: string, csrfToken: string): Promise<void> {
-  await requestJson(`${DATASETS}/${encodeURIComponent(datasetId)}`, {
-    method: 'DELETE',
-    csrfToken,
-  })
+  await requestJson(`${DATASETS}/${enc(datasetId)}`, { method: 'DELETE', csrfToken })
 }
 
-const QUESTIONS = '/api/web/v1/knowbot-questions'
+// ---------- 测试中转给我的问题 ----------
+const QUESTIONS = `${BASE}/knowbot-questions`
 
 export async function fetchMyQuestions(): Promise<MyQuestion[]> {
-  return parse(myQuestionsSchema, await requestJson(QUESTIONS)).questions
+  return parse(questionsSchema, await requestJson(QUESTIONS)).questions
 }
 
 export async function answerMyQuestion(
@@ -162,8 +210,8 @@ export async function answerMyQuestion(
   csrfToken: string,
 ): Promise<void> {
   parse(
-    answeredSchema,
-    await requestJson(`${QUESTIONS}/${encodeURIComponent(questionId)}/answer`, {
+    sentSchema,
+    await requestJson(`${QUESTIONS}/${enc(questionId)}/answer`, {
       method: 'POST',
       csrfToken,
       body: answer,

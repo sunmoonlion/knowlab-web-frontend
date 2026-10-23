@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 
 import { LogoutButton } from '@/components/auth/logout-button'
 import { SignedInAs } from '@/components/auth/signed-in-as'
-import { useMyQuestions } from '@/components/knowbots/shared'
+import { useCounts } from '@/components/knowbots/shared'
 import { Link, usePathname } from '@/i18n/navigation'
 import { findNavigationItem, webNavigation, type WebNavigationItem } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
@@ -19,8 +19,9 @@ type WebShellProps = {
   email?: string | null
 }
 
-// web端外壳（SDD 0037 §四）：和管理端同一套——左边一级导航可收起、手机上是抽屉、顶上一行写着登录的是谁；
-// 但不照搬：没有已打开页面那一行（用户一次看一件事），「待我回答」带数字（为 0 时灰、不显示数字）。
+// web端外壳（SDD 0037 第八节）：和管理端同一套——左边一级导航可收起、手机上是抽屉、顶上一行写着登录的是谁；
+// 但不照搬：没有已打开页面那一行（用户一次看一件事），「审核」数要你做的、「专家」数新交回的
+// （为 0 时灰、不显示数字）。
 export function WebShell({ children, locale, csrfToken, userLabel, email }: WebShellProps) {
   const t = useTranslations('nav')
   const tAuth = useTranslations('auth')
@@ -29,7 +30,7 @@ export function WebShell({ children, locale, csrfToken, userLabel, email }: WebS
   const setCollapsed = useUiStore((state) => state.setSidebarCollapsed)
   const mobileOpen = useUiStore((state) => state.mobileNavigationOpen)
   const setMobileOpen = useUiStore((state) => state.setMobileNavigationOpen)
-  const questions = useMyQuestions()
+  const counts = useCounts()
   const current = findNavigationItem(pathname)
 
   return (
@@ -67,7 +68,13 @@ export function WebShell({ children, locale, csrfToken, userLabel, email }: WebS
               label={t(item.key)}
               active={item.key === current?.key}
               collapsed={collapsed}
-              badge={item.key === 'questions' ? (questions.data?.length ?? 0) : undefined}
+              badge={
+                item.key === 'review'
+                  ? (counts.data?.inbox ?? 0)
+                  : item.key === 'experts'
+                    ? (counts.data?.experts_new ?? 0)
+                    : undefined
+              }
               onNavigate={() => setMobileOpen(false)}
             />
           ))}

@@ -3,104 +3,190 @@ import { render } from '@testing-library/react'
 import { NextIntlClientProvider } from 'next-intl'
 
 import type {
-  DraftDetail,
-  KnowbotDraft,
-  KnowbotRequest,
+  Application,
+  Detail,
+  Draft,
+  Expert,
+  ExpertItem,
   MyQuestion,
   Outputs,
-  RequestDetail,
+  Test,
+  Version,
 } from '@/contracts/knowbots'
 import messages from '@/messages/zh-CN.json'
 
-// 创意、分身、专家几页的测试共用（SDD 0037）：样例数据与渲染。
+// 申请、审核、专家三栏与详情页的测试共用（SDD 0037）：样例数据与渲染。
 
 export const CSRF = 'csrf-token-value-that-is-long-enough-1234'
 export const REQUEST = '0b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10'
 export const DRAFT = '1b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10'
-export const DRAFT2 = '2b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10'
+export const TEST = '2b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10'
+export const EXPERT = '6b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10'
+export const QUESTION = '5b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10'
+const BRIEF = { request_id: REQUEST, title: '财务分析与预测' }
 
-export function draft(overrides: Partial<KnowbotDraft> = {}): KnowbotDraft {
-  return {
-    draft_id: DRAFT,
-    revision: 1,
-    version: '1',
-    status: 'pending_test',
-    name: '财务分析与预测',
-    report: null,
-    knowbot_id: null,
-    ...overrides,
-  }
+const SUMMARY = {
+  version: 2,
+  acceptance: 'accepted' as const,
+  draft: '2.3',
+  test: { number: 5, status: 'passed' as const },
+  expert: { version: 2, stage: 'awaiting_user' as const },
 }
 
-export function request(overrides: Partial<KnowbotRequest> = {}): KnowbotRequest {
+export function version(overrides: Partial<Version> = {}): Version {
   return {
-    request_id: REQUEST,
-    title: '财务分析与预测',
-    runtime: 'knowbench',
-    created_at: '2026-10-18T10:00:00Z',
-    drafts: [],
-    amendments: [],
-    ...overrides,
-  }
-}
-
-export function mine(...requests: KnowbotRequest[]) {
-  return { contract_version: 1 as const, requests }
-}
-
-export function detail(overrides: Partial<RequestDetail> = {}): RequestDetail {
-  return {
-    contract_version: 1,
-    ...request(),
+    version: 1,
     idea: { kind: 'skill', skill: '# 我的方法' },
     cases: [
       {
         case_id: 'c1',
-        input: { question: '茅台近三年营收？', answers: {} },
+        input: { question: '茅台近三年营收？', answers: { period: '3y' } },
         expectations: [
           {
             artifact: 'official',
-            path: 'official_by_year.2024.revenue',
+            path: 'revenue',
             kind: 'approx',
-            value: 170899152276.34,
+            value: 1708.99,
             tolerance: 0.001,
           },
         ],
       },
-      {
-        case_id: 'c2',
-        input: { question: '五粮液毛利率？', answers: {} },
-        expectations: [],
-      },
     ],
+    consent_version: 2,
+    created_at: '2026-10-18T10:00:00Z',
+    acceptance: { accepted: true, reason: null, decided_at: '2026-10-18T11:00:00Z', trial: true },
     ...overrides,
   }
 }
 
-export function draftDetail(overrides: Partial<DraftDetail> = {}): DraftDetail {
+export function application(overrides: Partial<Application> = {}): Application {
   return {
-    contract_version: 1,
-    ...draft(),
-    request_id: REQUEST,
-    title: '财务分析与预测',
-    rule_sources: [{ rule: '毛利率按营业收入减营业成本算', ref: '第 4 问：毛利率口径' }],
+    ...BRIEF,
+    runtime: 'knowbench',
+    created_at: '2026-10-18T10:00:00Z',
+    latest_version: 2,
+    summary: SUMMARY,
+    consent_version: 2,
+    consent_current: 2,
+    category: 'working',
     ...overrides,
   }
+}
+
+export function draft(overrides: Partial<Draft> = {}): Draft {
+  return {
+    draft_id: DRAFT,
+    label: '2.3',
+    version: '2',
+    revision: 3,
+    request_version: 2,
+    status: 'pending_test',
+    name: '财务分析与预测',
+    created_at: '2026-10-24T09:00:00Z',
+    user_review: { state: 'pending', note: null, requested_at: '2026-10-24T09:05:00Z' },
+    rule_sources: [{ rule: '毛利率按营业收入减营业成本', ref: '创意 v2 第 4 问' }],
+    ...overrides,
+  }
+}
+
+export function testRecord(overrides: Partial<Test> = {}): Test {
+  return {
+    test_id: TEST,
+    number: 5,
+    draft_id: DRAFT,
+    label: '2.3',
+    status: 'passed',
+    started_at: '2026-10-24T09:30:00Z',
+    finished_at: '2026-10-24T10:00:00Z',
+    report: {
+      status: 'passed',
+      cases: [{ case_id: 'c1', status: 'passed', steps: [], expectations: [true], note: null }],
+      cost: null,
+      finished_at: '2026-10-24T10:00:00Z',
+    },
+    backfilled: false,
+    ...overrides,
+  }
+}
+
+export function expert(overrides: Partial<Expert> = {}): Expert {
+  return {
+    expert_id: EXPERT,
+    version: 2,
+    name: '财务分析与预测',
+    stage: 'awaiting_user',
+    draft_id: DRAFT,
+    label: '2.3',
+    test_id: TEST,
+    test_number: 5,
+    created_at: '2026-10-24T10:00:00Z',
+    returned_at: '2026-10-24T10:30:00Z',
+    user_accepted: null,
+    user_decided_at: null,
+    review_approved: null,
+    review_listing: null,
+    review_reason: null,
+    reviewed_at: null,
+    listed_at: null,
+    knowbot_id: null,
+    listing_status: null,
+    stopped_at: null,
+    stop_reason: null,
+    trial: false,
+    ...overrides,
+  }
+}
+
+export function expertItem(overrides: Partial<ExpertItem> = {}): ExpertItem {
+  return { ...BRIEF, category: 'new', ...expert(), ...overrides }
 }
 
 export function question(overrides: Partial<MyQuestion> = {}): MyQuestion {
   return {
-    question_id: '6b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10',
+    question_id: QUESTION,
     kind: 'question',
     text: '毛利率按哪个口径？',
-    options: [{ id: 'gross', label: '营业收入减营业成本' }],
+    options: [{ id: 'a', label: '营业收入口径' }],
     allow_free_text: true,
     case_id: 'c1',
     step_id: null,
-    asked_at: '2026-10-17T00:00:00Z',
+    asked_at: '2026-10-24T09:40:00Z',
     title: '财务分析与预测',
-    version: '1',
-    revision: 1,
+    request_id: REQUEST,
+    label: '2.3',
+    draft_id: DRAFT,
+    ...overrides,
+  }
+}
+
+export function detail(overrides: Partial<Detail> = {}): Detail {
+  return {
+    contract_version: 1,
+    ...BRIEF,
+    runtime: 'knowbench',
+    created_at: '2026-10-18T10:00:00Z',
+    latest_version: 2,
+    summary: SUMMARY,
+    consent_version: 2,
+    consent_current: 2,
+    versions: [
+      version(),
+      version({
+        version: 2,
+        idea: { kind: 'skill', skill: '# 第二版方法' },
+        acceptance: {
+          accepted: true,
+          reason: null,
+          decided_at: '2026-10-24T08:00:00Z',
+          trial: false,
+        },
+      }),
+    ],
+    drafts: [draft()],
+    tests: [testRecord()],
+    experts: [expert()],
+    timeline: [],
+    amendments: [],
     ...overrides,
   }
 }
@@ -108,47 +194,20 @@ export function question(overrides: Partial<MyQuestion> = {}): MyQuestion {
 export function outputs(overrides: Partial<Outputs> = {}): Outputs {
   return {
     contract_version: 1,
-    draft_id: DRAFT,
-    run_id: 'knowlab-run-0001',
+    test_id: TEST,
+    consent_needed: false,
     cases: [
       {
         case_id: 'c1',
-        fetched_at: '2026-10-19T08:00:00Z',
+        fetched_at: '2026-10-24T10:01:00Z',
         note: null,
         outputs: {
           contract: 'knowbot-test-run/v1',
-          run_id: 'knowlab-run-0001',
+          run_id: `knowlab-test-${TEST}`,
           case_id: 'c1',
-          deliverable: {
-            path: '底稿/财务分析与预测-成稿.md',
-            text: '# 回答\n\n营业收入 2025 年下降。\n\n| 年 | 营业收入 |\n| --- | --- |\n| 2025 | 1688 |',
-            truncated: false,
-          },
+          deliverable: { path: '底稿/成稿.md', text: '# 回答\n\n营业收入 2025 年下降。' },
           deliverable_note: null,
-          steps: [
-            {
-              step_id: 'scope',
-              title: '定范围',
-              outcome: 'accepted',
-              artifact: { company: '贵州茅台', in_data: true },
-              checks: [{ label: '交回的格式对', passed: true, message: '' }],
-            },
-            {
-              step_id: 'official',
-              title: '对照官方披露',
-              outcome: 'rejected',
-              artifact: null,
-              returned_raw: '{"checks": [{"verdict": "支持"}]}',
-              checks: [
-                {
-                  label: 'cite_required',
-                  passed: false,
-                  message: '有结论判了支持却没引原文',
-                },
-              ],
-            },
-            { step_id: 'forecast', title: '预测', outcome: 'not_reached', checks: [] },
-          ],
+          steps: [{ step_id: 'scope', title: '定范围', outcome: 'accepted', checks: [] }],
           error: null,
         },
       },
@@ -192,7 +251,7 @@ export function linkMock() {
         {children}
       </a>
     ),
-    usePathname: () => '/ideas',
+    usePathname: () => '/applications',
     useRouter: () => router,
   }
 }

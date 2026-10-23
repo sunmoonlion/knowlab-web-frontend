@@ -3,14 +3,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 
-import type { CaseOutputs, CaseResult, KnowbotDraft, StepOutput } from '@/contracts/knowbots'
+import type { CaseOutputs, CaseResult, StepOutput, Test } from '@/contracts/knowbots'
 import { fetchOutputs } from '@/lib/knowbots/client'
 import { cn } from '@/lib/utils'
 
 import { Markdown } from './markdown'
-import { caseName, caseQuestion, useWhen } from './shared'
+import { KEY, caseName, caseQuestion, useWhen } from './shared'
 
-// 分身的测试结果（SDD 0037 §四.3、§五）：每条用例一块——你的问题、结论、期望对上了几条、没过的白话原因；
+// 一次测试的结果（SDD 0037 第八节）：每条用例一块——你的问题、结论、期望对上了几条、没过的白话原因；
 // 下面先放成稿（验收依据，C-L3），各步交回物收在「每一步的结果」里、默认折叠。
 // 不显示验收规则的内部名字；平台的错不让用户背，原因全文只在管理端。
 
@@ -32,19 +32,19 @@ const OUTCOME_TONE: Record<StepOutput['outcome'], string> = {
 }
 
 export function TestResults({
-  draft,
+  test,
   cases,
 }: {
-  draft: KnowbotDraft
+  test: Test
   cases: Record<string, unknown>[] | undefined
 }) {
   const t = useTranslations('knowbots')
   const when = useWhen()
-  const report = draft.report
+  const report = test.report
   const done = report?.cases.length ?? 0
   const outputs = useQuery({
-    queryKey: ['web', 'knowbot-outputs', draft.draft_id, done],
-    queryFn: () => fetchOutputs(draft.draft_id),
+    queryKey: [...KEY, 'outputs', test.test_id, done],
+    queryFn: () => fetchOutputs(test.test_id),
     enabled: done > 0,
   })
   if (!report || done === 0) return null

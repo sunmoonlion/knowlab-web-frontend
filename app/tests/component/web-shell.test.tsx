@@ -2,12 +2,12 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { WebShell } from '@/components/shell/web-shell'
-import { fetchMyQuestions } from '@/lib/knowbots/client'
+import { fetchCounts } from '@/lib/knowbots/client'
 import { useUiStore } from '@/store/ui'
 
-import { CSRF, question, renderWith } from './knowbot-fixtures'
+import { CSRF, renderWith } from './knowbot-fixtures'
 
-vi.mock('@/lib/knowbots/client', () => ({ fetchMyQuestions: vi.fn() }))
+vi.mock('@/lib/knowbots/client', () => ({ fetchCounts: vi.fn() }))
 vi.mock('@/i18n/navigation', async () => (await import('./knowbot-fixtures')).linkMock())
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }))
 
@@ -20,57 +20,53 @@ function shell() {
 }
 
 beforeEach(() => {
-  vi.mocked(fetchMyQuestions).mockReset()
+  vi.mocked(fetchCounts).mockReset()
   useUiStore.setState({ sidebarCollapsed: false, mobileNavigationOpen: false })
 })
 
 describe('web端外壳', () => {
   it('lists the first-level pages in the user order, with no tab strip', async () => {
-    vi.mocked(fetchMyQuestions).mockResolvedValue([])
+    vi.mocked(fetchCounts).mockResolvedValue({ inbox: 0, experts_new: 0 })
     shell()
     const nav = screen.getByRole('navigation', { name: '主导航' })
     const links = within(nav).getAllByRole('link')
+    // 申请 · 审核 · 专家（SDD 0037 第八节），知识库在最后
     expect(links.map((a) => a.getAttribute('href'))).toEqual([
       '/dashboard',
-      '/questions',
-      '/ideas',
-      '/avatars',
+      '/applications',
+      '/review',
       '/experts',
       '/data',
     ])
     expect(links.map((a) => a.textContent?.replace(/\d+$/, ''))).toEqual([
       '首页',
-      '待我回答',
-      '创意',
-      '分身',
+      '申请',
+      '审核',
       '专家',
       '知识库',
     ])
-    // 不叫「我的专家」「我的分身」
+    // 不叫「我的专家」
     expect(screen.queryByText('我的专家')).toBeNull()
-    expect(screen.queryByText('我的分身')).toBeNull()
-    expect(within(nav).getByRole('link', { name: '创意' })).toHaveAttribute('aria-current', 'page')
+    expect(within(nav).getByRole('link', { name: /申请/ })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByText('页面内容')).toBeInTheDocument()
     expect(screen.getByText('当前用户：张三')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '退出登录' })).toBeInTheDocument()
     // 没有数字时是灰的 0
-    const badge = await screen.findByTestId('nav-badge-questions')
+    const badge = await screen.findByTestId('nav-badge-review')
     expect(badge).toHaveTextContent('0')
     expect(badge.className).toContain('bg-muted')
   })
 
-  it('shows how many questions wait for me', async () => {
-    vi.mocked(fetchMyQuestions).mockResolvedValue([
-      question(),
-      question({ question_id: '7b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10' }),
-    ])
+  it('counts what waits for me under Review and new experts under Experts', async () => {
+    vi.mocked(fetchCounts).mockResolvedValue({ inbox: 2, experts_new: 1 })
     shell()
-    await waitFor(() => expect(screen.getByTestId('nav-badge-questions')).toHaveTextContent('2'))
-    expect(screen.getByTestId('nav-badge-questions').className).toContain('bg-amber-500')
+    await waitFor(() => expect(screen.getByTestId('nav-badge-review')).toHaveTextContent('2'))
+    expect(screen.getByTestId('nav-badge-review').className).toContain('bg-amber-500')
+    expect(screen.getByTestId('nav-badge-experts')).toHaveTextContent('1')
   })
 
   it('collapses the sidebar and remembers it', async () => {
-    vi.mocked(fetchMyQuestions).mockResolvedValue([])
+    vi.mocked(fetchCounts).mockResolvedValue({ inbox: 0, experts_new: 0 })
     shell()
     fireEvent.click(screen.getByRole('button', { name: '收起导航' }))
     expect(useUiStore.getState().sidebarCollapsed).toBe(true)

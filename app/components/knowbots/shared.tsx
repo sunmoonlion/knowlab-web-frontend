@@ -2,133 +2,20 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useFormatter, useTranslations } from 'next-intl'
+import { useState } from 'react'
 
-import type { KnowbotDraft, KnowbotRequest, MyQuestion } from '@/contracts/knowbots'
-import { fetchMyKnowbots, fetchMyQuestions, fetchMyRequests } from '@/lib/knowbots/client'
+import type { ExpertStage, TestStatus } from '@/contracts/knowbots'
+import { fetchCounts } from '@/lib/knowbots/client'
 import { cn } from '@/lib/utils'
 
-// 创意、分身、专家几页共用（SDD 0037 §四）：同一份数据（我的创意连同各个分身、要我答的问题），
-// 各页按自己的事排；状态用用户的说法。查询键相同，切页不重复取。
-export const MY_REQUESTS_KEY = ['web', 'knowbot-requests'] as const
-export const QUESTIONS_KEY = ['web', 'knowbot-questions'] as const
-export const KNOWBOTS_KEY = ['web', 'knowbots'] as const
+// 申请、审核、专家三栏与详情页共用（SDD 0037 第八、第九节）。状态用用户的说法。
+export const KEY = ['web', 'knowbots'] as const
 
 export type Translate = ReturnType<typeof useTranslations<'knowbots'>>
 
-// 创意（用户的说法）：已提交等孵化 · 分身在做 · 等你回答 · 没通过在改 · 已出专家
-export type IdeaStatus = 'hatching' | 'working' | 'waiting' | 'failed' | 'expert'
-// 分身（用户的说法）：孵化中留给将来的孵化记录，现在走不到
-export type AvatarStatus =
-  | 'hatching'
-  | 'pending'
-  | 'testing'
-  | 'waiting'
-  | 'failed'
-  | 'passed'
-  | 'delivered'
-
-export type Idea = {
-  request: KnowbotRequest
-  drafts: KnowbotDraft[] // 新的在前
-  latest: KnowbotDraft | undefined
-  status: IdeaStatus
-  questions: MyQuestion[]
-}
-
-export type Avatar = {
-  draft: KnowbotDraft
-  request: KnowbotRequest
-  status: AvatarStatus
-  latest: boolean // 是这个创意最新的分身
-  questions: MyQuestion[]
-}
-
-export function newestFirst(a: KnowbotDraft, b: KnowbotDraft): number {
-  return Number(b.version) - Number(a.version) || b.revision - a.revision
-}
-
-// 问题带着它是哪个分身的（draft_id）；旧后端没有时才按创意标题与分身编号对
-function asksOf(asks: MyQuestion[], title: string, draft: KnowbotDraft): MyQuestion[] {
-  return asks.filter((q) =>
-    q.draft_id
-      ? q.draft_id === draft.draft_id
-      : q.title === title && q.version === draft.version && q.revision === draft.revision,
-  )
-}
-
-export function avatarStatusOf(draft: KnowbotDraft, asks: MyQuestion[]): AvatarStatus {
-  if (asks.length > 0) return 'waiting'
-  if (draft.status === 'pending_test') return 'pending'
-  return draft.status
-}
-
-function ideaStatusOf(latest: KnowbotDraft | undefined, asks: MyQuestion[]): IdeaStatus {
-  if (asks.length > 0) return 'waiting'
-  if (!latest) return 'hatching'
-  if (latest.status === 'failed') return 'failed'
-  return latest.status === 'delivered' ? 'expert' : 'working'
-}
-
-export function useMyQuestions() {
-  return useQuery({ queryKey: QUESTIONS_KEY, queryFn: fetchMyQuestions })
-}
-
-export function useMyKnowbots() {
-  return useQuery({ queryKey: KNOWBOTS_KEY, queryFn: fetchMyKnowbots })
-}
-
-/** 我的创意与分身，连同各自要我答的问题。问题取不到不挡页面（当作没有）。 */
-export function useMine() {
-  const requests = useQuery({ queryKey: MY_REQUESTS_KEY, queryFn: fetchMyRequests })
-  const questions = useMyQuestions()
-  const asks = questions.data ?? []
-  const ideas: Idea[] = []
-  const avatars: Avatar[] = []
-  for (const request of requests.data?.requests ?? []) {
-    const drafts = [...request.drafts].sort(newestFirst)
-    const latest = drafts[0]
-    const theirs = drafts.flatMap((d) => asksOf(asks, request.title, d))
-    ideas.push({
-      request,
-      drafts,
-      latest,
-      status: ideaStatusOf(latest, theirs),
-      questions: theirs,
-    })
-    for (const draft of drafts) {
-      const mine = asksOf(asks, request.title, draft)
-      avatars.push({
-        draft,
-        request,
-        status: avatarStatusOf(draft, mine),
-        latest: draft.draft_id === latest?.draft_id,
-        questions: mine,
-      })
-    }
-  }
-  ideas.sort((a, b) => (b.request.created_at ?? '').localeCompare(a.request.created_at ?? ''))
-  return {
-    ideas,
-    avatars,
-    questions: asks,
-    error: requests.error,
-    pending: requests.isPending,
-  }
-}
-
-/** 「分身 1.3」 */
-export function avatarName(t: Translate, draft: { version: string; revision: number }): string {
-  return t('avatar', { version: draft.version, revision: draft.revision })
-}
-
-/** 结果一句：「2/3 条用例通过」；还没有测完的用例就没有。 */
-export function casesLine(t: Translate, draft: KnowbotDraft): string | null {
-  const cases = draft.report?.cases ?? []
-  if (cases.length === 0) return null
-  return t('casesPassed', {
-    met: cases.filter((c) => c.status === 'passed').length,
-    total: cases.length,
-  })
+/** 左边栏旁的数：审核数「要你做的」，专家数「新交回」。取不到就不显示。 */
+export function useCounts() {
+  return useQuery({ queryKey: [...KEY, 'counts'], queryFn: fetchCounts })
 }
 
 /** 「你的第 2 条用例」：按创意里用例的先后数；不知道用例时按 c2 这样的编号数，再不行写编号。 */
@@ -159,77 +46,33 @@ const TONE = {
   good: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200',
 } as const
 
-const IDEA_TONE: Record<IdeaStatus, keyof typeof TONE> = {
-  hatching: 'muted',
-  working: 'running',
-  waiting: 'todo',
-  failed: 'bad',
-  expert: 'good',
-}
+export type Tone = keyof typeof TONE
 
-const AVATAR_TONE: Record<AvatarStatus, keyof typeof TONE> = {
-  hatching: 'muted',
-  pending: 'muted',
-  testing: 'running',
+export const TEST_TONE: Record<TestStatus, Tone> = {
+  queued: 'running',
+  running: 'running',
   waiting: 'todo',
-  failed: 'bad',
   passed: 'good',
-  delivered: 'good',
+  failed: 'bad',
+  platform_error: 'muted',
 }
 
-export function Badge({ tone, children }: { tone: keyof typeof TONE; children: React.ReactNode }) {
+export const EXPERT_TONE: Record<ExpertStage, Tone> = {
+  to_return: 'muted',
+  awaiting_user: 'todo',
+  declined: 'muted',
+  to_review: 'running',
+  rejected: 'bad',
+  to_deliver: 'running',
+  listed: 'good',
+  stopped: 'muted',
+}
+
+export function Badge({ tone, children }: { tone: Tone; children: React.ReactNode }) {
   return (
     <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-xs whitespace-nowrap', TONE[tone])}>
       {children}
     </span>
-  )
-}
-
-export function IdeaBadge({ status }: { status: IdeaStatus }) {
-  const t = useTranslations('knowbots')
-  return <Badge tone={IDEA_TONE[status]}>{t(`ideaStatus.${status}`)}</Badge>
-}
-
-export function AvatarBadge({ status }: { status: AvatarStatus }) {
-  const t = useTranslations('knowbots')
-  return <Badge tone={AVATAR_TONE[status]}>{t(`avatarStatus.${status}`)}</Badge>
-}
-
-/** 一串步骤，走到第 at 步（从 0 起，等于步数即全走完）；bad 时当前那一步标红。 */
-export function Progress({
-  steps,
-  at,
-  bad,
-  label,
-}: {
-  steps: readonly string[]
-  at: number
-  bad?: boolean
-  label: string
-}) {
-  return (
-    <ol className="flex flex-wrap gap-x-1 gap-y-2 text-xs" aria-label={label}>
-      {steps.map((s, i) => (
-        <li key={s} className="flex items-center gap-1">
-          <span
-            aria-current={i === at ? 'step' : undefined}
-            className={cn(
-              'rounded-full border px-2.5 py-1',
-              i < at && 'border-emerald-300 text-emerald-800 dark:text-emerald-300',
-              i === at &&
-                (bad
-                  ? 'border-red-400 font-medium text-red-800 dark:text-red-300'
-                  : 'border-primary bg-primary text-primary-foreground font-medium'),
-              i > at && 'text-muted-foreground',
-            )}
-          >
-            {i < at ? '✓ ' : ''}
-            {s}
-          </span>
-          {i < steps.length - 1 ? <span className="text-muted-foreground">→</span> : null}
-        </li>
-      ))}
-    </ol>
   )
 }
 
@@ -276,5 +119,127 @@ export function Card({
       {title ? <h3 className="font-medium">{title}</h3> : null}
       {children}
     </section>
+  )
+}
+
+/** 大类：每类带条数。 */
+function Filters<F extends string>({
+  filters,
+  value,
+  onChange,
+  count,
+  label,
+  name,
+}: {
+  filters: readonly F[]
+  value: F
+  onChange: (f: F) => void
+  count: (f: F) => number
+  label: string
+  name: (f: F) => string
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label={label}>
+      {filters.map((f) => (
+        <button
+          key={f}
+          type="button"
+          aria-pressed={value === f}
+          onClick={() => onChange(f)}
+          className={cn(
+            'rounded-full border px-3 py-1 text-xs',
+            value === f ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-accent',
+          )}
+        >
+          {name(f)} · {count(f)}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * 一栏的样子：左边大类与列表，中间是选中那一条，右边栏放结果。从别处点进来带着 picked：
+ * 先落在它所在的大类。
+ */
+export function ColumnLayout<F extends string, I>({
+  title,
+  filters,
+  defaultFilter,
+  items,
+  categoryOf,
+  keyOf,
+  picked,
+  onPick,
+  renderRow,
+  empty,
+  children,
+  failed,
+  pending,
+  actions,
+}: {
+  title: string
+  filters: readonly F[]
+  defaultFilter: F
+  items: I[]
+  categoryOf: (item: I) => F
+  keyOf: (item: I) => string
+  picked: string | null
+  onPick: (key: string) => void
+  renderRow: (item: I) => React.ReactNode
+  empty: string
+  children: (current: I | null) => React.ReactNode
+  failed: boolean
+  pending: boolean
+  actions?: React.ReactNode
+}) {
+  const t = useTranslations('knowbots')
+  const [chosen, setChosen] = useState<F | null>(null)
+  const pickedItem = items.find((item) => keyOf(item) === picked)
+  const filter = chosen ?? (pickedItem ? categoryOf(pickedItem) : defaultFilter)
+  const shown = items.filter((item) => categoryOf(item) === filter)
+  const current =
+    (pickedItem && categoryOf(pickedItem) === filter ? pickedItem : null) ?? shown[0] ?? null
+  return (
+    <div className="mt-6 space-y-4">
+      {actions}
+      {failed ? (
+        <p className="text-destructive text-sm" role="alert">
+          {t('loadFailed')}
+        </p>
+      ) : pending ? (
+        <p className="text-muted-foreground text-sm">{t('loading')}</p>
+      ) : (
+        <div className="flex flex-col items-start gap-6 lg:flex-row">
+          <aside aria-label={title} className="w-full space-y-3 lg:w-72 lg:shrink-0">
+            <Filters
+              filters={filters}
+              value={filter}
+              onChange={setChosen}
+              count={(f) => items.filter((item) => categoryOf(item) === f).length}
+              label={t('category')}
+              name={(f) => t(`categories.${f}` as never)}
+            />
+            {shown.length === 0 ? (
+              <p className="text-muted-foreground text-sm">{empty}</p>
+            ) : (
+              <ul className="space-y-2">
+                {shown.map((item) => (
+                  <li key={keyOf(item)}>
+                    <Row
+                      selected={current !== null && keyOf(item) === keyOf(current)}
+                      onPick={() => onPick(keyOf(item))}
+                    >
+                      {renderRow(item)}
+                    </Row>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
+          {children(current)}
+        </div>
+      )}
+    </div>
   )
 }
