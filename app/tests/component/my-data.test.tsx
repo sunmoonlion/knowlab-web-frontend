@@ -58,7 +58,7 @@ beforeEach(() => {
   vi.mocked(deleteDataset).mockReset()
 })
 
-describe('我的数据', () => {
+describe('知识库', () => {
   it('lists my data with usage and uploads a chosen file', async () => {
     vi.mocked(uploadDataset).mockResolvedValue(DATASET)
     page()

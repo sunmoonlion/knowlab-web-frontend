@@ -44,7 +44,7 @@ describe('web端外壳', () => {
       '创意',
       '分身',
       '专家',
-      '我的数据',
+      '知识库',
     ])
     // 不叫「我的专家」「我的分身」
     expect(screen.queryByText('我的专家')).toBeNull()

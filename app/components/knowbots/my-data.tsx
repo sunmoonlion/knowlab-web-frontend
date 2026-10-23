@@ -17,7 +17,7 @@ function size(bytes: number): string {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`
 }
 
-// 我的数据（SDD 0027 决定 4）：只用于你自己的分身与测试。只收 PDF、Excel、CSV、文本，
+// 知识库（SDD 0027 决定 4、SDD 0042 第七节，10-23 前叫「我的数据」）：只用于测试你的创意。只收 PDF、Excel、CSV、文本，
 // 单个不超过 50 MB，一共不超过 1 GB；在做的或已交付的分身用着的不能删。
 export function MyData({ csrfToken }: { csrfToken: string }) {
   const t = useTranslations('knowbotData')

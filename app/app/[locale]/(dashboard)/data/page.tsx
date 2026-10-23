@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('data'), robots: { index: false, follow: false } }
 }
 
-// 我的数据（SDD 0037 §四.2）：上传、看版本、删；一份数据可被几个创意用
+// 知识库（SDD 0037 §四.2、SDD 0042 第七节）：上传、看版本、删；一份数据可被几个创意用
 export default async function DataPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
   const session = await requireBrowserSession(locale, `/${locale}/data`)

@@ -53,7 +53,7 @@
     "ideas": "Ideas",
     "avatars": "Avatars",
     "experts": "Experts",
-    "data": "My data",
+    "data": "Knowledge base",
     "mainNavigation": "Main navigation",
     "openMenu": "Open navigation",
     "closeMenu": "Close navigation",
@@ -150,8 +150,8 @@
     }
   },
   "knowbotData": {
-    "title": "My data",
-    "intro": "Your data is used only for your own knowbots and their tests, never for anyone else. PDF, Excel, CSV and text only; up to 50 MB per file and 1 GB in total.",
+    "title": "Knowledge base",
+    "intro": "What you keep here is used only to test your ideas and is never given to anyone else. PDF, Excel, CSV and text only; up to 50 MB each, 1 GB and 1000 files in all.",
     "tableHint": "For numbers, upload tables where you can (Excel or CSV): reporting periods across the first row, line items down the first column, one number per cell. Your knowbot then takes figures cell by cell and the platform computes them, so results are exact and checkable. A PDF can only be read as text; use it to cross-check a few figures.",
     "loading": "Loading…",
     "loadFailed": "Could not load. Please refresh and try again.",
@@ -170,7 +170,12 @@
       "dataset_name_invalid": "The file name is not allowed.",
       "dataset_in_use": "A knowbot in progress or delivered uses this data, so it cannot be deleted.",
       "storage_unavailable": "Uploading data is not available yet.",
-      "other": "That did not work. Please try again later."
+      "other": "That did not work. Please try again later.",
+      "dataset_count_exceeded": "You can keep at most 1000 files; delete some you no longer need.",
+      "dataset_refused": "The knowledge base did not take this file.",
+      "reauth_required": "Your sign-in has expired; sign in again and retry.",
+      "knowbase_unconfigured": "The knowledge base is not available right now.",
+      "knowbase_unavailable": "The knowledge base cannot be reached right now; please try again later."
     }
   },
   "knowbotQuestions": {
