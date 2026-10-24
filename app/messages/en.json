@@ -167,7 +167,8 @@
       "dataset_refused": "The knowledge base did not take this file.",
       "reauth_required": "Your sign-in has expired; sign in again and retry.",
       "knowbase_unconfigured": "The knowledge base is not available right now.",
-      "knowbase_unavailable": "The knowledge base cannot be reached right now; please try again later."
+      "knowbase_unavailable": "The knowledge base cannot be reached right now; please try again later.",
+      "consent_not_withdrawn": "Not deleted this time: the test consent could not be updated yet; please delete it again shortly."
     }
   },
   "knowbotQuestions": {

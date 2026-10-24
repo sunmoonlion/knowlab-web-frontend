@@ -167,7 +167,8 @@
       "dataset_refused": "知识库没收下这份文件。",
       "reauth_required": "登录过期了，请重新登录再试。",
       "knowbase_unconfigured": "知识库暂时不可用。",
-      "knowbase_unavailable": "知识库暂时连不上，请稍后再试。"
+      "knowbase_unavailable": "知识库暂时连不上，请稍后再试。",
+      "consent_not_withdrawn": "这一次没删成：测试同意还没改好，请稍后再删一次。"
     }
   },
   "knowbotQuestions": {
