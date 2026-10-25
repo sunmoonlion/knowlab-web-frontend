@@ -245,4 +245,31 @@ describe('申请一个创意', () => {
     expect(router.push).toHaveBeenCalledWith(`/applications?item=${REQUEST}`)
     expect(submitRequest).not.toHaveBeenCalled()
   })
+
+  it('改创意：带过来的用例留原编号，删掉的号不再给新用例（Fable 评审 P1-6）', async () => {
+    vi.mocked(reviseRequest).mockResolvedValue(3)
+    const base = version()
+    const two = version({
+      cases: [
+        { ...base.cases[0]!, case_id: 'c1', input: { question: '问 A' } },
+        { ...base.cases[0]!, case_id: 'c2', input: { question: '问 B' } },
+      ],
+    })
+    renderWith(<RequestForm csrfToken={CSRF} revise={{ requestId: REQUEST, version: two }} />)
+    fireEvent.click(
+      screen.getAllByRole('button', { name: messages.knowbotRequests.form.removeCase })[0]!,
+    )
+    fireEvent.click(screen.getByText(messages.knowbotRequests.form.addCase))
+    fireEvent.change(screen.getByLabelText('用例 2：问它什么'), { target: { value: '问 C' } })
+    fireEvent.click(screen.getByLabelText(/我同意/))
+    fireEvent.click(
+      screen.getByRole('button', { name: messages.knowbotRequests.form.submitRevision }),
+    )
+    await waitFor(() => expect(reviseRequest).toHaveBeenCalled())
+    const body = vi.mocked(reviseRequest).mock.calls[0]![1]
+    expect(body.cases.map((c) => [c.case_id, c.input.question])).toEqual([
+      ['c2', '问 B'],
+      ['c3', '问 C'],
+    ])
+  })
 })

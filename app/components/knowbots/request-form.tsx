@@ -30,7 +30,9 @@ type ExpectationDraft = {
   tolerance: string
 }
 // answers：开步前提问预先给好的答案（改创意时照原样带上）
+// caseId：从上一版带过来的用例保留原编号；新加的才发新号（Fable 评审 P1-6）
 type CaseDraft = {
+  caseId?: string
   question: string
   expectations: ExpectationDraft[]
   answers?: Record<string, string>
@@ -45,9 +47,21 @@ const emptyExpectation = (): ExpectationDraft => ({
   tolerance: '',
 })
 
+function caseIds(cases: CaseDraft[]): string[] {
+  const taken = new Set(cases.flatMap((c) => (c.caseId ? [c.caseId] : [])))
+  let next = Math.max(0, ...[...taken].map((id) => Number(/^c(\d+)$/.exec(id)?.[1] ?? 0))) + 1
+  return cases.map((c) => {
+    if (c.caseId) return c.caseId
+    while (taken.has(`c${next}`)) next++
+    taken.add(`c${next}`)
+    return `c${next}`
+  })
+}
+
 function toCases(cases: CaseDraft[]): CaseIn[] {
+  const ids = caseIds(cases)
   return cases.map((c, i) => ({
-    case_id: `c${i + 1}`,
+    case_id: ids[i]!,
     input:
       c.answers && Object.keys(c.answers).length > 0
         ? { question: c.question.trim(), answers: c.answers }
@@ -78,6 +92,7 @@ function fromVersion(version: Version): CaseDraft[] {
         ? (input.answers as Record<string, string>)
         : undefined
     return {
+      caseId: typeof raw.case_id === 'string' ? raw.case_id : undefined,
       question: typeof input.question === 'string' ? input.question : '',
       answers,
       expectations: expectations.map((e) => ({
