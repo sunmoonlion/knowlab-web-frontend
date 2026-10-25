@@ -363,6 +363,7 @@ const datasetSchema = z.object({
   size_bytes: z.number().int().min(1),
   sha256: z.string().regex(/^[0-9a-f]{64}$/),
   created_at: when,
+  no_resale: z.boolean().optional(),
 })
 
 export const myDataSchema = z.object({

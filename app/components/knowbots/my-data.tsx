@@ -67,6 +67,9 @@ export function MyData({ csrfToken }: { csrfToken: string }) {
                   <span className="min-w-0 truncate">
                     {d.name}
                     <span className="text-muted-foreground"> · {size(d.size_bytes)}</span>
+                    {d.no_resale ? (
+                      <span className="text-muted-foreground"> · {t('noResale')}</span>
+                    ) : null}
                   </span>
                   <Button
                     size="sm"

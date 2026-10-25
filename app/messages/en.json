@@ -142,6 +142,7 @@
     }
   },
   "knowbotData": {
+    "noResale": "bought, no resale",
     "title": "Knowledge base",
     "intro": "What you keep here is used only to test your ideas and is never given to anyone else. PDF, Excel, CSV and text only; up to 50 MB each, 1 GB and 1000 files in all.",
     "tableHint": "For numbers, upload tables where you can (Excel or CSV): reporting periods across the first row, line items down the first column, one number per cell. Your knowbot then takes figures cell by cell and the platform computes them, so results are exact and checkable. A PDF can only be read as text; use it to cross-check a few figures.",
