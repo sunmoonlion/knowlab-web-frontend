@@ -146,7 +146,12 @@
     "failed": "没有提交成功，请再试一次。",
     "where": "{draft} · {case}",
     "ownWords": "写下你的回答",
-    "answer": "回答"
+    "answer": "回答",
+    "approvalIntro": "测试要在你的电脑上做这件事：批准了才做，拒绝了这一步不做。",
+    "approve": "批准",
+    "deny": "拒绝",
+    "dataHere": "专家要的数据在名称页的「测试」里确认。",
+    "toData": "去确认数据"
   },
   "knowbots": {
     "loading": "正在读取……",
@@ -298,7 +303,10 @@
       "draftNotOk": "准专家 {label}：你说不行（{at}）",
       "expertAccepted": "第 {version} 版：你要了（{at}）",
       "expertDeclined": "第 {version} 版：你没要（{at}）",
-      "answered": "你答：{answer}（{at}）"
+      "answered": "你答：{answer}（{at}）",
+      "approved": "批准",
+      "denied": "拒绝",
+      "dataConfirmed": "确认了数据"
     },
     "experts": {
       "title": "专家",
@@ -328,7 +336,11 @@
       "intro": "一个名称的一生：每个过程最新的一项，和按时间排的记录。",
       "timeline": "记录",
       "summary": "每个过程最新的一项",
-      "backfilled": "再早的测试没留记录。"
+      "backfilled": "再早的测试没留记录。",
+      "incubation": "孵化",
+      "incubationHint": "把你的方法一步一步写成格子，自动保存；写好了出一版准专家，拿去测。",
+      "openWorkdraft": "打开工作稿",
+      "published": "出了准专家 {label}：在下面「测试」里可以自己测一次。"
     },
     "event": {
       "submitted": "你申请：创意 v1",
@@ -388,7 +400,11 @@
       "starting": "正在发起…",
       "startFailed": "没发起成，请再试一次。",
       "keyNote": "用你在 knowbench 填的模型 key；没填的话测试会停下。",
-      "running": "第 {number} 次测试在跑"
+      "running": "第 {number} 次测试在跑",
+      "errors": {
+        "author_has_no_computer": "你还没有能测的电脑：先去 knowbench 接入一台电脑，再回来测。",
+        "test_computer_unavailable": "这台电脑或这个目录现在用不了：先去 knowbench 接入一台电脑（或把目录加进白名单），再回来测。"
+      }
     },
     "testData": {
       "lead": "用例 {caseId}：专家要这些数据。你可以换一份、改主体或年份、去掉、自己加一样；确认了才去签、去取，测试停在这里等你。",
@@ -432,6 +448,226 @@
         "waiting": "正在取",
         "unusable": "不能用"
       }
+    }
+  },
+  "workdraft": {
+    "title": "工作稿",
+    "intro": "把你的方法一步一步写成格子：自动保存；点「出一版」出准专家，拿去测。",
+    "backToName": "回到名称页",
+    "loading": "正在读取……",
+    "loadFailed": "读取失败，请刷新再试。",
+    "status": {
+      "idle": "自动保存",
+      "pending": "有改动，稍后自动保存",
+      "saving": "正在保存…",
+      "saved": "已自动保存",
+      "failed": "没存上（{code}），再改一下会重存。"
+    },
+    "conflict": "别处改过，已重新载入。",
+    "toolbar": {
+      "label": "工作稿的操作",
+      "aiDraft": "AI 起草",
+      "aiRevise": "让 AI 改…",
+      "soon": "即将开放",
+      "import": "导入",
+      "copy": "从我的准专家复制",
+      "preview": "预览清单",
+      "publish": "出一版",
+      "publishing": "正在出…"
+    },
+    "expert": {
+      "title": "整个专家",
+      "name": "名称",
+      "tagline": "一句话介绍",
+      "does": "接什么",
+      "doesNot": "不接什么",
+      "elsewhere": "不接的去哪问"
+    },
+    "data": {
+      "title": "数据",
+      "none": "还没有挑数据。",
+      "hint": "从你的 knowbase 挑数据的界面以后加；这里先列已挑的编号。",
+      "remove": "去掉 {id}"
+    },
+    "steps": {
+      "title": "步骤",
+      "add": "+ 加一步",
+      "none": "还没有步骤。",
+      "step": "第 {n} 步",
+      "up": "上移",
+      "down": "下移",
+      "remove": "删",
+      "upLabel": "上移第 {n} 步",
+      "downLabel": "下移第 {n} 步",
+      "removeLabel": "删掉第 {n} 步",
+      "confirmRemove": "确认删掉第 {n} 步",
+      "keep": "不删了"
+    },
+    "step": {
+      "title": "这一步叫什么",
+      "does": "做什么",
+      "doesHint": "一两句白话；要提示这一步一般要什么数据也写在这里。",
+      "why": "为什么",
+      "whyHint": "专家处理期间摆在页面上给用户看。",
+      "uses": "用上哪几步的结果",
+      "usesNone": "这是第一步，前面没有步骤。",
+      "rules": "规则",
+      "rule": "规则 {n}",
+      "addRule": "+ 加一条规则",
+      "removeRule": "删掉规则 {n}",
+      "ask": "开步前问用户什么",
+      "question": "问题 {n}",
+      "option": "问题 {q} 的选项 {n}",
+      "addOption": "+ 加一个选项",
+      "removeOption": "删掉问题 {q} 的选项 {n}",
+      "addQuestion": "+ 加一个问题",
+      "removeQuestion": "删掉问题 {n}",
+      "outputs": "交回哪几项",
+      "outputName": "第 {n} 项的名字",
+      "outputType": "第 {n} 项的类型",
+      "addOutput": "+ 加一项",
+      "removeOutput": "删掉第 {n} 项",
+      "items": "第 {n} 项的每项有哪几项",
+      "itemName": "第 {o} 项的子项 {n} 的名字",
+      "itemType": "第 {o} 项的子项 {n} 的类型",
+      "addItem": "+ 加一个子项",
+      "removeItem": "删掉第 {o} 项的子项 {n}",
+      "nameInvalid": "名字不能空，不能带空格、点、斜杠、引号和、，；：（）。",
+      "nameDuplicate": "名字重复了。",
+      "notSaved": "这几项改好之前先不存。",
+      "checks": "怎样算对",
+      "checksHint": "交回的每一项自动带「必须有」，交回的是一个 JSON、不给买卖建议也不用填。",
+      "template": "第 {n} 条的验收模板",
+      "addCheck": "+ 加一条",
+      "removeCheck": "删掉第 {n} 条",
+      "onFail": "没过怎么办",
+      "backTo": "退回到哪一步",
+      "chooseStep": "选一步",
+      "advanced": "高级（工具、额度、读入上限）",
+      "advancedHint": "不改就用默认的：工具全给，额度、读入上限用默认值。",
+      "tools": "能用的工具",
+      "reserve": "每步额度（元）",
+      "inputMax": "读入上限（字）",
+      "byDefault": "默认 {value}",
+      "invalidNumber": "填的不对，先不存。",
+      "ownSchema": "这一步用的是手写的交回结构（导入时带来的）。"
+    },
+    "types": {
+      "number": "数",
+      "table": "表",
+      "text": "文字",
+      "list": "列表"
+    },
+    "onFail": {
+      "rework": "重做一次，再不过停下来问",
+      "ask": "直接停下来问",
+      "back": "退回前面某一步"
+    },
+    "templates": {
+      "required": "必须有",
+      "non_empty": "不能空",
+      "list_min": "列表至少几项",
+      "list_empty": "列表必须是空的",
+      "blank": "这一项留空",
+      "each_has": "列表每项都有哪几项、某项只能取哪几个值",
+      "all_equal": "列表每项的某项都等于",
+      "computed": "数是用计算工具算出来的",
+      "identity": "两个数相等（恒等式、加总）",
+      "sourced": "数和原数据那一格对得上",
+      "quoted": "说法要附原文引文",
+      "covers": "上一步列出的每一项这一步都要有",
+      "max_chars": "字数上限"
+    },
+    "params": {
+      "keys": "哪几项",
+      "path": "哪一项",
+      "min": "至少几项（不填是 1）",
+      "eachKeys": "每项都有的项（用逗号或顿号隔开）",
+      "field": "某项的名字",
+      "values": "只能取的值（用逗号或顿号隔开）",
+      "equals": "都等于",
+      "expression": "算式（可不填）",
+      "tolerance": "容差（可不填）",
+      "source_step": "对照哪一步",
+      "source_path": "那一步的哪一项",
+      "source_field": "那一项里对照的名字（可不填）",
+      "also": "这一步还要对上的项（可不填）",
+      "max": "最多几个字",
+      "choose": "选一项"
+    },
+    "tools": {
+      "compute": "计算",
+      "describe_items": "看数据有哪些项",
+      "find_subject": "查主体",
+      "list_inputs": "列给它的数据",
+      "lookup": "查一项",
+      "query_facts": "查数",
+      "query_metric": "查指标",
+      "read_facts": "读数",
+      "read_input": "读一份数据",
+      "request_data": "要数据",
+      "search_evidence": "查引文"
+    },
+    "origin": {
+      "edit": "作者写的",
+      "import": "导入",
+      "copy": "复制",
+      "accept": "接受的建议",
+      "question": "答过的问题",
+      "none": "没有出处"
+    },
+    "problems": {
+      "title": "出版本前要改的",
+      "noSource": "没有出处：在这一格里自己改一下就算你写的。",
+      "differs": "这一格和它的记录对不上：自己改一下就算你写的。",
+      "scopeDoes": "写一写这位专家接什么。",
+      "noSteps": "至少加一步。",
+      "noTitle": "给这一步起个名字。",
+      "noDoes": "写这一步做什么。",
+      "noOutputs": "至少加一项交回。",
+      "noQuestion": "把问题写出来。",
+      "backEarlier": "只能退回到前面的步骤。",
+      "usesEarlier": "用上的只能是前面的步骤。",
+      "checkNeeds": "这个验收模板还有参数没填：{message}",
+      "checkPath": "选的不是这一步交回的项：{message}"
+    },
+    "preview": {
+      "title": "编出的清单",
+      "version": "会出第 {version} 版",
+      "problems": "出不了版本的地方：{count} 处",
+      "none": "都过了，可以出一版。",
+      "close": "关上",
+      "loading": "正在编……",
+      "failed": "没编出来，请再试一次。"
+    },
+    "publish": {
+      "done": "出了准专家 {label}。",
+      "refused": "出不了版本：有地方要改，已在格子上标红。",
+      "failed": "没出成（{code}），请再试一次。",
+      "unsaved": "有改动还没存上：存上了再出一版。"
+    },
+    "import": {
+      "title": "导入专家包",
+      "hint": "贴一份清单 v2 的 JSON，或选一个文件。导入会把整份工作稿换掉；导入的内容算你的原话，只导你自己的文件。",
+      "text": "清单 JSON",
+      "file": "选一个文件",
+      "submit": "导入（整份换掉）",
+      "badJson": "这不是一份 JSON。",
+      "invalid": "这份清单导不进来：只认清单 v2（{code}）。",
+      "done": "导入了。",
+      "notes": "没能留下的：",
+      "close": "关上"
+    },
+    "copy": {
+      "title": "从我的准专家复制",
+      "hint": "拿这个名称下你的一位准专家作起点，整份换掉现在的工作稿。",
+      "choose": "选一位",
+      "label": "准专家",
+      "none": "这个名称下还没有准专家。",
+      "submit": "复制（整份换掉）",
+      "failed": "没复制成（{code}）。",
+      "done": "复制好了。",
+      "close": "关上"
     }
   }
 }

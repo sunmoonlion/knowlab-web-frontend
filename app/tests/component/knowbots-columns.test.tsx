@@ -5,6 +5,7 @@ import { ExpertsView } from '@/components/knowbots/experts-view'
 import { NameView } from '@/components/knowbots/name-view'
 import { Overview } from '@/components/knowbots/overview'
 import { ReviewView } from '@/components/knowbots/review-view'
+import { inboxSchema } from '@/contracts/knowbots'
 import {
   answerMyQuestion,
   decideExpert,
@@ -149,6 +150,98 @@ describe('审核', () => {
   })
 })
 
+describe('审核：工具审批与数据', () => {
+  it('自助测试里的工具审批：批准、拒绝', async () => {
+    vi.mocked(fetchInbox).mockResolvedValue({
+      contract_version: 1,
+      items: [
+        {
+          ...question({ kind: 'tool_approval', text: '执行命令 python calc.py？', options: [] }),
+          ...BRIEF,
+          state: 'todo',
+          type: 'question',
+        },
+      ],
+      answered: [],
+    })
+    vi.mocked(answerMyQuestion).mockResolvedValue(undefined)
+    renderWith(<ReviewView csrfToken={CSRF} />)
+    expect(await screen.findByText(messages.knowbotQuestions.approvalIntro)).toBeInTheDocument()
+    expect(screen.queryByLabelText(messages.knowbotQuestions.ownWords)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: messages.knowbotQuestions.approve }))
+    await waitFor(() =>
+      expect(answerMyQuestion).toHaveBeenCalledWith(QUESTION, { decision: 'approve' }, CSRF),
+    )
+    fireEvent.click(screen.getByRole('button', { name: messages.knowbotQuestions.deny }))
+    await waitFor(() =>
+      expect(answerMyQuestion).toHaveBeenLastCalledWith(QUESTION, { decision: 'deny' }, CSRF),
+    )
+  })
+
+  it('专家要的数据：指去名称页确认，不在这里答', async () => {
+    vi.mocked(fetchInbox).mockResolvedValue({
+      contract_version: 1,
+      items: [
+        {
+          ...question({ kind: 'data', text: '要这几样数据', options: [] }),
+          ...BRIEF,
+          state: 'todo',
+          type: 'question',
+        },
+      ],
+      answered: [],
+    })
+    renderWith(<ReviewView csrfToken={CSRF} />)
+    expect(
+      await screen.findByRole('link', { name: messages.knowbotQuestions.toData }),
+    ).toHaveAttribute('href', `/names/${REQUEST}`)
+    expect(screen.queryByLabelText(messages.knowbotQuestions.ownWords)).toBeNull()
+  })
+
+  it('审核栏的约定认得审批、数据问题与它们的答案；答过的写批准 / 确认了数据', async () => {
+    const answered = [
+      {
+        question_id: QUESTION,
+        kind: 'tool_approval',
+        case_id: 'c1',
+        key: null,
+        text: '执行命令？',
+        answer: { decision: 'approve' },
+        answered_by: 'user',
+        answered_at: '2026-10-24T09:50:00Z',
+        draft_id: DRAFT,
+      },
+      {
+        question_id: '7b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10',
+        kind: 'data',
+        case_id: 'c1',
+        key: null,
+        text: '要这几样数据',
+        answer: { data: { pins: [] } },
+        answered_by: 'user',
+        answered_at: '2026-10-24T09:51:00Z',
+        draft_id: DRAFT,
+      },
+    ]
+    const parsed = inboxSchema.parse({
+      contract_version: 1,
+      items: [
+        {
+          ...question({ kind: 'data', options: [] }),
+          ...BRIEF,
+          state: 'todo',
+          type: 'question',
+        },
+      ],
+      answered,
+    })
+    vi.mocked(fetchInbox).mockResolvedValue({ ...parsed, items: [] })
+    renderWith(<ReviewView csrfToken={CSRF} />)
+    expect(await screen.findByText(/你答：批准/)).toBeInTheDocument()
+    expect(screen.getByText(/你答：确认了数据/)).toBeInTheDocument()
+  })
+})
+
 describe('专家', () => {
   it('能用的可以停用，要写原因', async () => {
     vi.mocked(fetchExperts).mockResolvedValue([
@@ -231,5 +324,18 @@ describe('首页与详情页', () => {
       `/experts?item=${EXPERT}`,
     )
     expect(screen.getByText('我们受理了创意 v2')).toBeInTheDocument()
+    // 孵化栏：点进去是工作稿
+    expect(screen.getByRole('link', { name: k.name.openWorkdraft })).toHaveAttribute(
+      'href',
+      `/names/${REQUEST}/workdraft`,
+    )
+  })
+
+  it('刚从工作稿出了一版：顶上说一声', async () => {
+    vi.mocked(fetchDetail).mockResolvedValue(detail())
+    renderWith(<NameView requestId={REQUEST} published="1.2" />)
+    expect(
+      await screen.findByText('出了准专家 1.2：在下面「测试」里可以自己测一次。'),
+    ).toBeInTheDocument()
   })
 })

@@ -32,6 +32,15 @@ import {
   type RevisionIn,
   type TestDataRequest,
 } from '@/contracts/knowbots'
+import {
+  previewSchema,
+  publishedSchema,
+  workdraftSchema,
+  type CellEdit,
+  type Preview,
+  type Published,
+  type Workdraft,
+} from '@/contracts/workdraft'
 import { requestJson } from '@/lib/common/api-client'
 
 export class KnowbotContractError extends Error {
@@ -167,7 +176,7 @@ export async function fetchMyQuestions(): Promise<MyQuestion[]> {
 
 export async function answerMyQuestion(
   questionId: string,
-  answer: { option_id?: string; text?: string },
+  answer: { option_id?: string; text?: string; decision?: 'approve' | 'deny' },
   csrfToken: string,
 ): Promise<void> {
   parse(
@@ -241,4 +250,61 @@ export async function declineTestData(questionId: string, csrfToken: string): Pr
       csrfToken,
     }),
   ).status
+}
+
+// ---------- 工作稿（专家孵化方案第五至十一节） ----------
+const workdraftOf = (requestId: string) => `${BASE}/knowbot-requests/${enc(requestId)}/workdraft`
+
+// 这个名称的工作稿；还没存过的是空的一份（revision 0）
+export async function fetchWorkdraft(requestId: string): Promise<Workdraft> {
+  return parse(workdraftSchema, await requestJson(workdraftOf(requestId)))
+}
+
+// 存几格（自动保存）：带读到的 revision，对不上回 409 workdraft_revision
+export async function saveWorkdraftCells(
+  requestId: string,
+  body: { revision: number; cells: CellEdit[] },
+  csrfToken: string,
+): Promise<Workdraft> {
+  return parse(
+    workdraftSchema,
+    await requestJson(`${workdraftOf(requestId)}/cells`, { method: 'POST', csrfToken, body }),
+  )
+}
+
+// 导入专家包（清单 v2）：整份换掉，导入的内容算我的原话
+export async function importWorkdraft(
+  requestId: string,
+  body: { revision: number; manifest: Record<string, unknown> },
+  csrfToken: string,
+): Promise<Workdraft> {
+  return parse(
+    workdraftSchema,
+    await requestJson(`${workdraftOf(requestId)}/import`, { method: 'POST', csrfToken, body }),
+  )
+}
+
+// 拿我自己的一位准专家作起点：整份换掉
+export async function copyWorkdraft(
+  requestId: string,
+  body: { revision: number; draft_id: string },
+  csrfToken: string,
+): Promise<Workdraft> {
+  return parse(
+    workdraftSchema,
+    await requestJson(`${workdraftOf(requestId)}/copy`, { method: 'POST', csrfToken, body }),
+  )
+}
+
+// 编出的清单与出不了版本的地方（按格子路径），不出版本
+export async function previewWorkdraft(requestId: string): Promise<Preview> {
+  return parse(previewSchema, await requestJson(`${workdraftOf(requestId)}/preview`))
+}
+
+// 出一版：把关都过了就出准专家第 n 版（自助）
+export async function publishWorkdraft(requestId: string, csrfToken: string): Promise<Published> {
+  return parse(
+    publishedSchema,
+    await requestJson(`${workdraftOf(requestId)}/publish`, { method: 'POST', csrfToken }),
+  )
 }

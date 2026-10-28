@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SelfTests, choiceOf } from '@/components/knowbots/self-test'
 import type { TestDataRequest } from '@/contracts/knowbots'
+import { ApiClientError } from '@/lib/common/api-client'
 import {
   confirmTestData,
   declineTestData,
@@ -113,6 +114,35 @@ describe('自助测试（SDD 0046 第三节）', () => {
         { environment_id: ENV, workspace_root: '/home/me/work', budget_limit: '5' },
         CSRF,
       ),
+    )
+  })
+
+  it.each([
+    ['test_computer_unavailable', messages.knowbots.selfTest.errors.test_computer_unavailable],
+    ['author_has_no_computer', messages.knowbots.selfTest.errors.author_has_no_computer],
+  ])('后端说电脑用不了（%s）：说先去 knowbench 接入一台电脑再回来测', async (code, text) => {
+    vi.mocked(startSelfTest).mockRejectedValue(
+      new ApiClientError(code === 'author_has_no_computer' ? 409 : 502, {
+        code,
+        message_key: 'errors.requestFailed',
+        retryable: false,
+        correlation_id: 'c',
+      }),
+    )
+    page(detail({ drafts: [draft({ status: 'pending_test', draft_id: DRAFT })], tests: [] }))
+    const start = within(await screen.findByTestId('self-test-start'))
+    fireEvent.click(start.getByRole('button', { name: '自己测一次' }))
+    expect(await start.findByRole('alert')).toHaveTextContent(text)
+    expect(text).toMatch(/先去 knowbench 接入一台电脑/)
+  })
+
+  it('别的错误：照旧说再试一次', async () => {
+    vi.mocked(startSelfTest).mockRejectedValue(new Error('boom'))
+    page(detail({ drafts: [draft({ status: 'pending_test', draft_id: DRAFT })], tests: [] }))
+    const start = within(await screen.findByTestId('self-test-start'))
+    fireEvent.click(start.getByRole('button', { name: '自己测一次' }))
+    expect(await start.findByRole('alert')).toHaveTextContent(
+      messages.knowbots.selfTest.startFailed,
     )
   })
 

@@ -11,10 +11,19 @@ import { AmendmentList } from './reference'
 import { SelfTests } from './self-test'
 import { Card, KEY, useWhen, type Translate } from './shared'
 
-// 一个名称的详情页（SDD 0037 第九节）：顶上一行每个过程最新的一项；下面按时间排的记录，每条写
-// 哪个过程、输入、输出、何时，点了去那一栏看。没交回我的专家不列；谁做的不写。
+// 一个名称的详情页（SDD 0037 第九节）：顶上一行每个过程最新的一项；「孵化」栏进工作稿（专家孵化
+// 方案第六节）；下面按时间排的记录，每条写哪个过程、输入、输出、何时，点了去那一栏看。没交回
+// 我的专家不列；谁做的不写。
 
-export function NameView({ requestId, csrfToken }: { requestId: string; csrfToken?: string }) {
+export function NameView({
+  requestId,
+  csrfToken,
+  published,
+}: {
+  requestId: string
+  csrfToken?: string
+  published?: string
+}) {
   const t = useTranslations('knowbots')
   const detail = useQuery({
     queryKey: [...KEY, 'detail', requestId],
@@ -36,6 +45,21 @@ export function NameView({ requestId, csrfToken }: { requestId: string; csrfToke
           {summaryParts(life.summary, t).join(' · ')}
         </p>
       </header>
+      {published ? (
+        <p role="status" className="text-sm text-emerald-700 dark:text-emerald-400">
+          {t('name.published', { label: published })}
+        </p>
+      ) : null}
+      {/* 孵化栏（专家孵化方案第六节）：点进去是这个专家的工作稿 */}
+      <Card title={t('name.incubation')}>
+        <p className="text-muted-foreground">{t('name.incubationHint')}</p>
+        <Link
+          href={`/names/${requestId}/workdraft`}
+          className="inline-block underline underline-offset-2"
+        >
+          {t('name.openWorkdraft')}
+        </Link>
+      </Card>
       {csrfToken ? <SelfTests life={life} csrfToken={csrfToken} /> : null}
       <Card title={t('name.timeline')}>
         <Timeline life={life} />

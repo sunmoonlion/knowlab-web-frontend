@@ -6,6 +6,7 @@ import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import type { Detail, TestDataItem, TestDataNeed, TestDataRequest } from '@/contracts/knowbots'
+import { ApiClientError } from '@/lib/common/api-client'
 import {
   confirmTestData,
   declineTestData,
@@ -22,6 +23,14 @@ const ACTIVE = new Set(['queued', 'running', 'waiting'])
 const field = 'h-8 rounded-lg border bg-transparent px-2 text-sm'
 const SUBJECT = /^(\d{6}\.(SH|SZ|BJ)|\d{5}\.HK|[A-Z][A-Z0-9.-]{0,9}\.US|org:[0-9A-Za-z:-]{3,60})$/
 const ADDABLE = ['annual_report', 'semiannual_report', 'interim_announcement', 'research_company']
+// 发起时后端说没有能测的电脑（作者没接入过、那台或那个目录用不了了）：说清楚先去 knowbench 接入
+export const NO_COMPUTER = ['author_has_no_computer', 'test_computer_unavailable'] as const
+
+/** 没发起成的话：认得的错误码说清楚怎么办，别的说「再试一次」。 */
+export function startFailure(error: unknown, t: (key: string) => string): string {
+  const code = error instanceof ApiClientError ? error.problem.code : ''
+  return (NO_COMPUTER as readonly string[]).includes(code) ? t(`errors.${code}`) : t('startFailed')
+}
 
 // 测试（SDD 0046 第三节）：自己在自己的电脑上测一次（选电脑、费用上限）；在跑的测试里专家提出的
 // 数据由我确认（换一份、改主体或年份、去掉、自己加一样），定下来的记成测试集，重测直接用。
@@ -135,7 +144,7 @@ function StartSelfTest({ draftId, csrfToken }: { draftId: string; csrfToken: str
       <p className="text-muted-foreground text-xs">{t('keyNote')}</p>
       {start.isError ? (
         <p role="alert" className="text-destructive">
-          {t('startFailed')}
+          {startFailure(start.error, (key) => t(key as never))}
         </p>
       ) : null}
     </div>

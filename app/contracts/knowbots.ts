@@ -208,10 +208,12 @@ export const applicationsSchema = z.object({
   items: z.array(applicationSchema),
 })
 
-// 测试中转给我回答的问题（投资判断只能我自己答，C-L1）
+// 测试中转给我回答的问题（投资判断只能我自己答，C-L1）；我自助测试里的工具审批（批准 / 拒绝）；
+// 专家要的数据（在名称页的测试卡片里确认，SDD 0046 第三节）
+export const QUESTION_KINDS = ['tool_approval', 'question', 'ask_before', 'data'] as const
 const questionSchema = z.object({
   question_id: z.string().uuid(),
-  kind: z.enum(['question', 'ask_before']),
+  kind: z.enum(QUESTION_KINDS),
   text: z.string().min(1).max(4000),
   options: z.array(z.object({ id: z.string(), label: z.string() })),
   allow_free_text: z.boolean(),
@@ -237,11 +239,12 @@ const inboxItemSchema = z.discriminatedUnion('type', [
 
 const answeredSchema = z.object({
   question_id: z.string().uuid(),
-  kind: z.enum(['tool_approval', 'question', 'ask_before']),
+  kind: z.enum(QUESTION_KINDS),
   case_id: z.string(),
   key: z.string().nullable(),
   text: z.string(),
-  answer: z.record(z.string(), z.string()).nullable(),
+  // 审批是 decision，判断是 option_id / text，数据是 data（确认的那几样）
+  answer: z.record(z.string(), z.unknown()).nullable(),
   answered_by: z.enum(['operator', 'user']).nullable(),
   answered_at: when,
   draft_id: z.string().uuid(),

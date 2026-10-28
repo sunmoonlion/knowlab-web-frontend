@@ -11,7 +11,7 @@ import { decideExpert, fetchDetail, fetchInbox, reviewDraft } from '@/lib/knowbo
 
 import { QuestionsHere } from './my-questions'
 import { Cases, Method, RuleSources } from './reference'
-import { Badge, Card, ColumnLayout, KEY, useWhen } from './shared'
+import { Badge, Card, ColumnLayout, KEY, useWhen, type Translate } from './shared'
 import { SidePanel } from './side-panel'
 import { TestResults } from './test-results'
 
@@ -276,13 +276,20 @@ function History({ items, answered }: { items: InboxItem[]; answered: Answered[]
         <li key={a.question_id}>
           <p className="whitespace-pre-wrap">{a.text}</p>
           <p className="text-muted-foreground text-xs">
-            {t('review.answered', {
-              answer: a.answer?.text ?? a.answer?.option_id ?? '—',
-              at: when(a.answered_at) ?? '—',
-            })}
+            {t('review.answered', { answer: answerText(a, t), at: when(a.answered_at) ?? '—' })}
           </p>
         </li>
       ))}
     </ul>
   )
+}
+
+/** 我答的是什么：审批说批准 / 拒绝，数据说确认了，别的照我写的或选的。 */
+export function answerText(a: Answered, t: Translate) {
+  const answer = a.answer ?? {}
+  if (answer.decision === 'approve') return t('review.approved')
+  if (answer.decision === 'deny') return t('review.denied')
+  if (answer.data !== undefined) return t('review.dataConfirmed')
+  const said = answer.text ?? answer.option_id
+  return typeof said === 'string' ? said : '—'
 }

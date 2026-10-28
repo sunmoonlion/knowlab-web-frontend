@@ -1,0 +1,566 @@
+'use client'
+
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
+import { useEffect, useId, useRef, useState } from 'react'
+
+import { Button } from '@/components/ui/button'
+import type { Workdraft, WorkdraftBody } from '@/contracts/workdraft'
+import { Link, useRouter } from '@/i18n/navigation'
+import { ApiClientError } from '@/lib/common/api-client'
+import {
+  copyWorkdraft,
+  fetchWorkdraft,
+  importWorkdraft,
+  previewWorkdraft,
+  publishWorkdraft,
+  saveWorkdraftCells,
+} from '@/lib/knowbots/client'
+import { diffEdits, freshId, newStep, placed, withoutStep } from '@/lib/knowbots/workdraft'
+
+import { Card, KEY } from './shared'
+import { Field, Group, INPUT, LINK, MarksContext, useProblemText } from './workdraft-cells'
+import { CopyPanel, ImportPanel, PreviewPanel } from './workdraft-panels'
+import { StepEditor } from './workdraft-step'
+
+// 工作稿页面（专家孵化方案第六节）：名称页「孵化」栏点进来。一个分格子的表单，作者看不到 JSON：
+// 整个专家的格子、一步一步的格子；改了自动保存（带 revision，别处改过回 409 就重新载入）。每格
+// 旁边小字标出处，后端预览回来的问题按格子路径标红。顶上：预览清单、出一版、导入、从我的准专家
+// 复制；「AI 起草」「让 AI 改…」是后面的步骤，先放着、禁用。
+
+type Doc = {
+  body: WorkdraftBody // 页面上的这一份（可能还没存）
+  saved: WorkdraftBody // 后端存着的那一份
+  revision: number
+  origins: Record<string, string>
+}
+type Status = { kind: 'idle' | 'pending' | 'saving' | 'saved' } | { kind: 'failed'; code: string }
+type Panels = 'preview' | 'import' | 'copy' | null
+
+const docOf = (w: Workdraft): Doc => ({
+  body: w.body,
+  saved: w.body,
+  revision: w.revision,
+  origins: w.origins,
+})
+const codeOf = (error: unknown) =>
+  error instanceof ApiClientError ? error.problem.code : 'unexpected'
+const conflict = (error: unknown) =>
+  error instanceof ApiClientError && error.problem.code === 'workdraft_revision'
+
+export function WorkdraftView({
+  requestId,
+  csrfToken,
+  saveDelay = 800,
+}: {
+  requestId: string
+  csrfToken: string
+  saveDelay?: number
+}) {
+  const t = useTranslations('workdraft')
+  const loaded = useQuery({
+    queryKey: [...KEY, 'workdraft', requestId],
+    queryFn: () => fetchWorkdraft(requestId),
+  })
+  // 别处改过（409）：重新取一份，编辑器整个换成新的
+  const [generation, setGeneration] = useState(0)
+  const [reloaded, setReloaded] = useState(false)
+  if (loaded.isError)
+    return (
+      <p className="text-destructive mt-6 text-sm" role="alert">
+        {t('loadFailed')}
+      </p>
+    )
+  if (!loaded.data) return <p className="text-muted-foreground mt-6 text-sm">{t('loading')}</p>
+  return (
+    <Editor
+      key={generation}
+      initial={loaded.data}
+      requestId={requestId}
+      csrfToken={csrfToken}
+      saveDelay={saveDelay}
+      reloaded={reloaded}
+      onConflict={async () => {
+        await loaded.refetch()
+        setReloaded(true)
+        setGeneration((g) => g + 1)
+      }}
+    />
+  )
+}
+
+function Editor({
+  initial,
+  requestId,
+  csrfToken,
+  saveDelay,
+  reloaded,
+  onConflict,
+}: {
+  initial: Workdraft
+  requestId: string
+  csrfToken: string
+  saveDelay: number
+  reloaded: boolean
+  onConflict: () => Promise<void>
+}) {
+  const t = useTranslations('workdraft')
+  const router = useRouter()
+  const problemText = useProblemText()
+  const [doc, setDoc] = useState<Doc>(() => docOf(initial))
+  const [status, setStatus] = useState<Status>({ kind: 'idle' })
+  const [panel, setPanel] = useState<Panels>(null)
+  const [busy, setBusy] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const [message, setMessage] = useState<{ tone: 'ok' | 'bad'; text: string } | null>(null)
+  const [panelError, setPanelError] = useState<string | null>(null)
+  const [notes, setNotes] = useState<string[]>([])
+  const docRef = useRef(doc)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const queue = useRef<Promise<void>>(Promise.resolve())
+  const dead = useRef(false)
+  useEffect(() => {
+    dead.current = false
+    const pending = timer
+    return () => {
+      dead.current = true
+      if (!pending.current) return
+      // 离开页面时还没到点的那次照样存（不等回包；别处改过就算了）
+      clearTimeout(pending.current)
+      const current = docRef.current
+      const cells = diffEdits(current.saved, current.body)
+      if (cells.length)
+        saveWorkdraftCells(requestId, { revision: current.revision, cells }, csrfToken).catch(
+          () => undefined,
+        )
+    }
+  }, [requestId, csrfToken])
+
+  const preview = useQuery({
+    queryKey: [...KEY, 'workdraft-preview', requestId, doc.revision],
+    queryFn: () => previewWorkdraft(requestId),
+    placeholderData: keepPreviousData,
+  })
+  const problems = preview.data?.problems ?? []
+
+  const commit = (next: Doc) => {
+    docRef.current = next
+    setDoc(next)
+  }
+
+  // 存一次：拿存好的那份与页面上的比，改了的格子带 revision 存
+  const save = async () => {
+    if (dead.current) return
+    const current = docRef.current
+    const cells = diffEdits(current.saved, current.body)
+    if (cells.length === 0) {
+      setStatus((s) => (s.kind === 'pending' && !timer.current ? { kind: 'saved' } : s))
+      return
+    }
+    setStatus({ kind: 'saving' })
+    try {
+      const got = await saveWorkdraftCells(
+        requestId,
+        { revision: current.revision, cells },
+        csrfToken,
+      )
+      if (dead.current) return
+      commit({ ...docRef.current, saved: got.body, revision: got.revision, origins: got.origins })
+      setStatus({ kind: timer.current ? 'pending' : 'saved' })
+    } catch (error) {
+      if (dead.current) return
+      if (conflict(error)) {
+        dead.current = true
+        await onConflict()
+        return
+      }
+      setStatus({ kind: 'failed', code: codeOf(error) })
+    }
+  }
+
+  // 一次只存一个：排在前一次后面
+  const flush = () => {
+    if (timer.current) {
+      clearTimeout(timer.current)
+      timer.current = null
+    }
+    const next = queue.current.then(save)
+    queue.current = next
+    return next
+  }
+
+  const edit = (change: (body: WorkdraftBody) => WorkdraftBody) => {
+    commit({ ...docRef.current, body: change(docRef.current.body) })
+    setStatus({ kind: 'pending' })
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => {
+      timer.current = null
+      void flush()
+    }, saveDelay)
+  }
+
+  // 整份换掉（导入、复制）：先把没存的存了，带最新的 revision
+  const replace = async (
+    run: (revision: number) => Promise<Workdraft>,
+    failed: (code: string) => string,
+    done: string,
+  ) => {
+    setBusy(true)
+    setPanelError(null)
+    try {
+      await flush()
+      if (dead.current) return
+      const got = await run(docRef.current.revision)
+      if (dead.current) return
+      commit(docOf(got))
+      setStatus({ kind: 'saved' })
+      setNotes(got.notes ?? [])
+      setMessage({ tone: 'ok', text: done })
+      setPanel(null)
+    } catch (error) {
+      if (dead.current) return
+      if (conflict(error)) {
+        dead.current = true
+        await onConflict()
+        return
+      }
+      setPanelError(failed(codeOf(error)))
+    } finally {
+      if (!dead.current) setBusy(false)
+    }
+  }
+
+  const publish = async () => {
+    setBusy(true)
+    setPublishing(true)
+    setMessage(null)
+    try {
+      await flush()
+      if (dead.current) return
+      // 有改动没存上（存的时候出错了）：先别出，出的会是旧的那份
+      if (diffEdits(docRef.current.saved, docRef.current.body).length) {
+        setMessage({ tone: 'bad', text: t('publish.unsaved') })
+        return
+      }
+      const got = await publishWorkdraft(requestId, csrfToken)
+      const label = `${got.version}.${got.revision}`
+      setMessage({ tone: 'ok', text: t('publish.done', { label }) })
+      router.push(`/names/${encodeURIComponent(requestId)}?published=${encodeURIComponent(label)}`)
+    } catch (error) {
+      if (dead.current) return
+      if (conflict(error)) {
+        dead.current = true
+        await onConflict()
+        return
+      }
+      const refused = codeOf(error) === 'workdraft_invalid'
+      // 出不了：重新预览一次，问题标到格子上
+      if (refused) await preview.refetch()
+      setMessage({
+        tone: 'bad',
+        text: refused ? t('publish.refused') : t('publish.failed', { code: codeOf(error) }),
+      })
+    } finally {
+      if (!dead.current) {
+        setBusy(false)
+        setPublishing(false)
+      }
+    }
+  }
+
+  const { body } = doc
+  const elsewhere = problems.filter((p) => !placed(p.path, body))
+  const setStep = (step: WorkdraftBody['steps'][number]) =>
+    edit((b) => ({ ...b, steps: b.steps.map((s) => (s.id === step.id ? step : s)) }))
+  const move = (id: string, by: -1 | 1) =>
+    edit((b) => {
+      const steps = [...b.steps]
+      const index = steps.findIndex((s) => s.id === id)
+      const to = index + by
+      if (index < 0 || to < 0 || to >= steps.length) return b
+      ;[steps[index], steps[to]] = [steps[to], steps[index]]
+      return { ...b, steps }
+    })
+  const statusText =
+    status.kind === 'failed'
+      ? t('status.failed', { code: status.code })
+      : t(`status.${status.kind}`)
+
+  return (
+    <MarksContext.Provider value={{ problems, origins: doc.origins }}>
+      <div className="mt-6 space-y-4">
+        <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h2 className="text-lg font-semibold">
+            {initial.title} · {t('title')}
+          </h2>
+          <span
+            role="status"
+            aria-live="polite"
+            className={
+              status.kind === 'failed'
+                ? 'text-destructive text-xs'
+                : 'text-muted-foreground text-xs'
+            }
+          >
+            {statusText}
+          </span>
+          <Link
+            href={`/names/${requestId}`}
+            className="ml-auto text-sm underline underline-offset-2"
+          >
+            {t('backToName')}
+          </Link>
+        </header>
+        <div role="toolbar" aria-label={t('toolbar.label')} className="flex flex-wrap gap-2">
+          <SoonButton label={t('toolbar.aiDraft')} soon={t('toolbar.soon')} />
+          <SoonButton label={t('toolbar.aiRevise')} soon={t('toolbar.soon')} />
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            aria-expanded={panel === 'import'}
+            onClick={() => {
+              setPanelError(null)
+              setPanel(panel === 'import' ? null : 'import')
+            }}
+          >
+            {t('toolbar.import')}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            aria-expanded={panel === 'copy'}
+            onClick={() => {
+              setPanelError(null)
+              setPanel(panel === 'copy' ? null : 'copy')
+            }}
+          >
+            {t('toolbar.copy')}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            aria-expanded={panel === 'preview'}
+            onClick={async () => {
+              if (panel === 'preview') return setPanel(null)
+              setPanel('preview')
+              await flush()
+              void preview.refetch()
+            }}
+          >
+            {t('toolbar.preview')}
+          </Button>
+          <Button size="sm" disabled={busy} onClick={() => void publish()}>
+            {publishing ? t('toolbar.publishing') : t('toolbar.publish')}
+          </Button>
+        </div>
+        {reloaded ? (
+          <p role="alert" className="text-sm text-amber-700">
+            {t('conflict')}
+          </p>
+        ) : null}
+        {message ? (
+          <div
+            role={message.tone === 'bad' ? 'alert' : 'status'}
+            className={
+              message.tone === 'bad'
+                ? 'text-destructive text-sm'
+                : 'text-sm text-emerald-700 dark:text-emerald-400'
+            }
+          >
+            <p>{message.text}</p>
+            {notes.length ? (
+              <>
+                <p className="text-muted-foreground mt-1 text-xs">{t('import.notes')}</p>
+                <ul className="text-muted-foreground list-disc pl-5 text-xs">
+                  {notes.map((n, i) => (
+                    <li key={i}>{n}</li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+          </div>
+        ) : null}
+        {panel === 'preview' ? (
+          <PreviewPanel
+            preview={preview.data}
+            failed={preview.isError}
+            onClose={() => setPanel(null)}
+          />
+        ) : panel === 'import' ? (
+          <ImportPanel
+            busy={busy}
+            error={panelError}
+            onClose={() => setPanel(null)}
+            onImport={(manifest) =>
+              void replace(
+                (revision) => importWorkdraft(requestId, { revision, manifest }, csrfToken),
+                (code) => t('import.invalid', { code }),
+                t('import.done'),
+              )
+            }
+          />
+        ) : panel === 'copy' ? (
+          <CopyPanel
+            requestId={requestId}
+            busy={busy}
+            error={panelError}
+            onClose={() => setPanel(null)}
+            onCopy={(draftId) =>
+              void replace(
+                (revision) => copyWorkdraft(requestId, { revision, draft_id: draftId }, csrfToken),
+                (code) => t('copy.failed', { code }),
+                t('copy.done'),
+              )
+            }
+          />
+        ) : null}
+        {elsewhere.length ? (
+          <Card title={t('problems.title')} className="border-destructive/50">
+            <ul
+              className="text-destructive list-disc space-y-0.5 pl-5 text-xs"
+              data-testid="problems-elsewhere"
+            >
+              {elsewhere.map((p, i) => (
+                <li key={i}>
+                  {p.path ? <code className="mr-1">{p.path}</code> : null}
+                  {problemText(p)}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ) : null}
+        <Card title={t('expert.title')}>
+          <Field label={t('expert.name')} path="name" filled={Boolean(body.name.trim())}>
+            {(a11y) => (
+              <input
+                {...a11y}
+                className={INPUT}
+                maxLength={80}
+                value={body.name}
+                onChange={(e) => edit((b) => ({ ...b, name: e.target.value }))}
+              />
+            )}
+          </Field>
+          <Field label={t('expert.tagline')} path="tagline" filled={Boolean(body.tagline.trim())}>
+            {(a11y) => (
+              <input
+                {...a11y}
+                className={INPUT}
+                maxLength={200}
+                value={body.tagline}
+                onChange={(e) => edit((b) => ({ ...b, tagline: e.target.value }))}
+              />
+            )}
+          </Field>
+          {(
+            [
+              ['does', 'expert.does'],
+              ['does_not', 'expert.doesNot'],
+              ['elsewhere', 'expert.elsewhere'],
+            ] as const
+          ).map(([key, label]) => (
+            <Field
+              key={key}
+              label={t(label)}
+              path={`scope/${key}`}
+              filled={Boolean(body.scope[key].trim())}
+            >
+              {(a11y) => (
+                <textarea
+                  {...a11y}
+                  className={INPUT}
+                  rows={2}
+                  maxLength={2000}
+                  value={body.scope[key]}
+                  onChange={(e) =>
+                    edit((b) => ({ ...b, scope: { ...b.scope, [key]: e.target.value } }))
+                  }
+                />
+              )}
+            </Field>
+          ))}
+        </Card>
+        <Card title={t('data.title')}>
+          <p className="text-muted-foreground text-xs">{t('data.hint')}</p>
+          {body.data_picks.length === 0 ? (
+            <p className="text-muted-foreground">{t('data.none')}</p>
+          ) : (
+            <ul className="flex flex-wrap gap-2">
+              {body.data_picks.map((id) => (
+                <li key={id} className="flex items-center gap-1 rounded-full border px-2 py-0.5">
+                  <code className="text-xs">{id}</code>
+                  <button
+                    type="button"
+                    className={LINK}
+                    aria-label={t('data.remove', { id })}
+                    onClick={() =>
+                      edit((b) => ({ ...b, data_picks: b.data_picks.filter((p) => p !== id) }))
+                    }
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+        <Group title={t('steps.title')} path="steps">
+          {body.steps.length === 0 ? (
+            <p className="text-muted-foreground text-sm">{t('steps.none')}</p>
+          ) : null}
+          <div className="space-y-4">
+            {body.steps.map((step, index) => (
+              <StepEditor
+                key={step.id}
+                step={step}
+                number={index + 1}
+                count={body.steps.length}
+                earlier={body.steps.slice(0, index)}
+                onChange={setStep}
+                onMove={(by) => move(step.id, by)}
+                onRemove={() => edit((b) => withoutStep(b, step.id))}
+              />
+            ))}
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              edit((b) => ({
+                ...b,
+                steps: [
+                  ...b.steps,
+                  newStep(
+                    freshId(
+                      's',
+                      b.steps.map((s) => s.id),
+                    ),
+                  ),
+                ],
+              }))
+            }
+          >
+            {t('steps.add')}
+          </Button>
+        </Group>
+      </div>
+    </MarksContext.Provider>
+  )
+}
+
+/** 后面的步骤才有的按钮：先放着、禁用，标「即将开放」。 */
+function SoonButton({ label, soon }: { label: string; soon: string }) {
+  const id = useId()
+  return (
+    <span className="inline-flex items-center gap-1">
+      <Button size="sm" variant="outline" disabled aria-describedby={id}>
+        {label}
+      </Button>
+      <span id={id} className="text-muted-foreground rounded-full border px-1.5 text-[0.7rem]">
+        {soon}
+      </span>
+    </span>
+  )
+}

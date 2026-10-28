@@ -146,7 +146,12 @@
     "failed": "Could not submit. Please try again.",
     "where": "{draft} · {case}",
     "ownWords": "Write your answer",
-    "answer": "Answer"
+    "answer": "Answer",
+    "approvalIntro": "The test wants to do this on your computer: it happens only if you approve; if you deny, the step does not do it.",
+    "approve": "Approve",
+    "deny": "Deny",
+    "dataHere": "Confirm the data the expert asks for under “Testing” on the name page.",
+    "toData": "Confirm the data"
   },
   "knowbots": {
     "loading": "Loading…",
@@ -298,7 +303,10 @@
       "draftNotOk": "candidate {label}: you said not right ({at})",
       "expertAccepted": "version {version}: you took it ({at})",
       "expertDeclined": "version {version}: you declined it ({at})",
-      "answered": "You answered: {answer} ({at})"
+      "answered": "You answered: {answer} ({at})",
+      "approved": "approved",
+      "denied": "denied",
+      "dataConfirmed": "confirmed the data"
     },
     "experts": {
       "title": "Experts",
@@ -328,7 +336,11 @@
       "intro": "The life of one name: the latest of each process, and the record in time order.",
       "timeline": "Record",
       "summary": "Latest of each process",
-      "backfilled": "Earlier tests left no record."
+      "backfilled": "Earlier tests left no record.",
+      "incubation": "Incubation",
+      "incubationHint": "Write your method step by step in cells; it saves itself. When it is ready, publish a draft expert and test it.",
+      "openWorkdraft": "Open the workdraft",
+      "published": "Published draft expert {label}: you can test it yourself under “Testing” below."
     },
     "event": {
       "submitted": "You applied: idea v1",
@@ -388,7 +400,11 @@
       "starting": "Starting…",
       "startFailed": "Could not start; try again.",
       "keyNote": "Uses the model key you set in knowbench; without one the test stops.",
-      "running": "Test {number} is running"
+      "running": "Test {number} is running",
+      "errors": {
+        "author_has_no_computer": "You have no computer to test on yet: connect one in knowbench first, then come back.",
+        "test_computer_unavailable": "That computer or folder cannot be used now: connect a computer in knowbench (or allow the folder) first, then come back."
+      }
     },
     "testData": {
       "lead": "Case {caseId}: the expert asks for this data. Switch to another copy, change the company or years, drop an item or add one; nothing is signed or fetched until you confirm, and the test waits here.",
@@ -432,6 +448,226 @@
         "waiting": "Being fetched",
         "unusable": "Cannot be used"
       }
+    }
+  },
+  "workdraft": {
+    "title": "Workdraft",
+    "intro": "Write your method step by step in cells. It saves itself; press “Publish a version” to make a draft expert you can test.",
+    "backToName": "Back to the name",
+    "loading": "Loading…",
+    "loadFailed": "Could not load; refresh and try again.",
+    "status": {
+      "idle": "Saves automatically",
+      "pending": "Changed; saving shortly",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "failed": "Not saved ({code}); change anything to retry."
+    },
+    "conflict": "It was changed elsewhere and has been reloaded.",
+    "toolbar": {
+      "label": "Workdraft actions",
+      "aiDraft": "AI draft",
+      "aiRevise": "Ask AI to change…",
+      "soon": "Coming soon",
+      "import": "Import",
+      "copy": "Copy from my draft experts",
+      "preview": "Preview manifest",
+      "publish": "Publish a version",
+      "publishing": "Publishing…"
+    },
+    "expert": {
+      "title": "The whole expert",
+      "name": "Name",
+      "tagline": "One-line introduction",
+      "does": "What it takes",
+      "doesNot": "What it does not take",
+      "elsewhere": "Where to ask instead"
+    },
+    "data": {
+      "title": "Data",
+      "none": "No data picked yet.",
+      "hint": "Picking data from your knowbase comes later; picked ids are listed here.",
+      "remove": "Remove {id}"
+    },
+    "steps": {
+      "title": "Steps",
+      "add": "+ Add a step",
+      "none": "No steps yet.",
+      "step": "Step {n}",
+      "up": "Up",
+      "down": "Down",
+      "remove": "Delete",
+      "upLabel": "Move step {n} up",
+      "downLabel": "Move step {n} down",
+      "removeLabel": "Delete step {n}",
+      "confirmRemove": "Really delete step {n}",
+      "keep": "Keep it"
+    },
+    "step": {
+      "title": "What this step is called",
+      "does": "What it does",
+      "doesHint": "A sentence or two; say here what data this step usually needs.",
+      "why": "Why",
+      "whyHint": "Shown to the user while the expert works.",
+      "uses": "Uses the results of",
+      "usesNone": "This is the first step; nothing comes before it.",
+      "rules": "Rules",
+      "rule": "Rule {n}",
+      "addRule": "+ Add a rule",
+      "removeRule": "Delete rule {n}",
+      "ask": "Ask the user before the step",
+      "question": "Question {n}",
+      "option": "Option {n} of question {q}",
+      "addOption": "+ Add an option",
+      "removeOption": "Delete option {n} of question {q}",
+      "addQuestion": "+ Add a question",
+      "removeQuestion": "Delete question {n}",
+      "outputs": "What it returns",
+      "outputName": "Name of item {n}",
+      "outputType": "Type of item {n}",
+      "addOutput": "+ Add an item",
+      "removeOutput": "Delete item {n}",
+      "items": "Fields of each entry in item {n}",
+      "itemName": "Name of field {n} of item {o}",
+      "itemType": "Type of field {n} of item {o}",
+      "addItem": "+ Add a field",
+      "removeItem": "Delete field {n} of item {o}",
+      "nameInvalid": "Names cannot be empty or contain spaces, dots, slashes, quotes or punctuation.",
+      "nameDuplicate": "This name is taken.",
+      "notSaved": "These items are not saved until they are fixed.",
+      "checks": "How to tell it is right",
+      "checksHint": "Every returned item is required automatically; “returns one JSON” and “no trading advice” need no entry.",
+      "template": "Check template of entry {n}",
+      "addCheck": "+ Add a check",
+      "removeCheck": "Delete check {n}",
+      "onFail": "If it fails",
+      "backTo": "Go back to",
+      "chooseStep": "Choose a step",
+      "advanced": "Advanced (tools, budget, input limit)",
+      "advancedHint": "Left alone it uses the defaults: every tool, the default budget and input limit.",
+      "tools": "Tools it may use",
+      "reserve": "Budget per step (CNY)",
+      "inputMax": "Input limit (characters)",
+      "byDefault": "Default {value}",
+      "invalidNumber": "Not valid; not saved yet.",
+      "ownSchema": "This step uses a hand-written output structure (brought in by an import)."
+    },
+    "types": {
+      "number": "Number",
+      "table": "Table",
+      "text": "Text",
+      "list": "List"
+    },
+    "onFail": {
+      "rework": "Redo once, then stop and ask",
+      "ask": "Stop and ask right away",
+      "back": "Go back to an earlier step"
+    },
+    "templates": {
+      "required": "Must be there",
+      "non_empty": "Not empty",
+      "list_min": "List has at least",
+      "list_empty": "List must be empty",
+      "blank": "Left blank",
+      "each_has": "Every entry has fields / a field takes only some values",
+      "all_equal": "A field of every entry equals",
+      "computed": "Numbers come from the compute tool",
+      "identity": "Two numbers are equal (identities, totals)",
+      "sourced": "Numbers match the source cell",
+      "quoted": "Claims carry quotes",
+      "covers": "Covers every entry of an earlier step",
+      "max_chars": "Character limit"
+    },
+    "params": {
+      "keys": "Which items",
+      "path": "Which item",
+      "min": "At least (1 if empty)",
+      "eachKeys": "Fields every entry has (comma separated)",
+      "field": "Field name",
+      "values": "Allowed values (comma separated)",
+      "equals": "Equals",
+      "expression": "Formula (optional)",
+      "tolerance": "Tolerance (optional)",
+      "source_step": "Earlier step",
+      "source_path": "Item of that step",
+      "source_field": "Field to match in it (optional)",
+      "also": "Also match these items (optional)",
+      "max": "At most this many characters",
+      "choose": "Choose an item"
+    },
+    "tools": {
+      "compute": "compute",
+      "describe_items": "describe the data",
+      "find_subject": "find a company",
+      "list_inputs": "list its data",
+      "lookup": "look one up",
+      "query_facts": "query figures",
+      "query_metric": "query a metric",
+      "read_facts": "read figures",
+      "read_input": "read one input",
+      "request_data": "ask for data",
+      "search_evidence": "search quotes"
+    },
+    "origin": {
+      "edit": "Written by the author",
+      "import": "Imported",
+      "copy": "Copied",
+      "accept": "Accepted suggestion",
+      "question": "Answered question",
+      "none": "No source"
+    },
+    "problems": {
+      "title": "To fix before publishing",
+      "noSource": "No source: change this cell yourself and it counts as yours.",
+      "differs": "This cell differs from its record: change it yourself and it counts as yours.",
+      "scopeDoes": "Say what this expert takes.",
+      "noSteps": "Add at least one step.",
+      "noTitle": "Name this step.",
+      "noDoes": "Say what this step does.",
+      "noOutputs": "Add at least one returned item.",
+      "noQuestion": "Write the question.",
+      "backEarlier": "Only an earlier step can be gone back to.",
+      "usesEarlier": "Only earlier steps can be used.",
+      "checkNeeds": "This check template has parameters missing: {message}",
+      "checkPath": "That is not an item this step returns: {message}"
+    },
+    "preview": {
+      "title": "The compiled manifest",
+      "version": "Would publish version {version}",
+      "problems": "Cannot publish yet: {count} places",
+      "none": "Everything holds; you can publish a version.",
+      "close": "Close",
+      "loading": "Compiling…",
+      "failed": "Could not compile; try again."
+    },
+    "publish": {
+      "done": "Published draft expert {label}.",
+      "refused": "Cannot publish: some cells need fixing and are marked red.",
+      "failed": "Not published ({code}); try again.",
+      "unsaved": "Some changes are not saved yet: publish once they are saved."
+    },
+    "import": {
+      "title": "Import an expert pack",
+      "hint": "Paste a manifest v2 JSON or choose a file. Importing replaces the whole workdraft; what you import counts as your own words, so import only your own files.",
+      "text": "Manifest JSON",
+      "file": "Choose a file",
+      "submit": "Import (replaces everything)",
+      "badJson": "This is not JSON.",
+      "invalid": "This manifest cannot be imported: only manifest v2 ({code}).",
+      "done": "Imported.",
+      "notes": "Could not keep:",
+      "close": "Close"
+    },
+    "copy": {
+      "title": "Copy from my draft experts",
+      "hint": "Start from one of your draft experts under this name; the whole workdraft is replaced.",
+      "choose": "Choose one",
+      "label": "Draft expert",
+      "none": "No draft experts under this name yet.",
+      "submit": "Copy (replaces everything)",
+      "failed": "Not copied ({code}).",
+      "done": "Copied.",
+      "close": "Close"
     }
   }
 }
