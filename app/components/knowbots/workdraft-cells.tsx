@@ -7,8 +7,11 @@ import type { Problem } from '@/contracts/workdraft'
 import { problemKey, same } from '@/lib/knowbots/workdraft'
 import { cn } from '@/lib/utils'
 
-// 工作稿的格子共用（专家孵化方案第六、九节）：每格旁边小字标出处（作者写的 / 导入 / 复制 / 没有
-// 出处），后端预览回来的问题按格子路径标红。
+import { SuggestionsAt } from './workdraft-suggestions'
+
+// 工作稿的格子共用（专家孵化方案第六、九节）：每格旁边小字标出处（作者写的 / 导入 / 复制 / 接受的
+// 建议 / 创意原句 / 答过的问题 / 没有出处），后端预览回来的问题按格子路径标红；这一轮 AI 对这一格
+// 的建议也显示在旁边（workdraft-suggestions）。
 
 export const INPUT = 'w-full rounded-md border bg-transparent px-3 py-1.5 text-sm'
 export const SELECT = 'h-8 rounded-md border bg-transparent px-2 text-sm'
@@ -65,6 +68,7 @@ export function CellMarks({
           {text(p)}
         </p>
       ))}
+      <SuggestionsAt home={path} />
     </div>
   )
 }
@@ -128,6 +132,7 @@ export function Group({
           {text(p)}
         </p>
       ))}
+      <SuggestionsAt home={path} />
       {children}
     </fieldset>
   )

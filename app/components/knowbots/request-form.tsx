@@ -117,7 +117,8 @@ const NO_ANSWERS: SixAnswers = {
   correctness: '',
 }
 
-// 提交一个创意（SDD 0027、0037）：方法用六问或一份 skill 写清楚，选运行方，给验收用例，同意数据用于
+// 提交一个创意（SDD 0027、0037）：方法用六问、一份 skill 或一句话问题写清楚（一句话问题由 AI 起草
+// 方法、你改定，专家孵化方案第四节），选运行方，给验收用例，同意数据用于
 // 测试。方法只来自用户（C-L1）；我们受理后孵化准专家、测试，测试通过即是专家，你同意、我们审过才上架。
 // 给了 revise 就是改创意：名称、运行方不变，从上一版带过来改，交了出一个新版本。
 export function RequestForm({
@@ -138,11 +139,12 @@ export function RequestForm({
   const before = revise?.version.idea
   const [title, setTitle] = useState('')
   const [runtime, setRuntime] = useState('')
-  const [kind, setKind] = useState<'six_questions' | 'skill'>(before?.kind ?? 'six_questions')
+  const [kind, setKind] = useState<IdeaIn['kind']>(before?.kind ?? 'six_questions')
   const [answers, setAnswers] = useState<SixAnswers>(
     before?.kind === 'six_questions' ? before.answers : NO_ANSWERS,
   )
   const [skill, setSkill] = useState(before?.kind === 'skill' ? before.skill : '')
+  const [question, setQuestion] = useState(before?.kind === 'question' ? before.question : '')
   const [cases, setCases] = useState<CaseDraft[]>(
     revise ? fromVersion(revise.version) : [emptyCase()],
   )
@@ -152,7 +154,12 @@ export function RequestForm({
   const chosenRuntime = runtime || (runtimes.data?.length === 1 ? runtimes.data[0] : '')
   const submit = useMutation({
     mutationFn: async () => {
-      const idea: IdeaIn = kind === 'skill' ? { kind, skill } : { kind, answers }
+      const idea: IdeaIn =
+        kind === 'skill'
+          ? { kind, skill }
+          : kind === 'question'
+            ? { kind, question: question.trim() }
+            : { kind, answers }
       const revision = { idea, cases: toCases(cases), consent_test_data: true as const }
       if (revise) {
         await reviseRequest(revise.requestId, revision, csrfToken)
@@ -240,8 +247,29 @@ export function RequestForm({
             />{' '}
             {t('form.skill')}
           </label>
+          <label>
+            <input
+              type="radio"
+              name="kind"
+              checked={kind === 'question'}
+              onChange={() => setKind('question')}
+            />{' '}
+            {t('form.oneQuestion')}
+          </label>
         </div>
-        {kind === 'six_questions' ? (
+        {kind === 'question' ? (
+          <label className="block text-sm">
+            {t('form.questionText')}
+            <span className="text-muted-foreground block text-xs">{t('form.questionHint')}</span>
+            <input
+              className={FIELD}
+              required
+              maxLength={2000}
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+            />
+          </label>
+        ) : kind === 'six_questions' ? (
           QUESTIONS.map((q) => (
             <label key={q} className="block text-sm">
               {t(`form.q.${q}`)}

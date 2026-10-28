@@ -290,6 +290,7 @@ export function answerText(a: Answered, t: Translate) {
   if (answer.decision === 'approve') return t('review.approved')
   if (answer.decision === 'deny') return t('review.denied')
   if (answer.data !== undefined) return t('review.dataConfirmed')
+  if (answer.option_id === 'proposal' && a.kind === 'gap') return t('review.asProposed')
   const said = answer.text ?? answer.option_id
   return typeof said === 'string' ? said : '—'
 }

@@ -94,8 +94,8 @@ export const bodySchema = z.object({
   steps: z.array(stepSchema),
 })
 
-// 每格的出处是怎么来的：在编辑器里写的、导入、复制、接受的建议、答过的缺口
-export const ORIGINS = ['edit', 'import', 'copy', 'accept', 'question'] as const
+// 每格的出处是怎么来的：在编辑器里写的、导入、复制、接受的建议、答过的缺口、创意原句
+export const ORIGINS = ['edit', 'import', 'copy', 'accept', 'question', 'idea'] as const
 export type Origin = (typeof ORIGINS)[number]
 
 export const workdraftSchema = z.object({
@@ -128,6 +128,102 @@ export const publishedSchema = z.object({
   request_version: z.number().int().min(1),
   mode: z.string(),
 })
+
+// ---------- AI 孵化的一轮（专家孵化方案第八、九节） ----------
+// 状态照契约 knowbot-incubation/v1 的结果状态
+export const ROUND_STATUSES = [
+  'queued',
+  'running',
+  'waiting',
+  'succeeded',
+  'failed',
+  'over_budget',
+  'cancelled',
+] as const
+export const ACTIVE_ROUNDS: readonly string[] = ['queued', 'running', 'waiting']
+export const DECISION_STATES = ['pending', 'accepted', 'accepted_edited', 'rejected'] as const
+
+const sourceRowSchema = z.object({
+  path: z.string(),
+  kind: z.enum(['idea', 'answer', 'proposal']),
+  quote: z.string().optional(),
+  ref: z.string().optional(),
+})
+// 一条建议：改哪一格、怎么改、理由；出处（引到的那几行）核得上没有；我怎么处理的
+export const suggestionSchema = z.object({
+  id: z.string(),
+  path: z.string(),
+  op: z.enum(['set', 'add', 'remove', 'move']),
+  value: z.unknown().optional(),
+  reason: z.string(),
+  sources: z.array(sourceRowSchema),
+  kinds: z.array(z.enum(['idea', 'answer', 'proposal'])),
+  verified: z.boolean(),
+  problems: z.array(z.object({ path: z.string(), problem: z.string() })),
+  state: z.enum(DECISION_STATES),
+})
+// 一个缺口：问题、提议、选项；进了审核栏的那一条答了没有
+export const gapSchema = z.object({
+  gap_id: z.string(),
+  question: z.string(),
+  proposal: z.string().nullable(),
+  options: z.array(z.string()),
+  question_id: z.string().uuid().nullable(),
+  answered: z.boolean(),
+  answer: z.record(z.string(), z.unknown()).nullable(),
+})
+export const roundSchema = z.object({
+  incubation_id: z.string().uuid(),
+  round: z.number().int().min(1),
+  action: z.enum(['draft', 'revise']),
+  instruction: z.string().nullable(),
+  step_id: z.string().nullable(),
+  status: z.enum(ROUND_STATUSES),
+  budget_limit: z.string(),
+  spent: z.string().nullable(),
+  currency: z.string(),
+  waiting_for: z.string().nullable(),
+  error: z.string().nullable(),
+  started_at: z.string().nullable(),
+  finished_at: z.string().nullable(),
+  // 只有取一轮时才带
+  suggestions: z.array(suggestionSchema).optional(),
+  gaps: z.array(gapSchema).optional(),
+})
+export const roundsSchema = z.object({
+  contract_version: z.literal(1),
+  incubations: z.array(roundSchema),
+})
+export const oneRoundSchema = z.object({
+  contract_version: z.literal(1),
+  incubation: roundSchema,
+})
+export const decidedSchema = z.object({
+  contract_version: z.literal(1),
+  workdraft: workdraftSchema.omit({ contract_version: true }),
+  incubation: roundSchema,
+})
+export const seededSchema = z.object({
+  contract_version: z.literal(1),
+  version: z.number().int().min(1),
+})
+
+export type Suggestion = z.infer<typeof suggestionSchema>
+export type Gap = z.infer<typeof gapSchema>
+export type Round = z.infer<typeof roundSchema>
+export type RoundStart = {
+  action: 'draft' | 'revise'
+  instruction?: string
+  step_id?: string
+  budget_limit: string
+  environment_id?: string
+  workspace_root?: string
+}
+export type Decision = {
+  action: 'accept' | 'accept_edited' | 'reject'
+  revision?: number
+  value?: unknown
+}
 
 export type WorkdraftBody = z.infer<typeof bodySchema>
 export type Step = z.infer<typeof stepSchema>

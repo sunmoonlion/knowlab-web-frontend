@@ -16,6 +16,13 @@ export function Method({ idea }: { idea: Idea }) {
         {idea.skill}
       </pre>
     )
+  if (idea.kind === 'question')
+    return (
+      <p className="whitespace-pre-wrap" data-testid="idea-question">
+        <span className="text-muted-foreground">{t('form.oneQuestion')}：</span>
+        {idea.question}
+      </p>
+    )
   return (
     <dl className="space-y-3">
       {(Object.keys(idea.answers) as (keyof typeof idea.answers)[]).map((k) => (

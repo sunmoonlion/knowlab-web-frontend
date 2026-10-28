@@ -1,32 +1,55 @@
 'use client'
 
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import type { Workdraft, WorkdraftBody } from '@/contracts/workdraft'
+import {
+  ACTIVE_ROUNDS,
+  type Round,
+  type RoundStart,
+  type Suggestion,
+  type Workdraft,
+  type WorkdraftBody,
+} from '@/contracts/workdraft'
 import { Link, useRouter } from '@/i18n/navigation'
 import { ApiClientError } from '@/lib/common/api-client'
 import {
+  cancelRound,
   copyWorkdraft,
+  decideSuggestion,
+  fetchRound,
+  fetchRounds,
   fetchWorkdraft,
   importWorkdraft,
   previewWorkdraft,
   publishWorkdraft,
+  refreshRound,
   saveWorkdraftCells,
+  seedSkill,
+  startRound,
 } from '@/lib/knowbots/client'
 import { diffEdits, freshId, newStep, placed, withoutStep } from '@/lib/knowbots/workdraft'
 
 import { Card, KEY } from './shared'
+import { GapsCard, RoundBar, RoundPanel, startFailure } from './workdraft-ai'
 import { Field, Group, INPUT, LINK, MarksContext, useProblemText } from './workdraft-cells'
 import { CopyPanel, ImportPanel, PreviewPanel } from './workdraft-panels'
 import { StepEditor } from './workdraft-step'
+import {
+  OtherSuggestions,
+  PendingSteps,
+  SuggestionsContext,
+  homeOf,
+  type Choice,
+} from './workdraft-suggestions'
 
-// 工作稿页面（专家孵化方案第六节）：名称页「孵化」栏点进来。一个分格子的表单，作者看不到 JSON：
+// 工作稿页面（专家孵化方案第六、八节）：名称页「孵化」栏点进来。一个分格子的表单，作者看不到 JSON：
 // 整个专家的格子、一步一步的格子；改了自动保存（带 revision，别处改过回 409 就重新载入）。每格
-// 旁边小字标出处，后端预览回来的问题按格子路径标红。顶上：预览清单、出一版、导入、从我的准专家
-// 复制；「AI 起草」「让 AI 改…」是后面的步骤，先放着、禁用。
+// 旁边小字标出处，后端预览回来的问题按格子路径标红。顶上：AI 起草、让 AI 改…、导入（专家包或
+// skill 当种子）、从我的准专家复制、预览清单、出一版；进行中的那一轮与历次在工具条下面，这一轮的
+// 建议显示在格子旁边，缺口列在页面底下。
 
 type Doc = {
   body: WorkdraftBody // 页面上的这一份（可能还没存）
@@ -35,7 +58,8 @@ type Doc = {
   origins: Record<string, string>
 }
 type Status = { kind: 'idle' | 'pending' | 'saving' | 'saved' } | { kind: 'failed'; code: string }
-type Panels = 'preview' | 'import' | 'copy' | null
+type Panels = 'preview' | 'import' | 'copy' | 'draft' | 'revise' | null
+const POLL_MS = 10_000
 
 const docOf = (w: Workdraft): Doc => ({
   body: w.body,
@@ -105,7 +129,9 @@ function Editor({
   onConflict: () => Promise<void>
 }) {
   const t = useTranslations('workdraft')
+  const ta = useTranslations('workdraft.ai')
   const router = useRouter()
+  const client = useQueryClient()
   const problemText = useProblemText()
   const [doc, setDoc] = useState<Doc>(() => docOf(initial))
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
@@ -115,6 +141,8 @@ function Editor({
   const [message, setMessage] = useState<{ tone: 'ok' | 'bad'; text: string } | null>(null)
   const [panelError, setPanelError] = useState<string | null>(null)
   const [notes, setNotes] = useState<string[]>([])
+  const [deciding, setDeciding] = useState(false)
+  const [reviseText, setReviseText] = useState('')
   const docRef = useRef(doc)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const queue = useRef<Promise<void>>(Promise.resolve())
@@ -142,6 +170,39 @@ function Editor({
     placeholderData: keepPreviousData,
   })
   const problems = preview.data?.problems ?? []
+
+  // AI 孵化的各轮：最后一轮在跑就每 10 秒刷新一次（问运行方）；格子旁边是最近一轮成了的建议
+  const roundsKey = [...KEY, 'rounds', requestId]
+  const rounds = useQuery({ queryKey: roundsKey, queryFn: () => fetchRounds(requestId) })
+  const list = rounds.data ?? []
+  const latest = list.at(-1)
+  const running = latest !== undefined && ACTIVE_ROUNDS.includes(latest.status)
+  const roundKey = (id: string | undefined) => [...KEY, 'round', requestId, id]
+  const current = useQuery({
+    queryKey: roundKey(latest?.incubation_id),
+    enabled: latest !== undefined,
+    queryFn: () => {
+      const id = latest?.incubation_id ?? ''
+      return running ? refreshRound(requestId, id, csrfToken) : fetchRound(requestId, id)
+    },
+    refetchInterval: running ? POLL_MS : false,
+  })
+  const currentStatus = current.data?.status
+  useEffect(() => {
+    // 刷新后这一轮结束了：各轮重新取，格子旁边换成这一轮的建议
+    if (latest && currentStatus && currentStatus !== latest.status) void rounds.refetch()
+  }, [latest, currentStatus, rounds])
+  const done = [...list].reverse().find((r) => r.status === 'succeeded')
+  const shownRound = useQuery({
+    queryKey: roundKey(done?.incubation_id),
+    enabled: done !== undefined,
+    queryFn: () => fetchRound(requestId, done?.incubation_id ?? ''),
+  })
+  const shown: Round | undefined = done ? shownRound.data : undefined
+  const pending = useMemo(
+    () => (shown?.suggestions ?? []).filter((s) => s.state === 'pending'),
+    [shown],
+  )
 
   const commit = (next: Doc) => {
     docRef.current = next
@@ -268,7 +329,112 @@ function Editor({
     }
   }
 
+  // 发起一轮：先把没存的存了，带着最新的工作稿去
+  const start = async (round: RoundStart) => {
+    setBusy(true)
+    setPanelError(null)
+    try {
+      await flush()
+      if (dead.current) return
+      const got = await startRound(requestId, round, csrfToken)
+      if (dead.current) return
+      client.setQueryData(roundKey(got.incubation_id), got)
+      await rounds.refetch()
+      setPanel(null)
+      setMessage({ tone: 'ok', text: ta('started', { n: got.round }) })
+    } catch (error) {
+      if (dead.current) return
+      setPanelError(startFailure(error, (key) => ta(key as never)))
+    } finally {
+      if (!dead.current) setBusy(false)
+    }
+  }
+
+  const cancel = async () => {
+    if (!latest) return
+    setBusy(true)
+    try {
+      const got = await cancelRound(requestId, latest.incubation_id, csrfToken)
+      client.setQueryData(roundKey(got.incubation_id), got)
+      await rounds.refetch()
+    } catch (error) {
+      setMessage({ tone: 'bad', text: ta('cancelFailed', { code: codeOf(error) }) })
+    } finally {
+      if (!dead.current) setBusy(false)
+    }
+  }
+
+  // 一条建议：接受、改了再接受（改工作稿，带 revision）、不要
+  const decide = async (suggestion: Suggestion, choice: Choice, value?: unknown) => {
+    if (!done) return
+    setDeciding(true)
+    setMessage(null)
+    try {
+      await flush()
+      if (dead.current) return
+      if (diffEdits(docRef.current.saved, docRef.current.body).length) {
+        setMessage({ tone: 'bad', text: t('publish.unsaved') })
+        return
+      }
+      const got = await decideSuggestion(
+        requestId,
+        done.incubation_id,
+        suggestion.id,
+        {
+          action: choice,
+          ...(choice === 'reject' ? {} : { revision: docRef.current.revision }),
+          ...(value !== undefined ? { value } : {}),
+        },
+        csrfToken,
+      )
+      if (dead.current) return
+      if (choice !== 'reject') {
+        commit(docOf(got.workdraft))
+        setStatus({ kind: 'saved' })
+      }
+      client.setQueryData(roundKey(done.incubation_id), got.round)
+    } catch (error) {
+      if (dead.current) return
+      if (conflict(error)) {
+        dead.current = true
+        await onConflict()
+        return
+      }
+      setMessage({ tone: 'bad', text: ta('decideFailed', { code: codeOf(error) }) })
+    } finally {
+      if (!dead.current) setDeciding(false)
+    }
+  }
+
+  // 导入 skill 当种子：存成创意的新一版，提示去点「AI 起草」
+  const seed = async (skill: string) => {
+    setBusy(true)
+    setPanelError(null)
+    try {
+      const version = await seedSkill(requestId, skill, csrfToken)
+      if (dead.current) return
+      setPanel(null)
+      setNotes([])
+      setMessage({ tone: 'ok', text: t('import.seeded', { version }) })
+    } catch (error) {
+      if (dead.current) return
+      setPanelError(t('import.seedFailed', { code: codeOf(error) }))
+    } finally {
+      if (!dead.current) setBusy(false)
+    }
+  }
+
   const { body } = doc
+  const suggestions = {
+    at: (home: string) => pending.filter((s) => homeOf(s, body) === home),
+    busy: deciding || busy,
+    decide: (s: Suggestion, choice: Choice, value?: unknown) => void decide(s, choice, value),
+  }
+  const openRound = (action: 'draft' | 'revise', text = '') => {
+    setPanelError(null)
+    setReviseText(text)
+    setPanel(panel === action ? null : action)
+  }
   const elsewhere = problems.filter((p) => !placed(p.path, body))
   const setStep = (step: WorkdraftBody['steps'][number]) =>
     edit((b) => ({ ...b, steps: b.steps.map((s) => (s.id === step.id ? step : s)) }))
@@ -288,279 +454,308 @@ function Editor({
 
   return (
     <MarksContext.Provider value={{ problems, origins: doc.origins }}>
-      <div className="mt-6 space-y-4">
-        <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 className="text-lg font-semibold">
-            {initial.title} · {t('title')}
-          </h2>
-          <span
-            role="status"
-            aria-live="polite"
-            className={
-              status.kind === 'failed'
-                ? 'text-destructive text-xs'
-                : 'text-muted-foreground text-xs'
-            }
-          >
-            {statusText}
-          </span>
-          <Link
-            href={`/names/${requestId}`}
-            className="ml-auto text-sm underline underline-offset-2"
-          >
-            {t('backToName')}
-          </Link>
-        </header>
-        <div role="toolbar" aria-label={t('toolbar.label')} className="flex flex-wrap gap-2">
-          <SoonButton label={t('toolbar.aiDraft')} soon={t('toolbar.soon')} />
-          <SoonButton label={t('toolbar.aiRevise')} soon={t('toolbar.soon')} />
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            aria-expanded={panel === 'import'}
-            onClick={() => {
-              setPanelError(null)
-              setPanel(panel === 'import' ? null : 'import')
-            }}
-          >
-            {t('toolbar.import')}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            aria-expanded={panel === 'copy'}
-            onClick={() => {
-              setPanelError(null)
-              setPanel(panel === 'copy' ? null : 'copy')
-            }}
-          >
-            {t('toolbar.copy')}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            aria-expanded={panel === 'preview'}
-            onClick={async () => {
-              if (panel === 'preview') return setPanel(null)
-              setPanel('preview')
-              await flush()
-              void preview.refetch()
-            }}
-          >
-            {t('toolbar.preview')}
-          </Button>
-          <Button size="sm" disabled={busy} onClick={() => void publish()}>
-            {publishing ? t('toolbar.publishing') : t('toolbar.publish')}
-          </Button>
-        </div>
-        {reloaded ? (
-          <p role="alert" className="text-sm text-amber-700">
-            {t('conflict')}
-          </p>
-        ) : null}
-        {message ? (
-          <div
-            role={message.tone === 'bad' ? 'alert' : 'status'}
-            className={
-              message.tone === 'bad'
-                ? 'text-destructive text-sm'
-                : 'text-sm text-emerald-700 dark:text-emerald-400'
-            }
-          >
-            <p>{message.text}</p>
-            {notes.length ? (
-              <>
-                <p className="text-muted-foreground mt-1 text-xs">{t('import.notes')}</p>
-                <ul className="text-muted-foreground list-disc pl-5 text-xs">
-                  {notes.map((n, i) => (
-                    <li key={i}>{n}</li>
-                  ))}
-                </ul>
-              </>
-            ) : null}
+      <SuggestionsContext.Provider value={suggestions}>
+        <div className="mt-6 space-y-4">
+          <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2 className="text-lg font-semibold">
+              {initial.title} · {t('title')}
+            </h2>
+            <span
+              role="status"
+              aria-live="polite"
+              className={
+                status.kind === 'failed'
+                  ? 'text-destructive text-xs'
+                  : 'text-muted-foreground text-xs'
+              }
+            >
+              {statusText}
+            </span>
+            <Link
+              href={`/names/${requestId}`}
+              className="ml-auto text-sm underline underline-offset-2"
+            >
+              {t('backToName')}
+            </Link>
+          </header>
+          <div role="toolbar" aria-label={t('toolbar.label')} className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy || running}
+              aria-expanded={panel === 'draft'}
+              onClick={() => openRound('draft')}
+            >
+              {t('toolbar.aiDraft')}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy || running}
+              aria-expanded={panel === 'revise'}
+              onClick={() => openRound('revise')}
+            >
+              {t('toolbar.aiRevise')}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              aria-expanded={panel === 'import'}
+              onClick={() => {
+                setPanelError(null)
+                setPanel(panel === 'import' ? null : 'import')
+              }}
+            >
+              {t('toolbar.import')}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              aria-expanded={panel === 'copy'}
+              onClick={() => {
+                setPanelError(null)
+                setPanel(panel === 'copy' ? null : 'copy')
+              }}
+            >
+              {t('toolbar.copy')}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              aria-expanded={panel === 'preview'}
+              onClick={async () => {
+                if (panel === 'preview') return setPanel(null)
+                setPanel('preview')
+                await flush()
+                void preview.refetch()
+              }}
+            >
+              {t('toolbar.preview')}
+            </Button>
+            <Button size="sm" disabled={busy} onClick={() => void publish()}>
+              {publishing ? t('toolbar.publishing') : t('toolbar.publish')}
+            </Button>
           </div>
-        ) : null}
-        {panel === 'preview' ? (
-          <PreviewPanel
-            preview={preview.data}
-            failed={preview.isError}
-            onClose={() => setPanel(null)}
-          />
-        ) : panel === 'import' ? (
-          <ImportPanel
+          <RoundBar
+            rounds={list}
+            current={current.data ?? latest}
             busy={busy}
-            error={panelError}
-            onClose={() => setPanel(null)}
-            onImport={(manifest) =>
-              void replace(
-                (revision) => importWorkdraft(requestId, { revision, manifest }, csrfToken),
-                (code) => t('import.invalid', { code }),
-                t('import.done'),
-              )
-            }
+            onCancel={() => void cancel()}
           />
-        ) : panel === 'copy' ? (
-          <CopyPanel
-            requestId={requestId}
-            busy={busy}
-            error={panelError}
-            onClose={() => setPanel(null)}
-            onCopy={(draftId) =>
-              void replace(
-                (revision) => copyWorkdraft(requestId, { revision, draft_id: draftId }, csrfToken),
-                (code) => t('copy.failed', { code }),
-                t('copy.done'),
-              )
-            }
-          />
-        ) : null}
-        {elsewhere.length ? (
-          <Card title={t('problems.title')} className="border-destructive/50">
-            <ul
-              className="text-destructive list-disc space-y-0.5 pl-5 text-xs"
-              data-testid="problems-elsewhere"
+          {reloaded ? (
+            <p role="alert" className="text-sm text-amber-700">
+              {t('conflict')}
+            </p>
+          ) : null}
+          {message ? (
+            <div
+              role={message.tone === 'bad' ? 'alert' : 'status'}
+              className={
+                message.tone === 'bad'
+                  ? 'text-destructive text-sm'
+                  : 'text-sm text-emerald-700 dark:text-emerald-400'
+              }
             >
-              {elsewhere.map((p, i) => (
-                <li key={i}>
-                  {p.path ? <code className="mr-1">{p.path}</code> : null}
-                  {problemText(p)}
-                </li>
-              ))}
-            </ul>
-          </Card>
-        ) : null}
-        <Card title={t('expert.title')}>
-          <Field label={t('expert.name')} path="name" filled={Boolean(body.name.trim())}>
-            {(a11y) => (
-              <input
-                {...a11y}
-                className={INPUT}
-                maxLength={80}
-                value={body.name}
-                onChange={(e) => edit((b) => ({ ...b, name: e.target.value }))}
-              />
-            )}
-          </Field>
-          <Field label={t('expert.tagline')} path="tagline" filled={Boolean(body.tagline.trim())}>
-            {(a11y) => (
-              <input
-                {...a11y}
-                className={INPUT}
-                maxLength={200}
-                value={body.tagline}
-                onChange={(e) => edit((b) => ({ ...b, tagline: e.target.value }))}
-              />
-            )}
-          </Field>
-          {(
-            [
-              ['does', 'expert.does'],
-              ['does_not', 'expert.doesNot'],
-              ['elsewhere', 'expert.elsewhere'],
-            ] as const
-          ).map(([key, label]) => (
-            <Field
-              key={key}
-              label={t(label)}
-              path={`scope/${key}`}
-              filled={Boolean(body.scope[key].trim())}
-            >
+              <p>{message.text}</p>
+              {notes.length ? (
+                <>
+                  <p className="text-muted-foreground mt-1 text-xs">{t('import.notes')}</p>
+                  <ul className="text-muted-foreground list-disc pl-5 text-xs">
+                    {notes.map((n, i) => (
+                      <li key={i}>{n}</li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+          {panel === 'draft' || panel === 'revise' ? (
+            <RoundPanel
+              key={`${panel}-${reviseText}`}
+              requestId={requestId}
+              action={panel}
+              steps={body.steps}
+              busy={busy}
+              error={panelError}
+              initialInstruction={reviseText}
+              onStart={(round) => void start(round)}
+              onClose={() => setPanel(null)}
+            />
+          ) : panel === 'preview' ? (
+            <PreviewPanel
+              preview={preview.data}
+              failed={preview.isError}
+              onClose={() => setPanel(null)}
+            />
+          ) : panel === 'import' ? (
+            <ImportPanel
+              busy={busy}
+              error={panelError}
+              onClose={() => setPanel(null)}
+              onSeedSkill={(skill) => void seed(skill)}
+              onImport={(manifest) =>
+                void replace(
+                  (revision) => importWorkdraft(requestId, { revision, manifest }, csrfToken),
+                  (code) => t('import.invalid', { code }),
+                  t('import.done'),
+                )
+              }
+            />
+          ) : panel === 'copy' ? (
+            <CopyPanel
+              requestId={requestId}
+              busy={busy}
+              error={panelError}
+              onClose={() => setPanel(null)}
+              onCopy={(draftId) =>
+                void replace(
+                  (revision) =>
+                    copyWorkdraft(requestId, { revision, draft_id: draftId }, csrfToken),
+                  (code) => t('copy.failed', { code }),
+                  t('copy.done'),
+                )
+              }
+            />
+          ) : null}
+          <OtherSuggestions />
+          {elsewhere.length ? (
+            <Card title={t('problems.title')} className="border-destructive/50">
+              <ul
+                className="text-destructive list-disc space-y-0.5 pl-5 text-xs"
+                data-testid="problems-elsewhere"
+              >
+                {elsewhere.map((p, i) => (
+                  <li key={i}>
+                    {p.path ? <code className="mr-1">{p.path}</code> : null}
+                    {problemText(p)}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+          <Card title={t('expert.title')}>
+            <Field label={t('expert.name')} path="name" filled={Boolean(body.name.trim())}>
               {(a11y) => (
-                <textarea
+                <input
                   {...a11y}
                   className={INPUT}
-                  rows={2}
-                  maxLength={2000}
-                  value={body.scope[key]}
-                  onChange={(e) =>
-                    edit((b) => ({ ...b, scope: { ...b.scope, [key]: e.target.value } }))
-                  }
+                  maxLength={80}
+                  value={body.name}
+                  onChange={(e) => edit((b) => ({ ...b, name: e.target.value }))}
                 />
               )}
             </Field>
-          ))}
-        </Card>
-        <Card title={t('data.title')}>
-          <p className="text-muted-foreground text-xs">{t('data.hint')}</p>
-          {body.data_picks.length === 0 ? (
-            <p className="text-muted-foreground">{t('data.none')}</p>
-          ) : (
-            <ul className="flex flex-wrap gap-2">
-              {body.data_picks.map((id) => (
-                <li key={id} className="flex items-center gap-1 rounded-full border px-2 py-0.5">
-                  <code className="text-xs">{id}</code>
-                  <button
-                    type="button"
-                    className={LINK}
-                    aria-label={t('data.remove', { id })}
-                    onClick={() =>
-                      edit((b) => ({ ...b, data_picks: b.data_picks.filter((p) => p !== id) }))
+            <Field label={t('expert.tagline')} path="tagline" filled={Boolean(body.tagline.trim())}>
+              {(a11y) => (
+                <input
+                  {...a11y}
+                  className={INPUT}
+                  maxLength={200}
+                  value={body.tagline}
+                  onChange={(e) => edit((b) => ({ ...b, tagline: e.target.value }))}
+                />
+              )}
+            </Field>
+            {(
+              [
+                ['does', 'expert.does'],
+                ['does_not', 'expert.doesNot'],
+                ['elsewhere', 'expert.elsewhere'],
+              ] as const
+            ).map(([key, label]) => (
+              <Field
+                key={key}
+                label={t(label)}
+                path={`scope/${key}`}
+                filled={Boolean(body.scope[key].trim())}
+              >
+                {(a11y) => (
+                  <textarea
+                    {...a11y}
+                    className={INPUT}
+                    rows={2}
+                    maxLength={2000}
+                    value={body.scope[key]}
+                    onChange={(e) =>
+                      edit((b) => ({ ...b, scope: { ...b.scope, [key]: e.target.value } }))
                     }
-                  >
-                    ×
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-        <Group title={t('steps.title')} path="steps">
-          {body.steps.length === 0 ? (
-            <p className="text-muted-foreground text-sm">{t('steps.none')}</p>
-          ) : null}
-          <div className="space-y-4">
-            {body.steps.map((step, index) => (
-              <StepEditor
-                key={step.id}
-                step={step}
-                number={index + 1}
-                count={body.steps.length}
-                earlier={body.steps.slice(0, index)}
-                onChange={setStep}
-                onMove={(by) => move(step.id, by)}
-                onRemove={() => edit((b) => withoutStep(b, step.id))}
-              />
+                  />
+                )}
+              </Field>
             ))}
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              edit((b) => ({
-                ...b,
-                steps: [
-                  ...b.steps,
-                  newStep(
-                    freshId(
-                      's',
-                      b.steps.map((s) => s.id),
+          </Card>
+          <Card title={t('data.title')}>
+            <p className="text-muted-foreground text-xs">{t('data.hint')}</p>
+            {body.data_picks.length === 0 ? (
+              <p className="text-muted-foreground">{t('data.none')}</p>
+            ) : (
+              <ul className="flex flex-wrap gap-2">
+                {body.data_picks.map((id) => (
+                  <li key={id} className="flex items-center gap-1 rounded-full border px-2 py-0.5">
+                    <code className="text-xs">{id}</code>
+                    <button
+                      type="button"
+                      className={LINK}
+                      aria-label={t('data.remove', { id })}
+                      onClick={() =>
+                        edit((b) => ({ ...b, data_picks: b.data_picks.filter((p) => p !== id) }))
+                      }
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          <Group title={t('steps.title')} path="steps">
+            {body.steps.length === 0 ? (
+              <p className="text-muted-foreground text-sm">{t('steps.none')}</p>
+            ) : null}
+            <div className="space-y-4">
+              {body.steps.map((step, index) => (
+                <StepEditor
+                  key={step.id}
+                  step={step}
+                  number={index + 1}
+                  count={body.steps.length}
+                  earlier={body.steps.slice(0, index)}
+                  onChange={setStep}
+                  onMove={(by) => move(step.id, by)}
+                  onRemove={() => edit((b) => withoutStep(b, step.id))}
+                />
+              ))}
+            </div>
+            <PendingSteps />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                edit((b) => ({
+                  ...b,
+                  steps: [
+                    ...b.steps,
+                    newStep(
+                      freshId(
+                        's',
+                        b.steps.map((s) => s.id),
+                      ),
                     ),
-                  ),
-                ],
-              }))
-            }
-          >
-            {t('steps.add')}
-          </Button>
-        </Group>
-      </div>
+                  ],
+                }))
+              }
+            >
+              {t('steps.add')}
+            </Button>
+          </Group>
+          <GapsCard
+            gaps={shown?.gaps ?? []}
+            onRevise={() => openRound('revise', ta('withAnswers'))}
+          />
+        </div>
+      </SuggestionsContext.Provider>
     </MarksContext.Provider>
-  )
-}
-
-/** 后面的步骤才有的按钮：先放着、禁用，标「即将开放」。 */
-function SoonButton({ label, soon }: { label: string; soon: string }) {
-  const id = useId()
-  return (
-    <span className="inline-flex items-center gap-1">
-      <Button size="sm" variant="outline" disabled aria-describedby={id}>
-        {label}
-      </Button>
-      <span id={id} className="text-muted-foreground rounded-full border px-1.5 text-[0.7rem]">
-        {soon}
-      </span>
-    </span>
   )
 }

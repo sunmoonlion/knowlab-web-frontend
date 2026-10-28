@@ -37,9 +37,11 @@ const sixAnswersSchema = z.object({
   correctness: z.string(),
 })
 
+// 创意的种类：六问、一份 skill、一句话问题（专家孵化方案第四节：方法由 AI 按问题起草）
 export const ideaSchema = z.union([
   z.object({ kind: z.literal('six_questions'), answers: sixAnswersSchema }),
   z.object({ kind: z.literal('skill'), skill: z.string() }),
+  z.object({ kind: z.literal('question'), question: z.string() }),
 ])
 
 const acceptanceSchema = z.object({
@@ -209,8 +211,9 @@ export const applicationsSchema = z.object({
 })
 
 // 测试中转给我回答的问题（投资判断只能我自己答，C-L1）；我自助测试里的工具审批（批准 / 拒绝）；
-// 专家要的数据（在名称页的测试卡片里确认，SDD 0046 第三节）
-export const QUESTION_KINDS = ['tool_approval', 'question', 'ask_before', 'data'] as const
+// 专家要的数据（在名称页的测试卡片里确认，SDD 0046 第三节）；AI 孵化列的缺口（gap，可以答
+// 「按提议」，专家孵化方案第 8.4 节）
+export const QUESTION_KINDS = ['tool_approval', 'question', 'ask_before', 'data', 'gap'] as const
 const questionSchema = z.object({
   question_id: z.string().uuid(),
   kind: z.enum(QUESTION_KINDS),
@@ -222,9 +225,13 @@ const questionSchema = z.object({
   asked_at: z.string(),
   title: z.string(),
   request_id: z.string().uuid(),
-  label: z.string(),
-  // 是哪位准专家的（SDD 0037）
-  draft_id: z.string().uuid(),
+  // 是哪位准专家的（SDD 0037）；孵化的缺口不挂准专家，是空的
+  label: z.string().nullable(),
+  draft_id: z.string().uuid().nullable(),
+  // 从哪来：测试中的，还是孵化的缺口；缺口带 AI 附的提议与是哪一轮
+  source: z.enum(['test', 'incubation']).optional(),
+  proposal: z.string().nullable().optional(),
+  incubation_id: z.string().uuid().nullable().optional(),
 })
 
 const brief = { request_id: z.string().uuid(), title: z.string().min(1).max(80) }
@@ -247,7 +254,9 @@ const answeredSchema = z.object({
   answer: z.record(z.string(), z.unknown()).nullable(),
   answered_by: z.enum(['operator', 'user']).nullable(),
   answered_at: when,
-  draft_id: z.string().uuid(),
+  draft_id: z.string().uuid().nullable(),
+  source: z.enum(['test', 'incubation']).optional(),
+  proposal: z.string().nullable().optional(),
 })
 
 export const inboxSchema = z.object({
@@ -385,6 +394,7 @@ export type SixAnswers = {
 export type IdeaIn =
   | { kind: 'six_questions'; answers: SixAnswers }
   | { kind: 'skill'; skill: string }
+  | { kind: 'question'; question: string }
 export type RevisionIn = { idea: IdeaIn; cases: CaseIn[]; consent_test_data: true }
 export type KnowbotRequestIn = RevisionIn & { title: string; runtime: string }
 

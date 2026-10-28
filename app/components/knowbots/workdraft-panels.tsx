@@ -11,7 +11,8 @@ import { fetchDetail } from '@/lib/knowbots/client'
 import { SELECT, useProblemText } from './workdraft-cells'
 import { KEY } from './shared'
 
-// 工作稿顶上几个按钮弹出的面板（专家孵化方案第六、十节）：预览清单、导入专家包、从我的准专家复制。
+// 工作稿顶上几个按钮弹出的面板（专家孵化方案第六、十节）：预览清单、导入专家包或 skill 当种子、从我的
+// 准专家复制。
 
 /** 弹出的一块：有标题、能关上（Esc 也能关）。 */
 export function Panel({
@@ -100,22 +101,29 @@ export function PreviewPanel({
   )
 }
 
-/** 导入专家包：贴或选一份清单 v2 JSON。 */
+/**
+ * 导入：专家包（贴或选一份清单 v2 JSON，整份换掉工作稿），或 skill 当种子（存成创意的新一版，
+ * 再点「AI 起草」去拆，或照着自己写；专家孵化方案第十节）。
+ */
 export function ImportPanel({
   busy,
   error,
   onImport,
+  onSeedSkill,
   onClose,
 }: {
   busy: boolean
   error: string | null
   onImport: (manifest: Record<string, unknown>) => void
+  onSeedSkill: (skill: string) => void
   onClose: () => void
 }) {
   const t = useTranslations('workdraft.import')
+  const [mode, setMode] = useState<'pack' | 'skill'>('pack')
   const [text, setText] = useState('')
   const [bad, setBad] = useState(false)
   const submit = () => {
+    if (mode === 'skill') return onSeedSkill(text)
     let parsed: unknown
     try {
       parsed = JSON.parse(text)
@@ -128,12 +136,28 @@ export function ImportPanel({
   }
   return (
     <Panel title={t('title')} onClose={onClose}>
-      <p className="text-muted-foreground">{t('hint')}</p>
+      <div role="radiogroup" aria-label={t('mode')} className="flex gap-4 text-xs">
+        {(['pack', 'skill'] as const).map((m) => (
+          <label key={m}>
+            <input
+              type="radio"
+              name="import-mode"
+              checked={mode === m}
+              onChange={() => {
+                setMode(m)
+                setBad(false)
+              }}
+            />{' '}
+            {t(m === 'pack' ? 'modePack' : 'modeSkill')}
+          </label>
+        ))}
+      </div>
+      <p className="text-muted-foreground">{mode === 'pack' ? t('hint') : t('skillHint')}</p>
       <label className="block">
         <span className="text-xs">{t('file')}</span>
         <input
           type="file"
-          accept="application/json,.json"
+          accept={mode === 'pack' ? 'application/json,.json' : '.md,.txt,text/markdown,text/plain'}
           className="mt-1 block text-xs"
           onChange={async (e) => {
             const file = e.target.files?.[0]
@@ -142,10 +166,11 @@ export function ImportPanel({
         />
       </label>
       <label className="block">
-        <span className="text-xs">{t('text')}</span>
+        <span className="text-xs">{mode === 'pack' ? t('text') : t('skillText')}</span>
         <textarea
           className="mt-1 w-full rounded-md border bg-transparent px-3 py-2 font-mono text-xs"
           rows={8}
+          maxLength={mode === 'skill' ? 20000 : undefined}
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
@@ -161,7 +186,7 @@ export function ImportPanel({
         </p>
       ) : null}
       <Button size="sm" disabled={busy || !text.trim()} onClick={submit}>
-        {t('submit')}
+        {mode === 'pack' ? t('submit') : t('seedSubmit')}
       </Button>
     </Panel>
   )

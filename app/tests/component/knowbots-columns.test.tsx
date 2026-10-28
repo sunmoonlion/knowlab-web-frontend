@@ -58,6 +58,49 @@ beforeEach(() => {
 })
 
 describe('审核', () => {
+  it('孵化的缺口也在待办里：看得到提议，可以答「按提议」，答过的记「按提议」', async () => {
+    const gap = question({
+      kind: 'gap',
+      text: '预测用什么方法？',
+      options: [{ id: 'o1', label: '分业务预测' }],
+      case_id: '',
+      label: null,
+      draft_id: null,
+      source: 'incubation',
+      proposal: '按近三年复合增速外推',
+      incubation_id: TEST,
+    })
+    vi.mocked(fetchInbox).mockResolvedValue({
+      contract_version: 1,
+      items: [{ ...gap, ...BRIEF, state: 'todo', type: 'question' }],
+      answered: [
+        {
+          question_id: EXPERT,
+          kind: 'gap',
+          case_id: '',
+          key: null,
+          text: '毛利率按哪个口径？',
+          answer: { option_id: 'proposal' },
+          answered_by: 'user',
+          answered_at: '2026-10-28T01:00:00Z',
+          draft_id: null,
+          source: 'incubation',
+          proposal: '合并口径',
+        },
+      ],
+    })
+    vi.mocked(answerMyQuestion).mockResolvedValue(undefined)
+    renderWith(<ReviewView csrfToken={CSRF} />)
+    expect(await screen.findByTestId('gap-proposal')).toHaveTextContent('按近三年复合增速外推')
+    expect(screen.getByText(messages.knowbotQuestions.gapWhere)).toBeInTheDocument()
+    expect(screen.queryByText(/准专家 \d/)).toBeNull()
+    expect(screen.getByText(/你答：按提议/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '按提议' }))
+    await waitFor(() =>
+      expect(answerMyQuestion).toHaveBeenCalledWith(QUESTION, { option_id: 'proposal' }, CSRF),
+    )
+  })
+
   it('待办箱分三类：问题、准专家、专家；回答问题就地答', async () => {
     vi.mocked(fetchInbox).mockResolvedValue({
       contract_version: 1,

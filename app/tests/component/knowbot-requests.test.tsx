@@ -187,6 +187,28 @@ describe('申请一个创意', () => {
     })
   })
 
+  it('选了一句话问题就只交那句问题（专家孵化方案第四节）', async () => {
+    vi.mocked(fetchRuntimes).mockResolvedValue(['knowbench'])
+    vi.mocked(submitRequest).mockResolvedValue(REQUEST)
+    renderWith(<RequestForm csrfToken={CSRF} />)
+    await waitFor(() => expect(screen.getByLabelText('在哪里运行')).toHaveValue('knowbench'))
+    fireEvent.change(screen.getByLabelText('名字'), { target: { value: '收入预测' } })
+    fireEvent.click(screen.getByLabelText('一句话问题'))
+    expect(screen.queryByLabelText('它解决什么问题？')).toBeNull()
+    expect(screen.queryByLabelText('skill 原文')).toBeNull()
+    fireEvent.change(screen.getByLabelText(/你想让专家回答什么问题/), {
+      target: { value: ' 这家公司未来三年的收入会怎样？ ' },
+    })
+    fireEvent.change(screen.getByLabelText('用例 1：问它什么'), { target: { value: '问' } })
+    fireEvent.click(screen.getByLabelText(/我同意/))
+    fireEvent.click(screen.getByRole('button', { name: '提交' }))
+    await waitFor(() => expect(submitRequest).toHaveBeenCalled())
+    expect(vi.mocked(submitRequest).mock.calls[0]![0].idea).toEqual({
+      kind: 'question',
+      question: '这家公司未来三年的收入会怎样？',
+    })
+  })
+
   it('被拒了照说，不离开这一页', async () => {
     vi.mocked(fetchRuntimes).mockResolvedValue(['knowbench'])
     vi.mocked(submitRequest).mockRejectedValue(

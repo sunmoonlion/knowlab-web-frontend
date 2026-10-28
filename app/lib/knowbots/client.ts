@@ -33,12 +33,19 @@ import {
   type TestDataRequest,
 } from '@/contracts/knowbots'
 import {
+  decidedSchema,
+  oneRoundSchema,
   previewSchema,
   publishedSchema,
+  roundsSchema,
+  seededSchema,
   workdraftSchema,
   type CellEdit,
+  type Decision,
   type Preview,
   type Published,
+  type Round,
+  type RoundStart,
   type Workdraft,
 } from '@/contracts/workdraft'
 import { requestJson } from '@/lib/common/api-client'
@@ -307,4 +314,98 @@ export async function publishWorkdraft(requestId: string, csrfToken: string): Pr
     publishedSchema,
     await requestJson(`${workdraftOf(requestId)}/publish`, { method: 'POST', csrfToken }),
   )
+}
+
+// 导入 skill 当种子：存成创意的新一版（种类 skill），回版本号
+export async function seedSkill(
+  requestId: string,
+  skill: string,
+  csrfToken: string,
+): Promise<number> {
+  return parse(
+    seededSchema,
+    await requestJson(`${workdraftOf(requestId)}/seed-skill`, {
+      method: 'POST',
+      csrfToken,
+      body: { skill },
+    }),
+  ).version
+}
+
+// ---------- AI 孵化的一轮（专家孵化方案第八、九节） ----------
+const roundsOf = (requestId: string) => `${workdraftOf(requestId)}/incubations`
+
+// 选电脑：我接入过的电脑与上次用的那台与目录
+export async function fetchRoundComputers(requestId: string): Promise<Computers> {
+  return parse(computersSchema, await requestJson(`${workdraftOf(requestId)}/computers`))
+}
+
+// 这个名称的各轮（第几轮、状态、花费），第一轮在前
+export async function fetchRounds(requestId: string): Promise<Round[]> {
+  return parse(roundsSchema, await requestJson(roundsOf(requestId))).incubations
+}
+
+// 发起一轮：已有一轮在跑回 409 incubation_running，没有电脑回 409 author_has_no_computer
+export async function startRound(
+  requestId: string,
+  body: RoundStart,
+  csrfToken: string,
+): Promise<Round> {
+  return parse(
+    oneRoundSchema,
+    await requestJson(roundsOf(requestId), { method: 'POST', csrfToken, body }),
+  ).incubation
+}
+
+export async function fetchRound(requestId: string, roundId: string): Promise<Round> {
+  return parse(oneRoundSchema, await requestJson(`${roundsOf(requestId)}/${enc(roundId)}`))
+    .incubation
+}
+
+// 刷新一次（轮询）：没结束的问一次运行方
+export async function refreshRound(
+  requestId: string,
+  roundId: string,
+  csrfToken: string,
+): Promise<Round> {
+  return parse(
+    oneRoundSchema,
+    await requestJson(`${roundsOf(requestId)}/${enc(roundId)}/refresh`, {
+      method: 'POST',
+      csrfToken,
+    }),
+  ).incubation
+}
+
+export async function cancelRound(
+  requestId: string,
+  roundId: string,
+  csrfToken: string,
+): Promise<Round> {
+  return parse(
+    oneRoundSchema,
+    await requestJson(`${roundsOf(requestId)}/${enc(roundId)}/cancel`, {
+      method: 'POST',
+      csrfToken,
+    }),
+  ).incubation
+}
+
+// 接受、改了再接受、不要一条建议：回改过的工作稿与这一轮
+export async function decideSuggestion(
+  requestId: string,
+  roundId: string,
+  suggestionId: string,
+  body: Decision,
+  csrfToken: string,
+): Promise<{ workdraft: Workdraft; round: Round }> {
+  const got = parse(
+    decidedSchema,
+    await requestJson(`${roundsOf(requestId)}/${enc(roundId)}/suggestions/${enc(suggestionId)}`, {
+      method: 'POST',
+      csrfToken,
+      body,
+    }),
+  )
+  return { workdraft: { ...got.workdraft, contract_version: 1 }, round: got.incubation }
 }

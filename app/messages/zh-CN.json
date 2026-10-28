@@ -129,7 +129,10 @@
       "submit": "提交",
       "invalid": "有内容没通过检查，请看各项是否填全、数字是否正确。",
       "failed": "提交没成功，请稍后再试。",
-      "submitRevision": "交上修改（出新版本）"
+      "submitRevision": "交上修改（出新版本）",
+      "oneQuestion": "一句话问题",
+      "questionText": "你想让专家回答什么问题",
+      "questionHint": "写一句就行，AI 会照它起草方法，你再改定。"
     },
     "amend": {
       "status": {
@@ -151,7 +154,10 @@
     "approve": "批准",
     "deny": "拒绝",
     "dataHere": "专家要的数据在名称页的「测试」里确认。",
-    "toData": "去确认数据"
+    "toData": "去确认数据",
+    "gapWhere": "AI 孵化列的缺口：你的方法上的判断，只能你自己定。",
+    "proposal": "AI 的提议：{proposal}",
+    "asProposed": "按提议"
   },
   "knowbots": {
     "loading": "正在读取……",
@@ -306,7 +312,8 @@
       "answered": "你答：{answer}（{at}）",
       "approved": "批准",
       "denied": "拒绝",
-      "dataConfirmed": "确认了数据"
+      "dataConfirmed": "确认了数据",
+      "asProposed": "按提议"
     },
     "experts": {
       "title": "专家",
@@ -468,7 +475,6 @@
       "label": "工作稿的操作",
       "aiDraft": "AI 起草",
       "aiRevise": "让 AI 改…",
-      "soon": "即将开放",
       "import": "导入",
       "copy": "从我的准专家复制",
       "preview": "预览清单",
@@ -614,7 +620,8 @@
       "copy": "复制",
       "accept": "接受的建议",
       "question": "答过的问题",
-      "none": "没有出处"
+      "none": "没有出处",
+      "idea": "创意原句"
     },
     "problems": {
       "title": "出版本前要改的",
@@ -656,7 +663,15 @@
       "invalid": "这份清单导不进来：只认清单 v2（{code}）。",
       "done": "导入了。",
       "notes": "没能留下的：",
-      "close": "关上"
+      "close": "关上",
+      "mode": "导入什么",
+      "modePack": "专家包（清单 JSON）",
+      "modeSkill": "skill 当种子",
+      "skillHint": "贴一份 skill 原文或选一个文件：存成创意的新一版（种类 skill），工作稿不动。之后点「AI 起草」让 AI 照它拆成一步一步，或者你照着自己写。",
+      "skillText": "skill 原文",
+      "seedSubmit": "存成创意的新一版",
+      "seeded": "存成了创意第 {version} 版。点「AI 起草」让 AI 照它起草，或者照着自己写。",
+      "seedFailed": "没存上（{code}），请再试一次。"
     },
     "copy": {
       "title": "从我的准专家复制",
@@ -668,6 +683,87 @@
       "failed": "没复制成（{code}）。",
       "done": "复制好了。",
       "close": "关上"
+    },
+    "ai": {
+      "label": "AI 建议",
+      "op": {
+        "set": "改成",
+        "add": "加上",
+        "remove": "删掉",
+        "move": "挪位置"
+      },
+      "moveTo": "挪到第 {n} 位",
+      "reason": "理由：{reason}",
+      "unverified": "出处核不上：它说出自你的原话或答复，但对不上。只能改了再接受（改过的算你的原话）。",
+      "editLabel": "改成你的话",
+      "badJson": "这不是一份 JSON。",
+      "acceptEdited": "改好了，接受",
+      "cancelEdit": "先不改",
+      "accept": "接受",
+      "edit": "改了再接受",
+      "reject": "不要",
+      "fromProposal": "这是 AI 的提议：你接受了才算数。",
+      "fromIdea": "出自你创意里的原话：「{quote}」",
+      "fromAnswer": "出自你答过的缺口。",
+      "newStep": "待接受的新步：{title}",
+      "elsewhere": "AI 的其他建议",
+      "draftTitle": "AI 起草",
+      "reviseTitle": "让 AI 改…",
+      "draftHint": "AI 照你的创意起草骨架：分几步、每步做什么、交回哪几项。要你拿主意的判断（口径、阈值、预测方法、什么算对）它只列成缺口、附提议，不直接写进格子。建议你接受了才进稿。",
+      "reviseHint": "写一句话说要怎么改，可以指定改哪一步。AI 带着你现在的工作稿和答过的缺口去，交回对工作稿的建议；碰到判断的出成缺口。",
+      "instruction": "要怎么改（一句话）",
+      "whichStep": "改哪一步",
+      "anyStep": "不指定",
+      "stepN": "第 {n} 步 · {title}",
+      "loadingComputers": "正在列你的电脑…",
+      "noComputer": "你还没有接入电脑：先去 knowbench 接入一台。",
+      "computer": "在哪台电脑上跑",
+      "chooseComputer": "选一台电脑",
+      "offline": "{name}（不在线）",
+      "folder": "工作目录",
+      "budget": "这一轮的费用上限（元）",
+      "keyNote": "在你的电脑上、用你的模型 key 跑，花的是你的钱；到上限就停下。",
+      "starting": "正在发起…",
+      "start": "发起这一轮",
+      "errors": {
+        "author_has_no_computer": "你还没有能用的电脑：先去 knowbench 接入一台，或在上面选一台。",
+        "incubation_running": "这份工作稿已有一轮在跑：等它结束或取消了再来。",
+        "incubation_unconfigured": "AI 孵化现在还没开通，请稍后再试。"
+      },
+      "startFailed": "没发起成，请再试一次。",
+      "round": "第 {n} 轮",
+      "action": {
+        "draft": "起草",
+        "revise": "按指令改"
+      },
+      "status": {
+        "queued": "排队中",
+        "running": "起草中",
+        "waiting": "等你的电脑",
+        "succeeded": "交回了建议",
+        "failed": "没成",
+        "over_budget": "到了费用上限，停下了",
+        "cancelled": "取消了"
+      },
+      "waiting": {
+        "computer_offline": "电脑不在线",
+        "folder_not_ready": "「孵化」目录还没建好"
+      },
+      "spent": "花了 {spent} / 上限 {limit} 元",
+      "cancel": "取消这一轮",
+      "history": "历次（{count}）",
+      "instructionWas": "这一轮的指令：{text}",
+      "error": "原因：{error}",
+      "gapsTitle": "待你定的（缺口）：{count} 条",
+      "gapsHint": "这些是你的方法上的判断，AI 只列问题、附提议，要你来定。到「审核」里答，可以答「按提议」；答完可以自己写进格子，或点「让 AI 改…」带上答复。",
+      "proposal": "提议：{proposal}",
+      "gapAnswered": "你答过了",
+      "toReview": "去审核里答",
+      "reviseWithAnswers": "让 AI 按我的答复改…",
+      "started": "第 {n} 轮发起了：跑完会把建议显示在格子旁边。",
+      "cancelFailed": "没取消成（{code}），请再试一次。",
+      "decideFailed": "没处理成（{code}），请再试一次。",
+      "withAnswers": "按我答过的缺口改"
     }
   }
 }

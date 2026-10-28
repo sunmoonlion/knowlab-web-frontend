@@ -16,6 +16,7 @@ import {
 import { freshId, nameProblem, outputsValid } from '@/lib/knowbots/workdraft'
 
 import { Checks } from './workdraft-checks'
+import { SuggestionsAt } from './workdraft-suggestions'
 import {
   CellMarks,
   CheckedInput,
@@ -104,6 +105,7 @@ export function StepEditor({
           )}
         </div>
       </header>
+      <SuggestionsAt home={base} />
       <Field label={t('step.title')} path={`${base}/title`} filled={Boolean(step.title.trim())}>
         {(a11y) => (
           <input

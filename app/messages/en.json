@@ -129,7 +129,10 @@
       "submit": "Submit",
       "invalid": "Something did not pass the checks. Please make sure every field is filled in and numbers are valid.",
       "failed": "Could not submit. Please try again later.",
-      "submitRevision": "Hand in the revision (new version)"
+      "submitRevision": "Hand in the revision (new version)",
+      "oneQuestion": "One question",
+      "questionText": "What question should the expert answer",
+      "questionHint": "One sentence is enough: AI drafts the method from it, and you revise and settle it."
     },
     "amend": {
       "status": {
@@ -151,7 +154,10 @@
     "approve": "Approve",
     "deny": "Deny",
     "dataHere": "Confirm the data the expert asks for under “Testing” on the name page.",
-    "toData": "Confirm the data"
+    "toData": "Confirm the data",
+    "gapWhere": "A gap listed by AI incubation: a judgement in your method that only you can make.",
+    "proposal": "AI proposal: {proposal}",
+    "asProposed": "As proposed"
   },
   "knowbots": {
     "loading": "Loading…",
@@ -306,7 +312,8 @@
       "answered": "You answered: {answer} ({at})",
       "approved": "approved",
       "denied": "denied",
-      "dataConfirmed": "confirmed the data"
+      "dataConfirmed": "confirmed the data",
+      "asProposed": "As proposed"
     },
     "experts": {
       "title": "Experts",
@@ -468,7 +475,6 @@
       "label": "Workdraft actions",
       "aiDraft": "AI draft",
       "aiRevise": "Ask AI to change…",
-      "soon": "Coming soon",
       "import": "Import",
       "copy": "Copy from my draft experts",
       "preview": "Preview manifest",
@@ -614,7 +620,8 @@
       "copy": "Copied",
       "accept": "Accepted suggestion",
       "question": "Answered question",
-      "none": "No source"
+      "none": "No source",
+      "idea": "Sentence from your idea"
     },
     "problems": {
       "title": "To fix before publishing",
@@ -656,7 +663,15 @@
       "invalid": "This manifest cannot be imported: only manifest v2 ({code}).",
       "done": "Imported.",
       "notes": "Could not keep:",
-      "close": "Close"
+      "close": "Close",
+      "mode": "What to import",
+      "modePack": "Expert pack (manifest JSON)",
+      "modeSkill": "Skill as a seed",
+      "skillHint": "Paste a skill or choose a file: it is saved as a new version of your idea (kind skill); the workdraft stays as it is. Then click “AI draft” to have AI break it into steps, or write them yourself from it.",
+      "skillText": "Skill text",
+      "seedSubmit": "Save as a new idea version",
+      "seeded": "Saved as version {version} of your idea. Click “AI draft” to have AI draft from it, or write from it yourself.",
+      "seedFailed": "Could not save ({code}). Please try again."
     },
     "copy": {
       "title": "Copy from my draft experts",
@@ -668,6 +683,87 @@
       "failed": "Not copied ({code}).",
       "done": "Copied.",
       "close": "Close"
+    },
+    "ai": {
+      "label": "AI suggestion",
+      "op": {
+        "set": "Change to",
+        "add": "Add",
+        "remove": "Remove",
+        "move": "Move"
+      },
+      "moveTo": "Move to position {n}",
+      "reason": "Why: {reason}",
+      "unverified": "The source does not check out: it claims to come from your words or answers, but does not match. You can only accept it after editing (edited text counts as your own words).",
+      "editLabel": "Put it in your words",
+      "badJson": "This is not JSON.",
+      "acceptEdited": "Accept my edit",
+      "cancelEdit": "Not now",
+      "accept": "Accept",
+      "edit": "Edit, then accept",
+      "reject": "Reject",
+      "fromProposal": "This is an AI proposal: it counts only once you accept it.",
+      "fromIdea": "From your own words in the idea: “{quote}”",
+      "fromAnswer": "From a gap you answered.",
+      "newStep": "New step to accept: {title}",
+      "elsewhere": "Other AI suggestions",
+      "draftTitle": "AI draft",
+      "reviseTitle": "Ask AI to change…",
+      "draftHint": "AI drafts the skeleton from your idea: the steps, what each does, what it hands back. Judgements that are yours to make (definitions, thresholds, forecasting methods, what counts as right) come only as gaps with a proposal, never written into cells. Suggestions enter the draft only when you accept them.",
+      "reviseHint": "Say in one line what to change, optionally for one step. AI takes your current workdraft and answered gaps and hands back suggestions; judgements come back as gaps.",
+      "instruction": "What to change (one line)",
+      "whichStep": "Which step",
+      "anyStep": "Any",
+      "stepN": "Step {n} · {title}",
+      "loadingComputers": "Listing your computers…",
+      "noComputer": "You have not connected a computer yet: connect one in knowbench first.",
+      "computer": "Run on which computer",
+      "chooseComputer": "Choose a computer",
+      "offline": "{name} (offline)",
+      "folder": "Working folder",
+      "budget": "Cost limit for this round (CNY)",
+      "keyNote": "Runs on your computer with your model key, at your cost; it stops at the limit.",
+      "starting": "Starting…",
+      "start": "Start this round",
+      "errors": {
+        "author_has_no_computer": "You have no usable computer yet: connect one in knowbench, or pick one above.",
+        "incubation_running": "A round of this workdraft is already running: wait for it to finish or cancel it.",
+        "incubation_unconfigured": "AI incubation is not available yet. Please try again later."
+      },
+      "startFailed": "Could not start. Please try again.",
+      "round": "Round {n}",
+      "action": {
+        "draft": "Draft",
+        "revise": "Revise"
+      },
+      "status": {
+        "queued": "Queued",
+        "running": "Drafting",
+        "waiting": "Waiting for your computer",
+        "succeeded": "Suggestions handed back",
+        "failed": "Failed",
+        "over_budget": "Stopped at the cost limit",
+        "cancelled": "Cancelled"
+      },
+      "waiting": {
+        "computer_offline": "computer offline",
+        "folder_not_ready": "incubation folder not ready"
+      },
+      "spent": "Spent {spent} of {limit} CNY",
+      "cancel": "Cancel this round",
+      "history": "Earlier rounds ({count})",
+      "instructionWas": "Instruction: {text}",
+      "error": "Reason: {error}",
+      "gapsTitle": "Yours to decide (gaps): {count}",
+      "gapsHint": "These are judgements in your method: AI only asks and proposes, you decide. Answer them under Review (you can answer “as proposed”); then write the answer into the cells yourself, or click “Ask AI to change…” to take your answers along.",
+      "proposal": "Proposal: {proposal}",
+      "gapAnswered": "Answered",
+      "toReview": "Answer under Review",
+      "reviseWithAnswers": "Ask AI to change by my answers…",
+      "started": "Round {n} started: its suggestions will show next to the cells.",
+      "cancelFailed": "Could not cancel ({code}). Please try again.",
+      "decideFailed": "Could not do that ({code}). Please try again.",
+      "withAnswers": "Change it by the gaps I answered"
     }
   }
 }

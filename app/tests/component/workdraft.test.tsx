@@ -26,6 +26,15 @@ vi.mock('@/lib/knowbots/client', () => ({
   previewWorkdraft: vi.fn(),
   publishWorkdraft: vi.fn(),
   fetchDetail: vi.fn(),
+  // AI 孵化的各轮（这里没有，见 workdraft-ai.test）
+  fetchRounds: vi.fn(async () => []),
+  fetchRound: vi.fn(),
+  refreshRound: vi.fn(),
+  startRound: vi.fn(),
+  cancelRound: vi.fn(),
+  decideSuggestion: vi.fn(),
+  seedSkill: vi.fn(),
+  fetchRoundComputers: vi.fn(),
 }))
 vi.mock('@/i18n/navigation', async () => (await import('./knowbot-fixtures')).linkMock())
 
@@ -383,11 +392,10 @@ describe('工作稿：格子与自动保存（专家孵化方案第六节）', (
 })
 
 describe('工作稿：顶上的按钮', () => {
-  it('AI 起草、让 AI 改…先禁用，标即将开放', async () => {
+  it('AI 起草、让 AI 改…打开了（没有在跑的一轮时能点）', async () => {
     page()
-    expect(await screen.findByRole('button', { name: w.toolbar.aiDraft })).toBeDisabled()
-    expect(screen.getByRole('button', { name: w.toolbar.aiRevise })).toBeDisabled()
-    expect(screen.getAllByText(w.toolbar.soon)).toHaveLength(2)
+    expect(await screen.findByRole('button', { name: w.toolbar.aiDraft })).toBeEnabled()
+    expect(screen.getByRole('button', { name: w.toolbar.aiRevise })).toBeEnabled()
   })
 
   it('预览清单：弹出编出的清单与问题', async () => {

@@ -13,7 +13,8 @@ import { KEY, caseName } from './shared'
 
 // 测试中需要你回答的问题（SDD 0027 §3.4、0037 第八节）：涉及你的方法上的判断，只能你自己答
 // （C-L1）。答完测试接着跑；你的回答会记进下一位准专家的规则出处。在「审核」里答。你自助测试里
-// 的工具审批也在这里批准或拒绝（SDD 0046 第四节）；专家要的数据在名称页的测试卡片里确认。
+// 的工具审批也在这里批准或拒绝（SDD 0046 第四节）；专家要的数据在名称页的测试卡片里确认。AI 孵化
+// 列的缺口（专家孵化方案第 8.4 节）也在这里答，可以答「按提议」；答完回工作稿点「让 AI 改…」带上。
 
 type AnswerValue = { option_id?: string; text?: string; decision?: 'approve' | 'deny' }
 
@@ -84,14 +85,17 @@ function QuestionRow({
   const t = useTranslations('knowbotQuestions')
   const tk = useTranslations('knowbots')
   const [text, setText] = useState('')
-  const where = (
-    <p className="text-muted-foreground">
-      {t('where', {
-        draft: tk('draftLabel', { label: q.label }),
-        case: caseName(tk, q.case_id, cases),
-      })}
-    </p>
-  )
+  const where =
+    q.kind === 'gap' ? (
+      <p className="text-muted-foreground">{t('gapWhere')}</p>
+    ) : (
+      <p className="text-muted-foreground">
+        {t('where', {
+          draft: tk('draftLabel', { label: q.label ?? '' }),
+          case: caseName(tk, q.case_id, cases),
+        })}
+      </p>
+    )
   if (q.kind === 'tool_approval') {
     return (
       <article className="space-y-2 text-sm" data-testid="tool-approval">
@@ -130,6 +134,14 @@ function QuestionRow({
     <article className="space-y-2 text-sm">
       {where}
       <p className="whitespace-pre-wrap">{q.text}</p>
+      {q.kind === 'gap' && q.proposal ? (
+        <div className="space-y-1" data-testid="gap-proposal">
+          <p className="text-muted-foreground">{t('proposal', { proposal: q.proposal })}</p>
+          <Button size="sm" disabled={busy} onClick={() => onAnswer({ option_id: 'proposal' })}>
+            {t('asProposed')}
+          </Button>
+        </div>
+      ) : null}
       {q.options.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {q.options.map((o) => (
