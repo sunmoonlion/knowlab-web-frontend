@@ -30,20 +30,18 @@ describe('web端外壳', () => {
     shell()
     const nav = screen.getByRole('navigation', { name: '主导航' })
     const links = within(nav).getAllByRole('link')
-    // 申请 · 审核 · 专家（SDD 0037 第八节），知识库在最后
+    // 申请 · 审核 · 专家（SDD 0037 第八节）；知识库已撤（decisions ⑰）
     expect(links.map((a) => a.getAttribute('href'))).toEqual([
       '/dashboard',
       '/applications',
       '/review',
       '/experts',
-      '/data',
     ])
     expect(links.map((a) => a.textContent?.replace(/\d+$/, ''))).toEqual([
       '首页',
       '申请',
       '审核',
       '专家',
-      '知识库',
     ])
     // 不叫「我的专家」
     expect(screen.queryByText('我的专家')).toBeNull()

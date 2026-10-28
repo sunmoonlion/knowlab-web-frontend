@@ -10,7 +10,6 @@ import {
   expertMovedSchema,
   expertsSchema,
   inboxSchema,
-  myDataSchema,
   outputsSchema,
   questionsSchema,
   reviewedSchema,
@@ -20,23 +19,20 @@ import {
   submittedSchema,
   testDataAnsweredSchema,
   testDataSchema,
-  uploadedSchema,
   type Application,
   type Computers,
   type Counts,
-  type Dataset,
   type Detail,
   type ExpertItem,
   type ExpertStage,
   type Inbox,
   type KnowbotRequestIn,
-  type MyData,
   type MyQuestion,
   type Outputs,
   type RevisionIn,
   type TestDataRequest,
 } from '@/contracts/knowbots'
-import { ApiClientError, requestJson } from '@/lib/common/api-client'
+import { requestJson } from '@/lib/common/api-client'
 
 export class KnowbotContractError extends Error {
   constructor(options?: { cause?: unknown }) {
@@ -160,47 +156,6 @@ export async function stopExpert(
 // 一次测试每条用例的成稿与各步交回物（验收依据，C-L3）
 export async function fetchOutputs(testId: string): Promise<Outputs> {
   return parse(outputsSchema, await requestJson(`${BASE}/knowbot-tests/${enc(testId)}/outputs`))
-}
-
-// ---------- 知识库 ----------
-const DATASETS = `${BASE}/knowbot-datasets`
-
-export async function fetchMyData(): Promise<MyData> {
-  return parse(myDataSchema, await requestJson(DATASETS))
-}
-
-// 上传是表单数据，不走 JSON 封装；同源、带 CSRF，错误照样给出后端的 code
-export async function uploadDataset(file: File, csrfToken: string): Promise<Dataset> {
-  const form = new FormData()
-  form.append('file', file)
-  const response = await fetch(DATASETS, {
-    method: 'POST',
-    credentials: 'same-origin',
-    cache: 'no-store',
-    redirect: 'manual',
-    body: form,
-    headers: { Accept: 'application/json', 'X-CSRF-Token': csrfToken },
-  })
-  const payload: unknown = await response.json().catch(() => null)
-  if (!response.ok) {
-    const code =
-      payload &&
-      typeof payload === 'object' &&
-      typeof (payload as { code?: unknown }).code === 'string'
-        ? (payload as { code: string }).code
-        : 'request_failed'
-    throw new ApiClientError(response.status, {
-      code,
-      message_key: 'errors.requestFailed',
-      retryable: false,
-      correlation_id: '',
-    })
-  }
-  return parse(uploadedSchema, payload).dataset
-}
-
-export async function deleteDataset(datasetId: string, csrfToken: string): Promise<void> {
-  await requestJson(`${DATASETS}/${enc(datasetId)}`, { method: 'DELETE', csrfToken })
 }
 
 // ---------- 测试中转给我的问题 ----------

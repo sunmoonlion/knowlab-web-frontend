@@ -358,27 +358,6 @@ export const runtimesSchema = z.object({
   runtimes: z.array(z.string().regex(RUNTIME)),
 })
 
-const datasetSchema = z.object({
-  dataset_id: z.string().uuid(),
-  name: z.string().min(1).max(200),
-  version: z.string(),
-  content_type: z.string(),
-  size_bytes: z.number().int().min(1),
-  sha256: z.string().regex(/^[0-9a-f]{64}$/),
-  created_at: when,
-  no_resale: z.boolean().optional(),
-})
-
-export const myDataSchema = z.object({
-  contract_version: z.literal(1),
-  datasets: z.array(datasetSchema),
-  used_bytes: z.number().int().min(0),
-  quota_bytes: z.number().int().min(1),
-  max_file_bytes: z.number().int().min(1),
-})
-
-export const uploadedSchema = z.object({ contract_version: z.literal(1), dataset: datasetSchema })
-
 // 提交、修改的形状与后端 KnowbotRequestIn、RevisionIn 一致；后端会再核一遍
 export type ExpectationIn = {
   artifact: string
@@ -428,8 +407,6 @@ export type Event = z.infer<typeof eventSchema>
 export type Outputs = z.infer<typeof outputsSchema>
 export type CaseOutputs = z.infer<typeof caseOutputsSchema>
 export type StepOutput = z.infer<typeof stepOutputSchema>
-export type Dataset = z.infer<typeof datasetSchema>
-export type MyData = z.infer<typeof myDataSchema>
 
 // ---------- 自助测试与测试里的数据（SDD 0046 第三节，decisions ⑭） ----------
 export const computerSchema = z.object({
