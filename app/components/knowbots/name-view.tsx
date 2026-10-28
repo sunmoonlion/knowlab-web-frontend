@@ -8,12 +8,13 @@ import { Link } from '@/i18n/navigation'
 import { fetchDetail } from '@/lib/knowbots/client'
 
 import { AmendmentList } from './reference'
+import { SelfTests } from './self-test'
 import { Card, KEY, useWhen, type Translate } from './shared'
 
 // 一个名称的详情页（SDD 0037 第九节）：顶上一行每个过程最新的一项；下面按时间排的记录，每条写
 // 哪个过程、输入、输出、何时，点了去那一栏看。没交回我的专家不列；谁做的不写。
 
-export function NameView({ requestId }: { requestId: string }) {
+export function NameView({ requestId, csrfToken }: { requestId: string; csrfToken?: string }) {
   const t = useTranslations('knowbots')
   const detail = useQuery({
     queryKey: [...KEY, 'detail', requestId],
@@ -35,6 +36,7 @@ export function NameView({ requestId }: { requestId: string }) {
           {summaryParts(life.summary, t).join(' · ')}
         </p>
       </header>
+      {csrfToken ? <SelfTests life={life} csrfToken={csrfToken} /> : null}
       <Card title={t('name.timeline')}>
         <Timeline life={life} />
         {life.tests.some((x) => x.backfilled) ? (

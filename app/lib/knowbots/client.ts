@@ -4,6 +4,7 @@ import type { z } from 'zod'
 
 import {
   applicationsSchema,
+  computersSchema,
   countsSchema,
   detailSchema,
   expertMovedSchema,
@@ -14,10 +15,14 @@ import {
   questionsSchema,
   reviewedSchema,
   runtimesSchema,
+  selfTestSchema,
   sentSchema,
   submittedSchema,
+  testDataAnsweredSchema,
+  testDataSchema,
   uploadedSchema,
   type Application,
+  type Computers,
   type Counts,
   type Dataset,
   type Detail,
@@ -29,6 +34,7 @@ import {
   type MyQuestion,
   type Outputs,
   type RevisionIn,
+  type TestDataRequest,
 } from '@/contracts/knowbots'
 import { ApiClientError, requestJson } from '@/lib/common/api-client'
 
@@ -217,4 +223,67 @@ export async function answerMyQuestion(
       body: answer,
     }),
   )
+}
+
+// ---------- 自助测试与测试里的数据（SDD 0046 第三节，decisions ⑭） ----------
+export async function fetchComputers(draftId: string): Promise<Computers> {
+  return parse(
+    computersSchema,
+    await requestJson(`${BASE}/knowbot-drafts/${enc(draftId)}/computers`),
+  )
+}
+
+export async function startSelfTest(
+  draftId: string,
+  body: { environment_id: string; workspace_root: string; budget_limit: string },
+  csrfToken: string,
+): Promise<string> {
+  return parse(
+    selfTestSchema,
+    await requestJson(`${BASE}/knowbot-drafts/${enc(draftId)}/self-tests`, {
+      method: 'POST',
+      csrfToken,
+      body,
+    }),
+  ).test_id
+}
+
+export async function refreshMyTest(testId: string, csrfToken: string): Promise<void> {
+  await requestJson(`${BASE}/knowbot-tests/${enc(testId)}/refresh`, { method: 'POST', csrfToken })
+}
+
+export async function fetchTestData(testId: string): Promise<TestDataRequest[]> {
+  return parse(testDataSchema, await requestJson(`${BASE}/knowbot-tests/${enc(testId)}/data`))
+    .requests
+}
+
+export type TestDataChoice = {
+  picks?: Record<string, { material_id: string; version_no: number }>
+  dropped?: string[]
+  needs?: Record<string, unknown>[]
+}
+
+export async function confirmTestData(
+  questionId: string,
+  body: TestDataChoice,
+  csrfToken: string,
+): Promise<string> {
+  return parse(
+    testDataAnsweredSchema,
+    await requestJson(`${BASE}/knowbot-test-data/${enc(questionId)}/confirm`, {
+      method: 'POST',
+      csrfToken,
+      body,
+    }),
+  ).status
+}
+
+export async function declineTestData(questionId: string, csrfToken: string): Promise<string> {
+  return parse(
+    testDataAnsweredSchema,
+    await requestJson(`${BASE}/knowbot-test-data/${enc(questionId)}/decline`, {
+      method: 'POST',
+      csrfToken,
+    }),
+  ).status
 }

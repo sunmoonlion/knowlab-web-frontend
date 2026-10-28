@@ -105,6 +105,8 @@ export function testRecord(overrides: Partial<Test> = {}): Test {
       finished_at: '2026-10-24T10:00:00Z',
     },
     backfilled: false,
+    mode: 'platform',
+    test_set_version: null,
     ...overrides,
   }
 }

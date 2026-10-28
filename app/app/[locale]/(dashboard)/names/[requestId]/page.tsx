@@ -19,13 +19,16 @@ export default async function NamePage({
   params: Promise<{ locale: string; requestId: string }>
 }) {
   const { locale, requestId } = await params
-  await requireBrowserSession(locale, `/${locale}/names/${encodeURIComponent(requestId)}`)
+  const session = await requireBrowserSession(
+    locale,
+    `/${locale}/names/${encodeURIComponent(requestId)}`,
+  )
   const t = await getTranslations('knowbots.name')
   return (
     <>
       <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
       <p className="text-muted-foreground mt-2">{t('intro')}</p>
-      <NameView requestId={requestId} />
+      <NameView requestId={requestId} csrfToken={session.csrf_token} />
     </>
   )
 }

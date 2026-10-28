@@ -404,6 +404,66 @@
       "amendments": "Amendments I wrote before",
       "rules": "Where my words are used",
       "versions": "Idea versions"
+    },
+    "selfTest": {
+      "title": "Testing",
+      "lead": "Test this draft on your own computer with your own model key; you set the spending limit.",
+      "loading": "Loading your computers…",
+      "failed": "Could not load your computers; try again later.",
+      "noComputer": "No computer of yours is online: connect or turn one on in knowbench first.",
+      "computer": "Computer",
+      "choose": "Choose one",
+      "offline": "{name} (offline)",
+      "folder": "Folder for the test project",
+      "budget": "Spending limit (CNY)",
+      "start": "Test it myself",
+      "starting": "Starting…",
+      "startFailed": "Could not start; try again.",
+      "keyNote": "Uses the model key you set in knowbench; without one the test stops.",
+      "running": "Test {number} is running"
+    },
+    "testData": {
+      "lead": "Case {caseId}: the expert asks for this data. Switch to another copy, change the company or years, drop an item or add one; nothing is signed or fetched until you confirm, and the test waits here.",
+      "supplying": "Fetching the data you confirmed; the test goes on once it is all here.",
+      "missing": "These did not arrive: {items}.",
+      "goOn": "Go on testing with what there is",
+      "confirm": "Confirm and fetch",
+      "confirming": "Confirming…",
+      "decline": "None of it, test with what there is",
+      "failed": "That did not work; try again.",
+      "unchosen": "{count} item(s) match several copies; choose one or drop it before confirming.",
+      "anySubject": "any company",
+      "essential": "essential",
+      "dropped": "Not this one",
+      "changed": "Changed; looked up again when you confirm",
+      "drop": "Not this one",
+      "undrop": "Keep it",
+      "edit": "Change",
+      "editDone": "Done",
+      "subject": "Company",
+      "from": "From year",
+      "to": "To year",
+      "add": "Add an item",
+      "addDone": "Add",
+      "docTypeLabel": "Type",
+      "docType": {
+        "annual_report": "Annual report",
+        "semiannual_report": "Semi-annual report",
+        "interim_announcement": "Interim announcement",
+        "research_company": "Company research"
+      },
+      "choose": "Choose one",
+      "asListed": "Use the one listed",
+      "pick": "Which copy for {name}",
+      "status": {
+        "resolved": "Have it",
+        "to_confirm": "Missing; to be fetched",
+        "ambiguous": "Several copies; choose one",
+        "not_shown": "Not shown to knowlab in knowbase yet",
+        "not_collectable": "Cannot be fetched; upload it in knowbase",
+        "waiting": "Being fetched",
+        "unusable": "Cannot be used"
+      }
     }
   }
 }

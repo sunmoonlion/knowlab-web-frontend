@@ -116,6 +116,9 @@ const testSchema = z.object({
   finished_at: when,
   report: reportSchema.nullable(),
   backfilled: z.boolean(),
+  // 自助（自己的电脑）还是平台；带的测试集第几版（SDD 0046 第三节）
+  mode: z.enum(['platform', 'self']).default('platform'),
+  test_set_version: z.number().int().nullable().default(null),
 })
 
 const expertSchema = z.object({
@@ -427,3 +430,67 @@ export type CaseOutputs = z.infer<typeof caseOutputsSchema>
 export type StepOutput = z.infer<typeof stepOutputSchema>
 export type Dataset = z.infer<typeof datasetSchema>
 export type MyData = z.infer<typeof myDataSchema>
+
+// ---------- 自助测试与测试里的数据（SDD 0046 第三节，decisions ⑭） ----------
+export const computerSchema = z.object({
+  environment_id: z.string().uuid(),
+  name: z.string(),
+  os: z.string().nullable().optional(),
+  online: z.boolean(),
+  roots: z.array(z.string()),
+})
+export type Computer = z.infer<typeof computerSchema>
+export const computersSchema = z.object({
+  computers: z.array(computerSchema),
+  last: z.object({ environment_id: z.string(), workspace_root: z.string().nullable() }).nullable(),
+})
+export type Computers = z.infer<typeof computersSchema>
+export const selfTestSchema = z.object({ test_id: z.string().uuid(), status: z.string() })
+
+const candidateSchema = z.object({
+  material_id: z.string(),
+  version_no: z.number().int(),
+  name: z.string().default(''),
+})
+export const testDataItemSchema = z.object({
+  ref: z.string(),
+  need_key: z.string(),
+  key: z.object({
+    subject: z.string().nullable().optional(),
+    period_start: z.string().nullable().optional(),
+    period_end: z.string().nullable().optional(),
+  }),
+  status: z.string(),
+  chosen: z.array(candidateSchema),
+  candidates: z.array(candidateSchema),
+})
+export type TestDataItem = z.infer<typeof testDataItemSchema>
+export const testDataNeedSchema = z
+  .object({
+    key: z.string(),
+    name: z.string(),
+    subject: z.string().nullable().optional(),
+    doc_type: z.string(),
+    period: z
+      .object({
+        kind: z.string(),
+        start: z.string().nullable().optional(),
+        end: z.string().nullable().optional(),
+      })
+      .loose(),
+    required: z.boolean().default(false),
+  })
+  .loose()
+export type TestDataNeed = z.infer<typeof testDataNeedSchema>
+export const testDataRequestSchema = z.object({
+  question_id: z.string().uuid(),
+  case_id: z.string(),
+  status: z.enum(['proposed', 'supplying', 'missing', 'answered']).nullable(),
+  needs: z.array(testDataNeedSchema),
+  items: z.array(testDataItemSchema),
+  missing: z.array(z.string()),
+  incomplete: z.array(z.string()),
+})
+export type TestDataRequest = z.infer<typeof testDataRequestSchema>
+export const testDataSchema = z.object({ requests: z.array(testDataRequestSchema) })
+export const testDataAnsweredSchema = z.object({ status: z.string() }).loose()
