@@ -9,13 +9,14 @@ import type { ExpertItem } from '@/contracts/knowbots'
 import { Link } from '@/i18n/navigation'
 import { fetchDetail, fetchExperts, stopExpert } from '@/lib/knowbots/client'
 
+import { AskInKnowbench } from './ask-in-knowbench'
 import { Badge, Card, ColumnLayout, EXPERT_TONE, KEY, useWhen } from './shared'
 import { SidePanel } from './side-panel'
 import { TestResults } from './test-results'
 
 // 专家（SDD 0037 第八节）：成品，唯一不是过程的一栏，只列交回了我的各版。新交回的去「审核」
 // 定要不要；要了的等我们审核，审过就能在 knowbench 工作台请；能用的可以停用。
-// 请专家在 knowbench 工作台；这个应用还没有登记去工作台的链接，只写一句怎么去。
+// 请专家在 knowbench 工作台：能用的那一版给一个去工作台的链接（没配工作台地址时只写一句怎么去）。
 
 const FILTERS = ['new', 'accepted', 'usable', 'stopped', 'not_listed'] as const
 type Filter = (typeof FILTERS)[number]
@@ -127,9 +128,11 @@ function ExpertPage({
           ) : null}
           {item.stage === 'listed' ? (
             <>
-              <p className="text-muted-foreground">
-                {t('experts.hint', { name: item.name ?? item.title })}
-              </p>
+              <AskInKnowbench
+                expert={item}
+                origin={detail.data?.origin}
+                name={item.name ?? item.title}
+              />
               <label className="block">
                 {t('experts.stopReason')}
                 <input

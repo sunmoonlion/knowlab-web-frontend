@@ -9,6 +9,7 @@ import type { Application, Detail, Version } from '@/contracts/knowbots'
 import { Link } from '@/i18n/navigation'
 import { acceptConsent, fetchApplications, fetchDetail } from '@/lib/knowbots/client'
 
+import { AskInKnowbench, listedExpert } from './ask-in-knowbench'
 import { summaryParts } from './name-view'
 import { AmendmentList, Cases, Method } from './reference'
 import { Badge, Card, ColumnLayout, KEY, useWhen, type Tone } from './shared'
@@ -78,6 +79,7 @@ function ApplicationProcess({ item, csrfToken }: { item: Application; csrfToken:
     queryFn: () => fetchDetail(item.request_id),
   })
   const latest = detail.data?.versions.find((v) => v.version === item.latest_version)
+  const usable = detail.data ? listedExpert(detail.data.experts) : null
   return (
     <>
       <section aria-label={item.title} className="min-w-0 flex-1 space-y-4">
@@ -91,6 +93,15 @@ function ApplicationProcess({ item, csrfToken }: { item: Application; csrfToken:
           </p>
         </header>
         <ConsentNotice item={item} csrfToken={csrfToken} />
+        {usable && detail.data ? (
+          <Card title={t('applications.usable', { version: usable.version })}>
+            <AskInKnowbench
+              expert={usable}
+              origin={detail.data.origin}
+              name={usable.name ?? item.title}
+            />
+          </Card>
+        ) : null}
         <Card title={t('applications.now')}>
           <p>{latest ? acceptanceLine(latest, t) : t('loading')}</p>
           <Link

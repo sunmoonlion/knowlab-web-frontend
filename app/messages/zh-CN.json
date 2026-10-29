@@ -301,7 +301,8 @@
       "rejected": "创意 v{version} 没受理：{reason}。改一改再交，就是新版本。",
       "revise": "修改创意",
       "reviseHint": "改了再交是一个新版本；旧版本留着，正在跑的测试不受影响。",
-      "reviseFrom": "「{title}」：从创意 v{version} 改起，交了出一个新版本。"
+      "reviseFrom": "「{title}」：从创意 v{version} 改起，交了出一个新版本。",
+      "usable": "专家 v{version} 能用了"
     },
     "review": {
       "title": "待办",
@@ -337,6 +338,8 @@
       "empty": "还没有交回你的专家。",
       "versions": "这个名称的各版",
       "hint": "去 knowbench 工作台请它：在工作台选专家时找「{name}」。",
+      "ask": "去 knowbench 请它",
+      "askWithQuestion": "带着当初那句问题去 knowbench 请它",
       "trial": "这一版在试行期就上架了（那时还没有这两道门）。",
       "toReview": "去「待办」里定要不要",
       "stopReason": "停用的原因",

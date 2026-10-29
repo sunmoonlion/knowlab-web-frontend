@@ -301,7 +301,8 @@
       "rejected": "Idea v{version} was not accepted: {reason}. Change it and hand it in again as a new version.",
       "revise": "Revise the idea",
       "reviseHint": "A revision is a new version; old versions stay, and a test already running is not affected.",
-      "reviseFrom": "“{title}”: start from idea v{version}; handing it in makes a new version."
+      "reviseFrom": "“{title}”: start from idea v{version}; handing it in makes a new version.",
+      "usable": "Expert v{version} is ready to use"
     },
     "review": {
       "title": "To do",
@@ -337,6 +338,8 @@
       "empty": "No expert has been returned to you yet.",
       "versions": "Versions of this name",
       "hint": "Ask it in the knowbench workbench: look for “{name}” when choosing an expert.",
+      "ask": "Ask it in knowbench",
+      "askWithQuestion": "Ask it in knowbench with your original question",
       "trial": "This version was listed in the trial period (before the two gates existed).",
       "toReview": "Decide in To do",
       "stopReason": "Why you stop it",

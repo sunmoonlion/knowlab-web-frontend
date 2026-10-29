@@ -221,6 +221,15 @@ export const detailSchema = z.object({
   ...lifeFields,
   // 现在的孵化是自己来还是平台；我给平台的授权
   incubation_mode: z.enum(['self', 'platform']),
+  // 从 knowbench 找专家没找到时建的：哪个应用、哪个项目、哪一轮找专家（专家孵化方案第十三节）
+  origin: z
+    .object({
+      app: z.string(),
+      project_id: z.string().nullable().optional(),
+      task_id: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
   grants: z.array(grantSchema),
   versions: z.array(versionSchema),
   drafts: z.array(draftSchema),
