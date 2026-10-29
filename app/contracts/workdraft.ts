@@ -98,6 +98,26 @@ export const bodySchema = z.object({
 export const ORIGINS = ['edit', 'import', 'copy', 'accept', 'question', 'idea'] as const
 export type Origin = (typeof ORIGINS)[number]
 
+// 挑的数据的格式（挑的时候记下的：名字、文件类型、描述、就绪的读法；不是内容，专家孵化方案第 8.2 节）
+export const dataFormatSchema = z
+  .object({
+    name: z.string(),
+    media_type: z.string().default(''),
+    description: z
+      .object({
+        subject: z.string().nullable().optional(),
+        doc_type: z.string().nullable().optional(),
+        period_start: z.string().nullable().optional(),
+        period_end: z.string().nullable().optional(),
+        data_format: z.string().nullable().optional(),
+      })
+      .loose()
+      .default({}),
+    readings: z.array(z.string()).default([]),
+  })
+  .loose()
+export type DataFormat = z.infer<typeof dataFormatSchema>
+
 export const workdraftSchema = z.object({
   contract_version: z.literal(1),
   request_id: z.string().uuid(),
@@ -106,6 +126,7 @@ export const workdraftSchema = z.object({
   body: bodySchema,
   sources: z.record(z.string(), z.object({ kind: z.string(), ref: z.string() }).loose()),
   origins: z.record(z.string(), z.string()).default({}),
+  data_formats: z.record(z.string(), dataFormatSchema).default({}),
   updated_at: z.string().nullable(),
   // 导入、复制时没能留下的东西
   notes: z.array(z.string()).optional(),
@@ -241,6 +262,8 @@ export type RoundStart = {
   budget_limit: string
   environment_id?: string
   workspace_root?: string
+  // 带上最近一次测试的报告让 AI 改（只有「让 AI 改…」，专家孵化方案第 8.4 节）
+  with_test?: boolean
 }
 export type Decision = {
   action: 'accept' | 'accept_edited' | 'reject'
@@ -262,6 +285,15 @@ export type Problem = z.infer<typeof problemSchema>
 export type Preview = z.infer<typeof previewSchema>
 export type Published = z.infer<typeof publishedSchema>
 export type CellEdit = { path: string; value: unknown }
+
+// 一键接受一步的全部建议：接受了的、跳过的（出处核不上、放不上去）
+export const acceptedStepSchema = z.object({
+  contract_version: z.literal(1),
+  workdraft: workdraftSchema.omit({ contract_version: true }),
+  incubation: roundSchema,
+  accepted: z.array(z.string()),
+  skipped: z.array(z.object({ id: z.string(), code: z.string() })),
+})
 
 export const decidedProposalSchema = z.object({
   contract_version: z.literal(1),

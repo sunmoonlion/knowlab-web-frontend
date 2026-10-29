@@ -74,6 +74,7 @@ export function application(overrides: Partial<Application> = {}): Application {
     summary: SUMMARY,
     consent_version: 2,
     consent_current: 2,
+    incubation_mode: 'self',
     category: 'working',
     ...overrides,
   }
@@ -179,6 +180,7 @@ export function detail(overrides: Partial<Detail> = {}): Detail {
     consent_version: 2,
     consent_current: 2,
     incubation_mode: 'platform',
+    platform_asks: [],
     grants: [],
     versions: [
       version(),

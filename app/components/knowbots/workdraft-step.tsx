@@ -16,7 +16,7 @@ import {
 import { freshId, nameProblem, outputsValid } from '@/lib/knowbots/workdraft'
 
 import { Checks } from './workdraft-checks'
-import { SuggestionsAt } from './workdraft-suggestions'
+import { AcceptStep, SuggestionsAt } from './workdraft-suggestions'
 import {
   CellMarks,
   CheckedInput,
@@ -66,6 +66,7 @@ export function StepEditor({
       <header className="flex flex-wrap items-center gap-2">
         <h3 className="font-medium">{heading}</h3>
         <div className="ml-auto flex gap-1">
+          <AcceptStep stepId={step.id} />
           <Button
             size="sm"
             variant="outline"

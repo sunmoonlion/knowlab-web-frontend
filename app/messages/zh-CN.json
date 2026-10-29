@@ -56,7 +56,15 @@
     "expandMenu": "展开导航",
     "collapseMenu": "收起导航",
     "applications": "申请",
-    "review": "待办"
+    "review": "待办",
+    "incubation": "孵化",
+    "tests": "测试",
+    "delivery": "交付",
+    "knowledge": "知识库",
+    "groups": {
+      "process": "过程",
+      "results": "结果"
+    }
   },
   "interaction": {
     "loading": "正在加载参考运行…",
@@ -248,7 +256,11 @@
     "columns": {
       "applications": "申请",
       "review": "待办",
-      "experts": "专家"
+      "experts": "专家",
+      "incubation": "孵化",
+      "tests": "测试",
+      "delivery": "交付",
+      "knowledge": "知识库"
     },
     "categories": {
       "working": "在做",
@@ -261,7 +273,13 @@
       "accepted": "你已同意，等我们审核",
       "usable": "能用",
       "stopped": "停用了",
-      "not_listed": "没上架"
+      "not_listed": "没上架",
+      "self": "自己来",
+      "platform": "平台孵化",
+      "to_test": "待测",
+      "testing": "在测",
+      "tested": "测过了",
+      "no_draft": "还没出准专家"
     },
     "ideaVersion": "创意 v{version}",
     "draftLabel": "准专家 {label}",
@@ -425,12 +443,16 @@
       "start": "自己测一次",
       "starting": "正在发起…",
       "startFailed": "没发起成，请再试一次。",
-      "keyNote": "用你在 knowbench 填的模型 key；没填的话测试会停下。",
+      "keyNote": "用你在 knowbench 填的模型 key，花的是你的钱；到上限就停下。",
       "running": "第 {number} 次测试在跑",
       "errors": {
         "author_has_no_computer": "你还没有能测的电脑：先去 knowbench 接入一台电脑，再回来测。",
-        "test_computer_unavailable": "这台电脑或这个目录现在用不了：先去 knowbench 接入一台电脑（或把目录加进白名单），再回来测。"
-      }
+        "test_computer_unavailable": "这台电脑或这个目录现在用不了：先去 knowbench 接入一台电脑（或把目录加进白名单），再回来测。",
+        "model_key_missing": "你还没有在 knowbench 填模型 key：先去填，再回来测。"
+      },
+      "noModelKey": "你还没有在 knowbench 填模型 key：填了才能发起测试。",
+      "toSettings": "去 knowbench 填模型 key",
+      "toMachines": "去 knowbench 接入电脑"
     },
     "testData": {
       "lead": "用例 {caseId}：专家要这些数据。你可以换一份、改主体或年份、去掉、自己加一样；确认了才去签、去取，测试停在这里等你。",
@@ -525,6 +547,93 @@
       "withdraw": "收回",
       "declined": "平台没接：{reason}",
       "failed": "没办成，请稍后再试。"
+    },
+    "incubationColumn": {
+      "title": "孵化",
+      "intro": "按名称列，标着现在是自己来还是平台孵化。自己来的进工作稿写方法；平台孵化的看进度、平台在等你什么。切换不跳转。",
+      "empty": "还没有名称：先去「申请」写一个创意。",
+      "workdraft": "工作稿",
+      "workdraftHint": "把你的方法一步一步写成格子，可以让 AI 起草、按你的话改；写好了出一版准专家，拿去测。",
+      "open": "打开工作稿"
+    },
+    "testsColumn": {
+      "title": "测试",
+      "intro": "用例、测试集、确认数据、发起测试、历次测试。都在你自己的电脑上、用你的模型 key 跑。",
+      "empty": "还没有名称：先去「申请」写一个创意。",
+      "cases": "验收用例",
+      "editCases": "改用例（出创意的新一版）",
+      "testSet": "测试集",
+      "testSetVersion": "测试集第 {version} 版",
+      "testSetNone": "还没有测试集：第一次测时，每条用例先由专家提出要什么数据，你确认后钉成测试集。",
+      "testSetHint": "重测带着测试集发起，同一版测试集测出的结果才直接比；要换数据就出测试集的新一版。",
+      "start": "发起",
+      "nothingToTest": "现在没有待测的准专家：先在工作稿里出一版。",
+      "history": "历次测试",
+      "historyNone": "还没测过。",
+      "mode": {
+        "self": "自助",
+        "platform": "平台"
+      },
+      "noReport": "这次还没有结果。"
+    },
+    "deliveryColumn": {
+      "title": "交付",
+      "intro": "测试通过出的专家版本在这里交付：选哪一版、定自用或公开、授权审核员、看审核进度，过了进 knowmart 小店。",
+      "empty": "还没有能交付的专家：测试通过、出了专家版本后在这里交付。",
+      "card": "这一版的交付",
+      "lead": "交付的动作在这一页做（下一步开通）；现在先看各版到哪了。",
+      "version": "专家版本",
+      "listing": "自用还是公开",
+      "listingKind": {
+        "self": "自用",
+        "public": "公开"
+      },
+      "listingUnset": "交付时选",
+      "reviewer": "审核员",
+      "reviewerHint": "交审时你授权审核员看这次交付，审完撤销",
+      "progress": "审核进度",
+      "shop": "knowmart 小店",
+      "listed": "已进小店（{at}）",
+      "notListed": "还没进小店"
+    },
+    "knowledge": {
+      "title": "知识库",
+      "intro": "这里只列你在 knowbase 展示给 knowlab 的资料。上传、改描述、展示给哪里、许可档都在 knowbase 管；孵化时在工作稿的「数据」一栏从这里挑。",
+      "manage": "去 knowbase 管理",
+      "manageHint": "去 knowbase 管理你的资料。",
+      "loading": "正在读你的知识库…",
+      "loadFailed": "没读到你的知识库，请稍后再试。",
+      "empty": "你还没有展示给 knowlab 的资料：在 knowbase 里打开「展示给 knowlab」就会列在这里。",
+      "unconfirmed": "描述待确认",
+      "notMine": "买来的",
+      "version": "第 {n} 版"
+    },
+    "platformView": {
+      "title": "平台视图",
+      "progress": "进度：",
+      "waiting": "在等你的",
+      "waitingNone": "平台现在没在等你。",
+      "asked": "平台问过的（{count}）",
+      "kind": {
+        "review": "请你审核",
+        "expert": "请你确认",
+        "proposal": "提议",
+        "gap": "缺口",
+        "question": "测试中的问题"
+      },
+      "review": "准专家 {label} 请你审核",
+      "expert": "第 {version} 版专家请你确认要不要",
+      "answer": "你的处理：{answer}",
+      "answers": {
+        "ok": "行",
+        "not_ok": "不行",
+        "accepted": "接受了",
+        "declined": "不要",
+        "accepted_edited": "改了再接受",
+        "rejected": "不要",
+        "withdrawn": "平台撤回了",
+        "void": "作废了"
+      }
     }
   },
   "workdraft": {
@@ -562,8 +671,20 @@
     "data": {
       "title": "数据",
       "none": "还没有挑数据。",
-      "hint": "从你的 knowbase 挑数据的界面以后加；这里先列已挑的编号。",
-      "remove": "去掉 {id}"
+      "hint": "从你的知识库挑几份给 AI 参考：只给它们的格式（名字、类型、描述、有哪几种读法），不给内容。交付时挑的数据再绑定给专家。",
+      "remove": "不要 {id}",
+      "drop": "不要了",
+      "readings": "读法：{list}",
+      "add": "+ 挑一份",
+      "pickTitle": "从知识库挑",
+      "close": "收起",
+      "loading": "正在读你的知识库…",
+      "loadFailed": "没读到你的知识库，请稍后再试。",
+      "empty": "你的知识库里还没有展示给 knowlab 的资料。",
+      "allPicked": "知识库里的都挑了。",
+      "toKnowbase": "去 knowbase 管理",
+      "pick": "挑这份",
+      "failed": "没挑成（{code}），请再试一次。"
     },
     "steps": {
       "title": "步骤",
@@ -798,7 +919,9 @@
       "errors": {
         "author_has_no_computer": "你还没有能用的电脑：先去 knowbench 接入一台，或在上面选一台。",
         "incubation_running": "这份工作稿已有一轮在跑：等它结束或取消了再来。",
-        "incubation_unconfigured": "AI 孵化现在还没开通，请稍后再试。"
+        "incubation_unconfigured": "AI 孵化现在还没开通，请稍后再试。",
+        "model_key_missing": "你还没有在 knowbench 填模型 key：先去填，再回来发起。",
+        "test_report_missing": "这个名称还没有测出结论的测试，带不了测试报告。"
       },
       "startFailed": "没发起成，请再试一次。",
       "round": "第 {n} 轮",
@@ -835,7 +958,17 @@
       "decideFailed": "没处理成（{code}），请再试一次。",
       "withAnswers": "按我答过的缺口改",
       "operatorLabel": "平台人员的提议",
-      "fromOperator": "这是平台人员提的，你接受了才算。"
+      "fromOperator": "这是平台人员提的，你接受了才算。",
+      "noModelKey": "你还没有在 knowbench 填模型 key：填了才能发起。",
+      "toSettings": "去 knowbench 填模型 key",
+      "withTest": "带上第 {number} 次测试（{status}）的报告：只给每一步过没过、为什么，不给成稿和数据",
+      "testOutcome": {
+        "passed": "通过",
+        "failed": "没通过"
+      },
+      "acceptStep": "全部接受（{n} 条）",
+      "acceptedAll": "这一步的 {n} 条建议都接受了。",
+      "acceptedSome": "接受了 {n} 条；{m} 条出处核不上或放不上去，跳过了，请逐条处理。"
     }
   }
 }

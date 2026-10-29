@@ -22,13 +22,36 @@ type Suggestions = {
   at: (home: string) => Suggestion[]
   busy: boolean
   decide: (suggestion: Suggestion, choice: Choice, value?: unknown) => void
+  // 一步上还没处理的 AI 建议有几条；一键接受这一步的全部（第 8.3 节）
+  inStep: (stepId: string) => number
+  acceptStep: (stepId: string) => void
 }
 
 export const SuggestionsContext = createContext<Suggestions>({
   at: () => [],
   busy: false,
   decide: () => undefined,
+  inStep: () => 0,
+  acceptStep: () => undefined,
 })
+
+/** 一步头上「全部接受」：这一步上的 AI 建议一键接受，出处核不上的跳过、照旧逐条处理。 */
+export function AcceptStep({ stepId }: { stepId: string }) {
+  const t = useTranslations('workdraft.ai')
+  const { inStep, acceptStep, busy } = useContext(SuggestionsContext)
+  const count = inStep(stepId)
+  if (count === 0) return null
+  return (
+    <Button
+      size="sm"
+      disabled={busy}
+      data-testid={`accept-step-${stepId}`}
+      onClick={() => acceptStep(stepId)}
+    >
+      {t('acceptStep', { n: count })}
+    </Button>
+  )
+}
 
 const NEW_STEP = /^steps\/([^/]+)$/
 

@@ -14,7 +14,8 @@ import {
 } from '@/contracts/workdraft'
 import { Link } from '@/i18n/navigation'
 import { ApiClientError } from '@/lib/common/api-client'
-import { fetchRoundComputers } from '@/lib/knowbots/client'
+import { CrossAppLink } from '@/components/common/cross-app-link'
+import { fetchDetail, fetchRoundComputers } from '@/lib/knowbots/client'
 
 import { Card, KEY } from './shared'
 import { INPUT, SELECT } from './workdraft-cells'
@@ -30,9 +31,15 @@ export const START_CODES = [
   'author_has_no_computer',
   'incubation_running',
   'incubation_unconfigured',
+  'model_key_missing',
+  'test_report_missing',
 ] as const
 
-/** 「AI 起草」「让 AI 改…」：动作、那句话与哪一步、费用上限、电脑与目录（默认上次）。 */
+/**
+ * 「AI 起草」「让 AI 改…」：动作、那句话与哪一步、费用上限、电脑与目录（默认上次）。模型 key 没填的
+ * 发起前就拦，给去 knowbench 填的链接（SDD 0046 第三节）。「让 AI 改…」可以带上最近一次测试的报告
+ * （专家孵化方案第 8.4 节）：最近一次没通过时默认勾上。
+ */
 export function RoundPanel({
   requestId,
   action,
@@ -62,6 +69,21 @@ export function RoundPanel({
   const [budget, setBudget] = useState('20')
   const [picked, setPicked] = useState<string | null>(null)
   const [root, setRoot] = useState<string | null>(null)
+  const detail = useQuery({
+    queryKey: [...KEY, 'detail', requestId],
+    queryFn: () => fetchDetail(requestId),
+    enabled: action === 'revise',
+  })
+  const finished = (detail.data?.tests ?? []).filter(
+    (x) => x.status === 'passed' || x.status === 'failed',
+  )
+  const latestTest = finished.reduce<(typeof finished)[number] | null>(
+    (a, x) => (a && a.number > x.number ? a : x),
+    null,
+  )
+  const [withTest, setWithTest] = useState<boolean | null>(null)
+  const carryTest = latestTest !== null && (withTest ?? latestTest.status === 'failed')
+  const noKey = computers.data?.model_key === false
   const list = computers.data?.computers ?? []
   const last = computers.data?.last ?? null
   const online = list.filter((c) => c.online)
@@ -77,7 +99,8 @@ export function RoundPanel({
       : env?.roots[0]) ??
     ''
   const okBudget = BUDGET.test(budget) && Number(budget) > 0
-  const ready = okBudget && Boolean(env && folder) && (action === 'draft' || instruction.trim())
+  const ready =
+    !noKey && okBudget && Boolean(env && folder) && (action === 'draft' || instruction.trim())
   return (
     <Panel title={action === 'draft' ? t('draftTitle') : t('reviseTitle')} onClose={onClose}>
       <p className="text-muted-foreground">
@@ -111,7 +134,30 @@ export function RoundPanel({
               ))}
             </select>
           </label>
+          {latestTest ? (
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={carryTest}
+                onChange={(e) => setWithTest(e.target.checked)}
+              />
+              <span>
+                {t('withTest', {
+                  number: latestTest.number,
+                  status: t(`testOutcome.${latestTest.status}` as never),
+                })}
+              </span>
+            </label>
+          ) : null}
         </>
+      ) : null}
+      {noKey ? (
+        <p className="text-amber-700" role="alert" data-testid="no-model-key">
+          {t('noModelKey')}{' '}
+          <CrossAppLink to="knowbench.settings" className="underline underline-offset-2">
+            {t('toSettings')}
+          </CrossAppLink>
+        </p>
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
         {computers.isPending ? (
@@ -178,6 +224,7 @@ export function RoundPanel({
             action,
             ...(action === 'revise' ? { instruction: instruction.trim() } : {}),
             ...(action === 'revise' && stepId ? { step_id: stepId } : {}),
+            ...(action === 'revise' && carryTest ? { with_test: true } : {}),
             budget_limit: budget,
             environment_id: env.environment_id,
             workspace_root: folder,

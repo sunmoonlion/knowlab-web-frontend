@@ -92,6 +92,7 @@ beforeEach(() => {
         { environment_id: ENV, name: '我的电脑', online: true, roots: ['/home/me/work'] },
       ],
       last: null,
+      model_key: true,
     })
   vi.mocked(startSelfTest).mockReset().mockResolvedValue(TEST)
   vi.mocked(refreshMyTest).mockReset().mockResolvedValue()
@@ -150,9 +151,23 @@ describe('自助测试（SDD 0046 第三节）', () => {
     vi.mocked(fetchComputers).mockResolvedValue({
       computers: [{ environment_id: ENV, name: '我的电脑', online: false, roots: ['/w'] }],
       last: null,
+      model_key: true,
     })
     page(detail({ drafts: [draft({ status: 'pending_test' })], tests: [] }))
     expect(await screen.findByText(/先去 knowbench 接入/)).toBeInTheDocument()
+  })
+
+  it('模型 key 没填：发起前就拦，说去 knowbench 填（SDD 0046 第三节）', async () => {
+    vi.mocked(fetchComputers).mockResolvedValue({
+      computers: [{ environment_id: ENV, name: '我的电脑', online: true, roots: ['/w'] }],
+      last: null,
+      model_key: false,
+    })
+    page(detail({ drafts: [draft({ status: 'pending_test' })], tests: [] }))
+    expect(await screen.findByTestId('no-model-key')).toHaveTextContent(
+      messages.knowbots.selfTest.noModelKey,
+    )
+    expect(screen.queryByRole('button', { name: '自己测一次' })).toBeNull()
   })
 })
 

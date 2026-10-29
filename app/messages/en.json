@@ -56,7 +56,15 @@
     "expandMenu": "Expand navigation",
     "collapseMenu": "Collapse navigation",
     "applications": "Applications",
-    "review": "To do"
+    "review": "To do",
+    "incubation": "Incubation",
+    "tests": "Tests",
+    "delivery": "Delivery",
+    "knowledge": "Knowledge",
+    "groups": {
+      "process": "Process",
+      "results": "Results"
+    }
   },
   "interaction": {
     "loading": "Loading the reference run...",
@@ -248,7 +256,11 @@
     "columns": {
       "applications": "Applications",
       "review": "To do",
-      "experts": "Experts"
+      "experts": "Experts",
+      "incubation": "Incubation",
+      "tests": "Tests",
+      "delivery": "Delivery",
+      "knowledge": "Knowledge"
     },
     "categories": {
       "working": "In progress",
@@ -261,7 +273,13 @@
       "accepted": "Accepted by you, waiting for our review",
       "usable": "Usable",
       "stopped": "Stopped",
-      "not_listed": "Not listed"
+      "not_listed": "Not listed",
+      "self": "On my own",
+      "platform": "Platform",
+      "to_test": "To test",
+      "testing": "Testing",
+      "tested": "Tested",
+      "no_draft": "No draft yet"
     },
     "ideaVersion": "idea v{version}",
     "draftLabel": "candidate {label}",
@@ -425,12 +443,16 @@
       "start": "Test it myself",
       "starting": "Starting…",
       "startFailed": "Could not start; try again.",
-      "keyNote": "Uses the model key you set in knowbench; without one the test stops.",
+      "keyNote": "Uses the model key you added in knowbench and your money; it stops at the limit.",
       "running": "Test {number} is running",
       "errors": {
         "author_has_no_computer": "You have no computer to test on yet: connect one in knowbench first, then come back.",
-        "test_computer_unavailable": "That computer or folder cannot be used now: connect a computer in knowbench (or allow the folder) first, then come back."
-      }
+        "test_computer_unavailable": "That computer or folder cannot be used now: connect a computer in knowbench (or allow the folder) first, then come back.",
+        "model_key_missing": "You have no model key in knowbench yet: add one, then come back to test."
+      },
+      "noModelKey": "You have no model key in knowbench yet: add one before starting a test.",
+      "toSettings": "Add a model key in knowbench",
+      "toMachines": "Connect a computer in knowbench"
     },
     "testData": {
       "lead": "Case {caseId}: the expert asks for this data. Switch to another copy, change the company or years, drop an item or add one; nothing is signed or fetched until you confirm, and the test waits here.",
@@ -525,6 +547,93 @@
       "withdraw": "Take it back",
       "declined": "The platform did not take it: {reason}",
       "failed": "That did not work; try again later."
+    },
+    "incubationColumn": {
+      "title": "Incubation",
+      "intro": "Each name with its current mode. On your own you write the method in the workdraft; with the platform you see the progress and what it waits for from you. Switching stays on the page.",
+      "empty": "No names yet: write an idea under Applications first.",
+      "workdraft": "Workdraft",
+      "workdraftHint": "Write your method step by step; AI can draft it or revise it as you say. When it is ready, publish a draft expert and test it.",
+      "open": "Open the workdraft"
+    },
+    "testsColumn": {
+      "title": "Tests",
+      "intro": "Test cases, test sets, confirming data, starting a test and past tests. All run on your own computer with your model key.",
+      "empty": "No names yet: write an idea under Applications first.",
+      "cases": "Test cases",
+      "editCases": "Edit the cases (a new idea version)",
+      "testSet": "Test set",
+      "testSetVersion": "Test set v{version}",
+      "testSetNone": "No test set yet: on the first test the expert asks for data per case; once you confirm, it is pinned as the test set.",
+      "testSetHint": "Retests start with the test set, so results of the same test set compare directly; to change data, make a new test set version.",
+      "start": "Start",
+      "nothingToTest": "No draft expert to test now: publish one from the workdraft first.",
+      "history": "Past tests",
+      "historyNone": "Not tested yet.",
+      "mode": {
+        "self": "Own",
+        "platform": "Platform"
+      },
+      "noReport": "No result yet."
+    },
+    "deliveryColumn": {
+      "title": "Delivery",
+      "intro": "Expert versions that passed a test are delivered here: pick the version, choose own use or public, authorize the reviewer, follow the review, then into the knowmart shop.",
+      "empty": "No expert to deliver yet: once a test passes and an expert version exists, deliver it here.",
+      "card": "Delivering this version",
+      "lead": "Delivery actions live on this page (coming in the next step); for now see where each version is.",
+      "version": "Expert version",
+      "listing": "Own use or public",
+      "listingKind": {
+        "self": "Own use",
+        "public": "Public"
+      },
+      "listingUnset": "Chosen at delivery",
+      "reviewer": "Reviewer",
+      "reviewerHint": "At delivery you authorize the reviewer for this delivery; it is revoked after the review",
+      "progress": "Review",
+      "shop": "knowmart shop",
+      "listed": "In the shop ({at})",
+      "notListed": "Not in the shop yet"
+    },
+    "knowledge": {
+      "title": "Knowledge",
+      "intro": "Only the materials you show to knowlab in knowbase. Uploading, descriptions, where they show and licenses are managed in knowbase; pick from here in the workdraft's Data section.",
+      "manage": "Manage in knowbase",
+      "manageHint": "Manage your materials in knowbase.",
+      "loading": "Reading your knowledge…",
+      "loadFailed": "Could not read your knowledge. Please try again later.",
+      "empty": "Nothing is shown to knowlab yet: turn on \"show to knowlab\" in knowbase and it appears here.",
+      "unconfirmed": "Description unconfirmed",
+      "notMine": "Bought",
+      "version": "Version {n}"
+    },
+    "platformView": {
+      "title": "Platform view",
+      "progress": "Progress:",
+      "waiting": "Waiting for you",
+      "waitingNone": "The platform is not waiting for you now.",
+      "asked": "What the platform asked ({count})",
+      "kind": {
+        "review": "Review",
+        "expert": "Confirm",
+        "proposal": "Proposal",
+        "gap": "Gap",
+        "question": "Test question"
+      },
+      "review": "Draft expert {label} waits for your review",
+      "expert": "Expert version {version} waits for your decision",
+      "answer": "You: {answer}",
+      "answers": {
+        "ok": "OK",
+        "not_ok": "Not OK",
+        "accepted": "Accepted",
+        "declined": "Declined",
+        "accepted_edited": "Edited and accepted",
+        "rejected": "Rejected",
+        "withdrawn": "Withdrawn by the platform",
+        "void": "Void"
+      }
     }
   },
   "workdraft": {
@@ -562,8 +671,20 @@
     "data": {
       "title": "Data",
       "none": "No data picked yet.",
-      "hint": "Picking data from your knowbase comes later; picked ids are listed here.",
-      "remove": "Remove {id}"
+      "hint": "Pick a few materials from your knowledge for the AI: only their format (name, type, description, available readings) goes, never the content. Picked data is bound to the expert at delivery.",
+      "remove": "Drop {id}",
+      "drop": "Drop",
+      "readings": "Readings: {list}",
+      "add": "+ Pick one",
+      "pickTitle": "Pick from your knowledge",
+      "close": "Close",
+      "loading": "Reading your knowledge…",
+      "loadFailed": "Could not read your knowledge. Please try again later.",
+      "empty": "Nothing in your knowledge is shown to knowlab yet.",
+      "allPicked": "Everything in your knowledge is picked.",
+      "toKnowbase": "Manage in knowbase",
+      "pick": "Pick",
+      "failed": "Could not pick ({code}). Please try again."
     },
     "steps": {
       "title": "Steps",
@@ -798,7 +919,9 @@
       "errors": {
         "author_has_no_computer": "You have no usable computer yet: connect one in knowbench, or pick one above.",
         "incubation_running": "A round of this workdraft is already running: wait for it to finish or cancel it.",
-        "incubation_unconfigured": "AI incubation is not available yet. Please try again later."
+        "incubation_unconfigured": "AI incubation is not available yet. Please try again later.",
+        "model_key_missing": "You have no model key in knowbench yet: add one, then start again.",
+        "test_report_missing": "This name has no finished test yet, so there is no report to carry."
       },
       "startFailed": "Could not start. Please try again.",
       "round": "Round {n}",
@@ -835,7 +958,17 @@
       "decideFailed": "Could not do that ({code}). Please try again.",
       "withAnswers": "Change it by the gaps I answered",
       "operatorLabel": "Proposal from the platform staff",
-      "fromOperator": "Proposed by the platform staff; it counts only once you accept it."
+      "fromOperator": "Proposed by the platform staff; it counts only once you accept it.",
+      "noModelKey": "You have no model key in knowbench yet: add one before starting.",
+      "toSettings": "Add a model key in knowbench",
+      "withTest": "Carry the report of test {number} ({status}): only whether each step passed and why, no deliverables or data",
+      "testOutcome": {
+        "passed": "passed",
+        "failed": "failed"
+      },
+      "acceptStep": "Accept all ({n})",
+      "acceptedAll": "All {n} suggestions on this step accepted.",
+      "acceptedSome": "Accepted {n}; skipped {m} whose sources do not check out or that do not fit. Handle them one by one."
     }
   }
 }

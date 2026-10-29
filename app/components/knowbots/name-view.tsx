@@ -8,12 +8,13 @@ import { Link } from '@/i18n/navigation'
 import { fetchDetail } from '@/lib/knowbots/client'
 
 import { IncubationMode } from './incubation-mode'
+import { PlatformView } from './platform-asks'
 import { AmendmentList } from './reference'
 import { SelfTests } from './self-test'
 import { Card, KEY, useWhen, type Translate } from './shared'
 
-// 一个名称的详情页（SDD 0037 第九节）：顶上一行每个过程最新的一项；「孵化」栏进工作稿（专家孵化
-// 方案第六节）；下面按时间排的记录，每条写哪个过程、输入、输出、何时，点了去那一栏看。没交回
+// 一个名称的详情页（SDD 0037 第九节）：顶上一行每个过程最新的一项；平台孵化时有平台视图（0046
+// 第四节）；「孵化」栏进工作稿（专家孵化方案第六节）；左边栏的孵化、测试、交付是同一批东西的另一种入口；下面按时间排的记录，每条写哪个过程、输入、输出、何时，点了去那一栏看。没交回
 // 我的专家不列；谁做的不写。
 
 export function NameView({
@@ -53,6 +54,10 @@ export function NameView({
       ) : null}
       {/* 自己来还是请平台（SDD 0046 第四节）：切换不跳转 */}
       {csrfToken ? <IncubationMode life={life} csrfToken={csrfToken} /> : null}
+      {/* 平台视图：进度、在等你什么、平台人员问了什么 */}
+      {life.incubation_mode === 'platform' || life.platform_asks.length ? (
+        <PlatformView life={life} progress={summaryParts(life.summary, t).join(' · ')} />
+      ) : null}
       {/* 孵化栏（专家孵化方案第六节）：点进去是这个专家的工作稿 */}
       <Card title={t('name.incubation')}>
         <p className="text-muted-foreground">{t('name.incubationHint')}</p>

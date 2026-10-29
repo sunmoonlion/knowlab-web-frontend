@@ -65,6 +65,7 @@ function workdraft(over: Partial<Workdraft> = {}): Workdraft {
     body: emptyBody(),
     sources: {},
     origins: {},
+    data_formats: {},
     updated_at: null,
     ...over,
   }

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
+import { CrossAppLink } from '@/components/common/cross-app-link'
 import { Button } from '@/components/ui/button'
 import type {
   Detail,
@@ -32,7 +33,12 @@ const field = 'h-8 rounded-lg border bg-transparent px-2 text-sm'
 const SUBJECT = /^(\d{6}\.(SH|SZ|BJ)|\d{5}\.HK|[A-Z][A-Z0-9.-]{0,9}\.US|org:[0-9A-Za-z:-]{3,60})$/
 const ADDABLE = ['annual_report', 'semiannual_report', 'interim_announcement', 'research_company']
 // 发起时后端说没有能测的电脑（作者没接入过、那台或那个目录用不了了）：说清楚先去 knowbench 接入
-export const NO_COMPUTER = ['author_has_no_computer', 'test_computer_unavailable'] as const
+// 模型 key 没填（SDD 0046 第三节「没填不能发起」）也说清楚去哪填
+export const NO_COMPUTER = [
+  'author_has_no_computer',
+  'test_computer_unavailable',
+  'model_key_missing',
+] as const
 
 /** 没发起成的话：认得的错误码说清楚怎么办，别的说「再试一次」。 */
 export function startFailure(error: unknown, t: (key: string) => string): string {
@@ -98,7 +104,24 @@ function StartSelfTest({ draftId, csrfToken }: { draftId: string; csrfToken: str
       : env?.roots[0]) ??
     ''
   const okBudget = /^[0-9]{1,6}(\.[0-9]{1,2})?$/.test(budget) && Number(budget) > 0
-  if (online.length === 0) return <p className="text-amber-700">{t('noComputer')}</p>
+  if (computers.data.model_key === false)
+    return (
+      <p className="text-amber-700" role="alert" data-testid="no-model-key">
+        {t('noModelKey')}{' '}
+        <CrossAppLink to="knowbench.settings" className="underline underline-offset-2">
+          {t('toSettings')}
+        </CrossAppLink>
+      </p>
+    )
+  if (online.length === 0)
+    return (
+      <p className="text-amber-700">
+        {t('noComputer')}{' '}
+        <CrossAppLink to="knowbench.machines" className="underline underline-offset-2">
+          {t('toMachines')}
+        </CrossAppLink>
+      </p>
+    )
   return (
     <div className="space-y-2" data-testid="self-test-start">
       <p>{t('lead')}</p>

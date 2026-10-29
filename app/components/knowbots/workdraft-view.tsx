@@ -17,6 +17,7 @@ import {
 import { Link, useRouter } from '@/i18n/navigation'
 import { ApiClientError } from '@/lib/common/api-client'
 import {
+  acceptStep,
   cancelRound,
   copyWorkdraft,
   decideProposal,
@@ -25,6 +26,7 @@ import {
   fetchRounds,
   fetchWorkdraft,
   importWorkdraft,
+  pickData,
   previewWorkdraft,
   publishWorkdraft,
   refreshRound,
@@ -36,7 +38,8 @@ import { diffEdits, freshId, newStep, placed, withoutStep } from '@/lib/knowbots
 
 import { Card, KEY } from './shared'
 import { GapsCard, RoundBar, RoundPanel, startFailure } from './workdraft-ai'
-import { Field, Group, INPUT, LINK, MarksContext, useProblemText } from './workdraft-cells'
+import { Field, Group, INPUT, MarksContext, useProblemText } from './workdraft-cells'
+import { DataCard } from './workdraft-data'
 import { CopyPanel, ImportPanel, PreviewPanel } from './workdraft-panels'
 import { StepEditor } from './workdraft-step'
 import {
@@ -58,6 +61,7 @@ type Doc = {
   saved: WorkdraftBody // 后端存着的那一份
   revision: number
   origins: Record<string, string>
+  formats: Workdraft['data_formats'] // 挑的数据的格式（挑的时候后端记下的）
 }
 type Status = { kind: 'idle' | 'pending' | 'saving' | 'saved' } | { kind: 'failed'; code: string }
 type Panels = 'preview' | 'import' | 'copy' | 'draft' | 'revise' | null
@@ -68,6 +72,7 @@ const docOf = (w: Workdraft): Doc => ({
   saved: w.body,
   revision: w.revision,
   origins: w.origins,
+  formats: w.data_formats ?? {},
 })
 const codeOf = (error: unknown) =>
   error instanceof ApiClientError ? error.problem.code : 'unexpected'
@@ -145,6 +150,7 @@ function Editor({
   const [notes, setNotes] = useState<string[]>([])
   const [deciding, setDeciding] = useState(false)
   const [reviseText, setReviseText] = useState('')
+  const [dataError, setDataError] = useState<string | null>(null)
   const docRef = useRef(doc)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const queue = useRef<Promise<void>>(Promise.resolve())
@@ -429,6 +435,76 @@ function Editor({
     }
   }
 
+  // 挑数据：先把没存的存了，带最新的 revision 整份换（只能是知识库栏里的，后端记下格式）
+  const pick = async (picks: string[]) => {
+    setBusy(true)
+    setDataError(null)
+    try {
+      await flush()
+      if (dead.current) return
+      const got = await pickData(requestId, { revision: docRef.current.revision, picks }, csrfToken)
+      if (dead.current) return
+      commit({ ...docOf(got), body: { ...docRef.current.body, data_picks: got.body.data_picks } })
+      setStatus({ kind: 'saved' })
+    } catch (error) {
+      if (dead.current) return
+      if (conflict(error)) {
+        dead.current = true
+        await onConflict()
+        return
+      }
+      setDataError(t('data.failed', { code: codeOf(error) }))
+    } finally {
+      if (!dead.current) setBusy(false)
+    }
+  }
+
+  // 一键接受一步的全部建议（专家孵化方案第 8.3 节）：出处核不上的、放不上去的跳过，照旧逐条处理
+  const acceptAll = async (stepId: string) => {
+    if (!done) return
+    setDeciding(true)
+    setMessage(null)
+    try {
+      await flush()
+      if (dead.current) return
+      if (diffEdits(docRef.current.saved, docRef.current.body).length) {
+        setMessage({ tone: 'bad', text: t('publish.unsaved') })
+        return
+      }
+      const got = await acceptStep(
+        requestId,
+        done.incubation_id,
+        stepId,
+        docRef.current.revision,
+        csrfToken,
+      )
+      if (dead.current) return
+      if (got.accepted.length) {
+        commit(docOf(got.workdraft))
+        setStatus({ kind: 'saved' })
+      }
+      client.setQueryData(roundKey(done.incubation_id), got.round)
+      setMessage(
+        got.skipped.length
+          ? {
+              tone: 'bad',
+              text: ta('acceptedSome', { n: got.accepted.length, m: got.skipped.length }),
+            }
+          : { tone: 'ok', text: ta('acceptedAll', { n: got.accepted.length }) },
+      )
+    } catch (error) {
+      if (dead.current) return
+      if (conflict(error)) {
+        dead.current = true
+        await onConflict()
+        return
+      }
+      setMessage({ tone: 'bad', text: ta('decideFailed', { code: codeOf(error) }) })
+    } finally {
+      if (!dead.current) setDeciding(false)
+    }
+  }
+
   // 导入 skill 当种子：存成创意的新一版，提示去点「AI 起草」
   const seed = async (skill: string) => {
     setBusy(true)
@@ -452,6 +528,14 @@ function Editor({
     at: (home: string) => pending.filter((s) => homeOf(s, body) === home),
     busy: deciding || busy,
     decide: (s: Suggestion, choice: Choice, value?: unknown) => void decide(s, choice, value),
+    // 这一步上还没处理的 AI 建议有几条（平台人员的提议逐条处理，不在里面）
+    inStep: (stepId: string) =>
+      pending.filter(
+        (s) =>
+          !s.kinds.includes('operator') &&
+          (s.path === `steps/${stepId}` || s.path.startsWith(`steps/${stepId}/`)),
+      ).length,
+    acceptStep: (stepId: string) => void acceptAll(stepId),
   }
   const openRound = (action: 'draft' | 'revise', text = '') => {
     setPanelError(null)
@@ -709,30 +793,13 @@ function Editor({
               </Field>
             ))}
           </Card>
-          <Card title={t('data.title')}>
-            <p className="text-muted-foreground text-xs">{t('data.hint')}</p>
-            {body.data_picks.length === 0 ? (
-              <p className="text-muted-foreground">{t('data.none')}</p>
-            ) : (
-              <ul className="flex flex-wrap gap-2">
-                {body.data_picks.map((id) => (
-                  <li key={id} className="flex items-center gap-1 rounded-full border px-2 py-0.5">
-                    <code className="text-xs">{id}</code>
-                    <button
-                      type="button"
-                      className={LINK}
-                      aria-label={t('data.remove', { id })}
-                      onClick={() =>
-                        edit((b) => ({ ...b, data_picks: b.data_picks.filter((p) => p !== id) }))
-                      }
-                    >
-                      ×
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
+          <DataCard
+            picks={body.data_picks}
+            formats={doc.formats}
+            busy={busy}
+            error={dataError}
+            onPick={(picks) => void pick(picks)}
+          />
           <Group title={t('steps.title')} path="steps">
             {body.steps.length === 0 ? (
               <p className="text-muted-foreground text-sm">{t('steps.none')}</p>

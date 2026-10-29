@@ -200,6 +200,8 @@ const lifeFields = {
   // 同意的是第几版测试数据说明、现行是第几版（SDD 0037）
   consent_version: z.number().int().min(1),
   consent_current: z.number().int().min(1),
+  // 现在的孵化是自己来还是平台（孵化栏按它分，SDD 0046 第六节）
+  incubation_mode: z.enum(['self', 'platform']).default('self'),
 }
 
 // 补充方法（SDD 0035，已取消）：我以前写的，只看
@@ -215,6 +217,23 @@ const amendmentSchema = z.object({
 
 // 详情页的记录：哪个过程、输入、输出、何时（各过程带的项不同）
 const eventSchema = z.object({ at: z.string(), kind: z.string() }).catchall(z.unknown())
+
+// 平台在问我什么（SDD 0046 第四节「平台视图」）：平台人员请我审核的准专家、交回等我定的专家、
+// 对工作稿的提议、平台那一轮的缺口、平台测试里转给我的问题；还在等我（open）或处理过了（done）
+export const PLATFORM_ASK_KINDS = ['review', 'expert', 'proposal', 'gap', 'question'] as const
+export const platformAskSchema = z.object({
+  kind: z.enum(PLATFORM_ASK_KINDS),
+  state: z.enum(['open', 'done']),
+  at: z.string().nullable().optional(),
+  text: z.string().nullable().optional(),
+  label: z.string().nullable().optional(),
+  answer: z.string().nullable().optional(),
+  question_id: z.string().optional(),
+  draft_id: z.string().optional(),
+  expert_id: z.string().optional(),
+  path: z.string().optional(),
+})
+export type PlatformAsk = z.infer<typeof platformAskSchema>
 
 export const detailSchema = z.object({
   contract_version: z.literal(1),
@@ -237,6 +256,7 @@ export const detailSchema = z.object({
   experts: z.array(expertSchema),
   timeline: z.array(eventSchema),
   amendments: z.array(amendmentSchema),
+  platform_asks: z.array(platformAskSchema).default([]),
 })
 
 export const countsSchema = z.object({
@@ -485,6 +505,8 @@ export type Computer = z.infer<typeof computerSchema>
 export const computersSchema = z.object({
   computers: z.array(computerSchema),
   last: z.object({ environment_id: z.string(), workspace_root: z.string().nullable() }).nullable(),
+  // 我在 knowbench 填了模型 key 没有：false 时发起前就拦（SDD 0046 第三节）；null 是说不准
+  model_key: z.boolean().nullable().default(null),
 })
 export type Computers = z.infer<typeof computersSchema>
 export const selfTestSchema = z.object({ test_id: z.string().uuid(), status: z.string() })
@@ -536,3 +558,32 @@ export const testDataRequestSchema = z.object({
 export type TestDataRequest = z.infer<typeof testDataRequestSchema>
 export const testDataSchema = z.object({ requests: z.array(testDataRequestSchema) })
 export const testDataAnsweredSchema = z.object({ status: z.string() }).loose()
+
+// ---------- 知识库栏（SDD 0046 第六节）：knowbase 里我展示给 knowlab 的资料，在 knowbase 管 ----------
+export const materialSchema = z.object({
+  material_id: z.string(),
+  name: z.string(),
+  mine: z.boolean(),
+  category: z.string().nullable().optional(),
+  content_origin: z.string().nullable().optional(),
+  license: z.string().nullable().optional(),
+  description: z
+    .object({
+      subject: z.string().nullable().optional(),
+      doc_type: z.string().nullable().optional(),
+      period_start: z.string().nullable().optional(),
+      period_end: z.string().nullable().optional(),
+      data_format: z.string().nullable().optional(),
+      status: z.string().nullable().optional(),
+    })
+    .loose(),
+  version_no: z.number().int().nullable().optional(),
+  media_type: z.string().nullable().optional(),
+  size_bytes: z.number().int().nullable().optional(),
+  created_at: z.string().nullable().optional(),
+})
+export type Material = z.infer<typeof materialSchema>
+export const librarySchema = z.object({
+  contract_version: z.literal(1),
+  materials: z.array(materialSchema),
+})

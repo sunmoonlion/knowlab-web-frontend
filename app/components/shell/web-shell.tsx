@@ -7,7 +7,12 @@ import { LogoutButton } from '@/components/auth/logout-button'
 import { SignedInAs } from '@/components/auth/signed-in-as'
 import { useCounts } from '@/components/knowbots/shared'
 import { Link, usePathname } from '@/i18n/navigation'
-import { findNavigationItem, webNavigation, type WebNavigationItem } from '@/lib/navigation'
+import {
+  findNavigationItem,
+  webNavigation,
+  webNavigationGroups,
+  type WebNavigationItem,
+} from '@/lib/navigation'
 import { cn } from '@/lib/utils'
 import { useUiStore } from '@/store/ui'
 
@@ -19,8 +24,8 @@ type WebShellProps = {
   email?: string | null
 }
 
-// web端外壳（SDD 0037 第八节）：和管理端同一套——左边一级导航可收起、手机上是抽屉、顶上一行写着登录的是谁；
-// 但不照搬：没有已打开页面那一行（用户一次看一件事），「审核」数要你做的、「专家」数新交回的
+// web端外壳（SDD 0037 第八节，0046 第六节分栏）：和管理端同一套——左边一级导航可收起、手机上是抽屉、顶上一行写着登录的是谁；
+// 但不照搬：没有已打开页面那一行（用户一次看一件事），导航分「过程」「结果」两组，「待办」数要你做的、「专家」数新交回的
 // （为 0 时灰、不显示数字）。
 export function WebShell({ children, locale, csrfToken, userLabel, email }: WebShellProps) {
   const t = useTranslations('nav')
@@ -61,22 +66,38 @@ export function WebShell({ children, locale, csrfToken, userLabel, email }: WebS
           <strong className={cn('truncate', collapsed && 'lg:hidden')}>knowlab</strong>
         </div>
         <nav aria-label={t('mainNavigation')} className="flex flex-col gap-1 p-2">
-          {webNavigation.map((item) => (
-            <NavigationLink
-              key={item.key}
-              item={item}
-              label={t(item.key)}
-              active={item.key === current?.key}
-              collapsed={collapsed}
-              badge={
-                item.key === 'review'
-                  ? (counts.data?.inbox ?? 0)
-                  : item.key === 'experts'
-                    ? (counts.data?.experts_new ?? 0)
-                    : undefined
-              }
-              onNavigate={() => setMobileOpen(false)}
-            />
+          {webNavigationGroups.map((group) => (
+            <div key={group} className="flex flex-col gap-1" data-testid={`nav-group-${group}`}>
+              {group === 'home' ? null : (
+                <p
+                  className={cn(
+                    'text-muted-foreground mt-3 px-3 text-xs font-medium',
+                    collapsed && 'lg:border-t lg:pt-2',
+                  )}
+                >
+                  <span className={cn(collapsed && 'lg:sr-only')}>{t(`groups.${group}`)}</span>
+                </p>
+              )}
+              {webNavigation
+                .filter((item) => item.group === group)
+                .map((item) => (
+                  <NavigationLink
+                    key={item.key}
+                    item={item}
+                    label={t(item.key)}
+                    active={item.key === current?.key}
+                    collapsed={collapsed}
+                    badge={
+                      item.key === 'review'
+                        ? (counts.data?.inbox ?? 0)
+                        : item.key === 'experts'
+                          ? (counts.data?.experts_new ?? 0)
+                          : undefined
+                    }
+                    onNavigate={() => setMobileOpen(false)}
+                  />
+                ))}
+            </div>
           ))}
         </nav>
       </aside>

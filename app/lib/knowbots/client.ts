@@ -12,6 +12,7 @@ import {
   expertsSchema,
   grantResultSchema,
   inboxSchema,
+  librarySchema,
   outputsSchema,
   questionsSchema,
   reviewedSchema,
@@ -30,12 +31,14 @@ import {
   type Grant,
   type Inbox,
   type KnowbotRequestIn,
+  type Material,
   type MyQuestion,
   type Outputs,
   type RevisionIn,
   type TestDataRequest,
 } from '@/contracts/knowbots'
 import {
+  acceptedStepSchema,
   decidedProposalSchema,
   decidedSchema,
   oneRoundSchema,
@@ -93,6 +96,12 @@ export async function fetchExperts(): Promise<ExpertItem[]> {
 // 我的一个名称的详情页；不是自己的回 404
 export async function fetchDetail(requestId: string): Promise<Detail> {
   return parse(detailSchema, await requestJson(`${BASE}/knowbot-requests/${enc(requestId)}`))
+}
+
+// ---------- 知识库栏（SDD 0046 第六节） ----------
+// 我在 knowbase 展示给 knowlab 的资料（后端凭我本人的令牌现取）
+export async function fetchLibrary(): Promise<Material[]> {
+  return parse(librarySchema, await requestJson(`${BASE}/knowbot-library`)).materials
 }
 
 // ---------- 申请与修改 ----------
@@ -308,6 +317,18 @@ export async function copyWorkdraft(
   )
 }
 
+// 挑数据：整份换成这几份（只能是知识库栏里的），挑的时候后端记下格式
+export async function pickData(
+  requestId: string,
+  body: { revision: number; picks: string[] },
+  csrfToken: string,
+): Promise<Workdraft> {
+  return parse(
+    workdraftSchema,
+    await requestJson(`${workdraftOf(requestId)}/data-picks`, { method: 'PUT', csrfToken, body }),
+  )
+}
+
 // 编出的清单与出不了版本的地方（按格子路径），不出版本
 export async function previewWorkdraft(requestId: string): Promise<Preview> {
   return parse(previewSchema, await requestJson(`${workdraftOf(requestId)}/preview`))
@@ -413,6 +434,30 @@ export async function decideSuggestion(
     }),
   )
   return { workdraft: { ...got.workdraft, contract_version: 1 }, round: got.incubation }
+}
+
+// 一键接受一步的全部建议：出处核不上的、放不上去的跳过
+export async function acceptStep(
+  requestId: string,
+  roundId: string,
+  stepId: string,
+  revision: number,
+  csrfToken: string,
+): Promise<{ workdraft: Workdraft; round: Round; accepted: string[]; skipped: string[] }> {
+  const got = parse(
+    acceptedStepSchema,
+    await requestJson(`${roundsOf(requestId)}/${enc(roundId)}/steps/${enc(stepId)}/accept-all`, {
+      method: 'POST',
+      csrfToken,
+      body: { revision },
+    }),
+  )
+  return {
+    workdraft: { ...got.workdraft, contract_version: 1 },
+    round: got.incubation,
+    accepted: got.accepted,
+    skipped: got.skipped.map((s) => s.id),
+  }
 }
 
 // ---------- 自己来还是请平台（SDD 0046 第四节） ----------

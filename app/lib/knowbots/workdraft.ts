@@ -107,7 +107,8 @@ export function sendable(body: WorkdraftBody, saved: WorkdraftBody): WorkdraftBo
 
 /**
  * 自动保存这一次要存的几格：拿存好的那份与本地这份比。步骤加了、删了、挪了顺序就整列
- * `steps` 换掉（字没变的格子后端照留出处）；否则只存改了的格子。
+ * `steps` 换掉（字没变的格子后端照留出处）；否则只存改了的格子。挑的数据不在这里存：
+ * 走挑数据的接口（后端核每份都在知识库栏里、记下格式）。
  */
 export function diffEdits(saved: WorkdraftBody, local: WorkdraftBody): CellEdit[] {
   const send = sendable(local, saved)
@@ -118,8 +119,6 @@ export function diffEdits(saved: WorkdraftBody, local: WorkdraftBody): CellEdit[
     if (send.scope[key] !== saved.scope[key])
       edits.push({ path: `scope/${key}`, value: send.scope[key] })
   }
-  if (!same(send.data_picks, saved.data_picks))
-    edits.push({ path: 'data_picks', value: send.data_picks })
   const whole = { path: 'steps', value: send.steps }
   if (
     !same(

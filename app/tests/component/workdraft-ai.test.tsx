@@ -5,12 +5,16 @@ import { WorkdraftView } from '@/components/knowbots/workdraft-view'
 import type { Round, Suggestion, Workdraft, WorkdraftBody } from '@/contracts/workdraft'
 import { ApiClientError } from '@/lib/common/api-client'
 import {
+  acceptStep,
   cancelRound,
   decideSuggestion,
+  fetchDetail,
+  fetchLibrary,
   fetchRound,
   fetchRoundComputers,
   fetchRounds,
   fetchWorkdraft,
+  pickData,
   previewWorkdraft,
   refreshRound,
   saveWorkdraftCells,
@@ -20,7 +24,7 @@ import {
 import { newStep } from '@/lib/knowbots/workdraft'
 import messages from '@/messages/zh-CN.json'
 
-import { CSRF, QUESTION, REQUEST, renderWith } from './knowbot-fixtures'
+import { CSRF, QUESTION, REQUEST, detail, renderWith, testRecord } from './knowbot-fixtures'
 
 // 工作稿上的 AI（专家孵化方案第八、九节）：两个按钮发起一轮（费用上限、选电脑默认上次）、进行中
 // 与取消、格子旁的建议三个按钮、核不上的只能改了再接受、加一步的建议是待接受的新步、缺口区、导入
@@ -42,6 +46,9 @@ vi.mock('@/lib/knowbots/client', () => ({
   decideSuggestion: vi.fn(),
   seedSkill: vi.fn(),
   fetchRoundComputers: vi.fn(),
+  acceptStep: vi.fn(),
+  fetchLibrary: vi.fn(),
+  pickData: vi.fn(),
 }))
 vi.mock('@/i18n/navigation', async () => (await import('./knowbot-fixtures')).linkMock())
 
@@ -71,6 +78,7 @@ function workdraft(over: Partial<Workdraft> = {}): Workdraft {
     body: body(),
     sources: {},
     origins: {},
+    data_formats: {},
     updated_at: null,
     ...over,
   }
@@ -152,6 +160,7 @@ beforeEach(() => {
       { environment_id: OTHER, name: '公司电脑', online: true, roots: ['/w1', '/w2'] },
     ],
     last: { environment_id: OTHER, workspace_root: '/w2' },
+    model_key: true,
   })
 })
 
@@ -218,6 +227,44 @@ describe('发起一轮', () => {
     await waitFor(() => expect(dialog.getByLabelText(a.computer)).toHaveValue(OTHER))
     fireEvent.click(dialog.getByRole('button', { name: a.start }))
     expect(await dialog.findByRole('alert')).toHaveTextContent(a.errors.author_has_no_computer)
+  })
+})
+
+describe('发起前就拦、带测试报告（SDD 0046 第三节；专家孵化方案第 8.4 节）', () => {
+  it('模型 key 没填：说清楚去 knowbench 填，发起点不了', async () => {
+    vi.mocked(fetchRoundComputers).mockResolvedValue({
+      computers: [{ environment_id: ENV, name: '我的电脑', online: true, roots: ['/w'] }],
+      last: null,
+      model_key: false,
+    })
+    page()
+    fireEvent.click(await screen.findByRole('button', { name: w.toolbar.aiDraft }))
+    const dialog = within(await screen.findByRole('dialog', { name: a.draftTitle }))
+    expect(await dialog.findByTestId('no-model-key')).toHaveTextContent(a.noModelKey)
+    expect(dialog.getByRole('button', { name: a.start })).toBeDisabled()
+    expect(startRound).not.toHaveBeenCalled()
+  })
+
+  it('让 AI 改…：最近一次测试没通过时默认带上报告，可以不带', async () => {
+    vi.mocked(fetchDetail).mockResolvedValue(
+      detail({ tests: [testRecord({ number: 1 }), testRecord({ number: 2, status: 'failed' })] }),
+    )
+    vi.mocked(startRound).mockResolvedValue(round({ status: 'queued', action: 'revise' }))
+    page()
+    fireEvent.click(await screen.findByRole('button', { name: w.toolbar.aiRevise }))
+    const dialog = within(await screen.findByRole('dialog', { name: a.reviseTitle }))
+    const box = await dialog.findByRole('checkbox', { name: /第 2 次测试（没通过）/ })
+    expect(box).toBeChecked()
+    fireEvent.change(dialog.getByLabelText(a.instruction), { target: { value: '照报告改' } })
+    await waitFor(() => expect(dialog.getByLabelText(a.computer)).toHaveValue(OTHER))
+    fireEvent.click(dialog.getByRole('button', { name: a.start }))
+    await waitFor(() =>
+      expect(startRound).toHaveBeenCalledWith(
+        REQUEST,
+        expect.objectContaining({ action: 'revise', instruction: '照报告改', with_test: true }),
+        CSRF,
+      ),
+    )
   })
 })
 
@@ -373,6 +420,78 @@ describe('格子旁边的建议', () => {
     fireEvent.click(pending.getByRole('button', { name: a.accept }))
     expect(await screen.findByText(w.conflict)).toBeInTheDocument()
     expect(fetchWorkdraft).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('一键接受一步、挑数据', () => {
+  it('一步头上「全部接受」：带 revision 交这一步，跳过的照实说', async () => {
+    const pending = [
+      suggestion({
+        id: 'a1',
+        path: 'steps/s1/why',
+        value: '先知道手上有什么',
+        kinds: ['proposal'],
+        sources: [],
+      }),
+      suggestion({
+        id: 'a2',
+        path: 'steps/s1/title',
+        value: '摸底',
+        kinds: ['proposal'],
+        sources: [],
+      }),
+    ]
+    withRound(round({ suggestions: pending }))
+    vi.mocked(acceptStep).mockResolvedValue({
+      workdraft: workdraft({
+        revision: 3,
+        body: body({ steps: [{ ...newStep('s1'), title: '摸底' }] }),
+      }),
+      round: round({ suggestions: pending.map((x) => ({ ...x, state: 'accepted' as const })) }),
+      accepted: ['a2'],
+      skipped: ['a1'],
+    })
+    page()
+    const step = within(await screen.findByTestId('step-s1'))
+    fireEvent.click(await step.findByRole('button', { name: a.acceptStep.replace('{n}', '2') }))
+    await waitFor(() => expect(acceptStep).toHaveBeenCalledWith(REQUEST, ROUND, 's1', 2, CSRF))
+    expect(await screen.findByRole('alert')).toHaveTextContent('接受了 1 条；1 条')
+  })
+
+  it('数据：从知识库栏挑一份，后端记下格式，显示名字与读法', async () => {
+    vi.mocked(fetchLibrary).mockResolvedValue([
+      {
+        material_id: 'm1',
+        name: '2024 年报.pdf',
+        mine: true,
+        description: { subject: '600519.SH', doc_type: 'annual_report' },
+      },
+    ])
+    vi.mocked(pickData).mockResolvedValue(
+      workdraft({
+        revision: 3,
+        body: body({ data_picks: ['m1'] }),
+        data_formats: {
+          m1: {
+            name: '2024 年报.pdf',
+            media_type: 'application/pdf',
+            description: {},
+            readings: ['text'],
+          },
+        },
+      }),
+    )
+    page()
+    fireEvent.click(await screen.findByRole('button', { name: w.data.add }))
+    const picker = within(await screen.findByTestId('data-picker'))
+    fireEvent.click(await picker.findByRole('button', { name: w.data.pick }))
+    await waitFor(() =>
+      expect(pickData).toHaveBeenCalledWith(REQUEST, { revision: 2, picks: ['m1'] }, CSRF),
+    )
+    const picks = within(await screen.findByTestId('data-picks'))
+    expect(picks.getByText('2024 年报.pdf')).toBeVisible()
+    expect(picks.getByText(/读法：text/)).toBeVisible()
+    expect(saveWorkdraftCells).not.toHaveBeenCalled()
   })
 })
 

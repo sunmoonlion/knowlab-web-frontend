@@ -30,19 +30,33 @@ describe('web端外壳', () => {
     shell()
     const nav = screen.getByRole('navigation', { name: '主导航' })
     const links = within(nav).getAllByRole('link')
-    // 申请 · 待办 · 专家（SDD 0037 第八节，0046 起「审核」改叫「待办」）；知识库已撤（decisions ⑰）
+    // 首页之下：过程（申请 · 孵化 · 测试 · 交付 · 待办），结果（专家 · 知识库）（SDD 0046 第六节）
     expect(links.map((a) => a.getAttribute('href'))).toEqual([
       '/dashboard',
       '/applications',
+      '/incubation',
+      '/tests',
+      '/delivery',
       '/review',
       '/experts',
+      '/knowledge',
     ])
     expect(links.map((a) => a.textContent?.replace(/\d+$/, ''))).toEqual([
       '首页',
       '申请',
+      '孵化',
+      '测试',
+      '交付',
       '待办',
       '专家',
+      '知识库',
     ])
+    expect(within(screen.getByTestId('nav-group-process')).getByText('过程')).toBeInTheDocument()
+    expect(
+      within(screen.getByTestId('nav-group-results'))
+        .getAllByRole('link')
+        .map((a) => a.getAttribute('href')),
+    ).toEqual(['/experts', '/knowledge'])
     // 不叫「我的专家」
     expect(screen.queryByText('我的专家')).toBeNull()
     expect(within(nav).getByRole('link', { name: /申请/ })).toHaveAttribute('aria-current', 'page')
