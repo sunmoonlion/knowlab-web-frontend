@@ -219,7 +219,7 @@
     },
     "consent": {
       "needed": "This idea was submitted under the old test-data notice. Accept the new notice to see the write-ups and step results of its tests.",
-      "text": "New notice: the write-ups and step results of a test are shown only to you and to the staff running the test — you use them to accept the knowbot, the staff to check it works correctly. They are not used for training, not shown to other users and not used for anything else. They are deleted 90 days after the candidate is listed or replaced by a newer one.",
+      "text": "New notice (version 3): tests use the materials you choose in knowbase for testing and run on your own computer with your own model key. The write-ups and step results are shown only to you; when you ask the platform to test or review it, they are also shown to the platform staff doing that work, to check the knowbot works correctly. They are not used for training, not shown to other users and not used for anything else. They are deleted 90 days after the candidate is listed or replaced by a newer one.",
       "accept": "Accept the new notice",
       "failed": "That did not work; please try again later.",
       "hidden": "This idea has not accepted the new test-data notice, so write-ups and step results are hidden for now. Accept it under Applications."

@@ -102,6 +102,8 @@ describe('申请', () => {
     vi.mocked(fetchApplications).mockResolvedValue([application({ consent_version: 1 })])
     vi.mocked(acceptConsent).mockResolvedValue(undefined)
     renderWith(<ApplicationsView csrfToken={CSRF} />)
+    // 给看的是现行那一版说明（第 3 版：资料在 knowbase、在作者自己的电脑上跑），和申请表单的勾选一致
+    expect(await screen.findByText(/新说明（第 3 版）/)).toHaveTextContent('在你自己的电脑上')
     fireEvent.click(await screen.findByRole('button', { name: k.consent.accept }))
     await waitFor(() => expect(acceptConsent).toHaveBeenCalledWith(REQUEST, CSRF))
   })
