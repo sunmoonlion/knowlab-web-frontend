@@ -125,7 +125,7 @@
       "addExpectation": "Add an expectation",
       "addCase": "Add a case",
       "removeCase": "Remove this case",
-      "consent": "I agree that the data I upload may be used to test this knowbot. The write-ups and step results of a test are shown only to me and to the staff running the test: I use them to accept the knowbot, the staff to check it works correctly. They are not used for training, not shown to other users and not used for anything else. They are deleted 90 days after the candidate is listed or replaced by a newer one.",
+      "consent": "I agree that the materials I choose in knowbase for testing may be used to test this knowbot. Tests run on my own computer with my own model key. The write-ups and step results are shown only to me; when I ask the platform to test or review it, they are also shown to the platform staff doing that work, to check the knowbot works correctly. They are not used for training, not shown to other users and not used for anything else. They are deleted 90 days after the candidate is listed or replaced by a newer one.",
       "submit": "Submit",
       "invalid": "Something did not pass the checks. Please make sure every field is filled in and numbers are valid.",
       "failed": "Could not submit. Please try again later.",
