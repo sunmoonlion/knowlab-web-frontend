@@ -6,9 +6,11 @@ import {
   applicationsSchema,
   computersSchema,
   countsSchema,
+  defaultsSchema,
   detailSchema,
   expertMovedSchema,
   expertsSchema,
+  grantResultSchema,
   inboxSchema,
   outputsSchema,
   questionsSchema,
@@ -25,6 +27,7 @@ import {
   type Detail,
   type ExpertItem,
   type ExpertStage,
+  type Grant,
   type Inbox,
   type KnowbotRequestIn,
   type MyQuestion,
@@ -33,6 +36,7 @@ import {
   type TestDataRequest,
 } from '@/contracts/knowbots'
 import {
+  decidedProposalSchema,
   decidedSchema,
   oneRoundSchema,
   previewSchema,
@@ -43,6 +47,7 @@ import {
   type CellEdit,
   type Decision,
   type Preview,
+  type Proposal,
   type Published,
   type Round,
   type RoundStart,
@@ -408,4 +413,80 @@ export async function decideSuggestion(
     }),
   )
   return { workdraft: { ...got.workdraft, contract_version: 1 }, round: got.incubation }
+}
+
+// ---------- 自己来还是请平台（SDD 0046 第四节） ----------
+// 新申请默认的模式：上次选的；第一次是 null，让我自己选
+export async function fetchRequestDefaults(): Promise<'self' | 'platform' | null> {
+  return parse(defaultsSchema, await requestJson(`${BASE}/knowbot-requests/defaults`)).mode
+}
+
+// 「请平台孵化」：确认框上同意就是本人授权；带平台发起 AI 一轮的费用上限
+export async function askPlatform(
+  requestId: string,
+  budgetLimit: string,
+  csrfToken: string,
+): Promise<Grant> {
+  const got = await requestJson(`${BASE}/knowbot-requests/${enc(requestId)}/platform`, {
+    method: 'POST',
+    csrfToken,
+    body: { agree: true, budget_limit: budgetLimit },
+  })
+  return parse(grantResultSchema, got).grant
+}
+
+// 「我自己来」：平台的授权立即撤销
+export async function takeBack(requestId: string, csrfToken: string): Promise<void> {
+  await requestJson(`${BASE}/knowbot-requests/${enc(requestId)}/take-back`, {
+    method: 'POST',
+    csrfToken,
+  })
+}
+
+// 续期：孵化授权续到 30 天后
+export async function renewPlatform(requestId: string, csrfToken: string): Promise<Grant> {
+  const got = await requestJson(`${BASE}/knowbot-requests/${enc(requestId)}/platform/renew`, {
+    method: 'POST',
+    csrfToken,
+  })
+  return parse(grantResultSchema, got).grant
+}
+
+// 「交平台测」：自己孵化的准专家交平台测这一次（轻受理），上限我设
+export async function askPlatformTest(
+  draftId: string,
+  budgetLimit: string,
+  csrfToken: string,
+): Promise<Grant> {
+  const got = await requestJson(`${BASE}/knowbot-drafts/${enc(draftId)}/platform-test`, {
+    method: 'POST',
+    csrfToken,
+    body: { agree: true, budget_limit: budgetLimit },
+  })
+  return parse(grantResultSchema, got).grant
+}
+
+// 还没开测的平台测试，我收回
+export async function withdrawPlatformTest(grantId: string, csrfToken: string): Promise<void> {
+  await requestJson(`${BASE}/knowbot-grants/${enc(grantId)}/withdraw`, {
+    method: 'POST',
+    csrfToken,
+  })
+}
+
+// 平台人员的一条提议：接受、改了再接受、不要（专家孵化方案第十二节）
+export async function decideProposal(
+  requestId: string,
+  proposalId: string,
+  body: Decision,
+  csrfToken: string,
+): Promise<{ workdraft: Workdraft; proposal: Proposal }> {
+  const got = parse(
+    decidedProposalSchema,
+    await requestJson(
+      `${BASE}/knowbot-requests/${enc(requestId)}/workdraft/proposals/${enc(proposalId)}`,
+      { method: 'POST', csrfToken, body },
+    ),
+  )
+  return { workdraft: { ...got.workdraft, contract_version: 1 }, proposal: got.proposal }
 }

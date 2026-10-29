@@ -30,7 +30,7 @@ describe('web端外壳', () => {
     shell()
     const nav = screen.getByRole('navigation', { name: '主导航' })
     const links = within(nav).getAllByRole('link')
-    // 申请 · 审核 · 专家（SDD 0037 第八节）；知识库已撤（decisions ⑰）
+    // 申请 · 待办 · 专家（SDD 0037 第八节，0046 起「审核」改叫「待办」）；知识库已撤（decisions ⑰）
     expect(links.map((a) => a.getAttribute('href'))).toEqual([
       '/dashboard',
       '/applications',
@@ -40,7 +40,7 @@ describe('web端外壳', () => {
     expect(links.map((a) => a.textContent?.replace(/\d+$/, ''))).toEqual([
       '首页',
       '申请',
-      '审核',
+      '待办',
       '专家',
     ])
     // 不叫「我的专家」

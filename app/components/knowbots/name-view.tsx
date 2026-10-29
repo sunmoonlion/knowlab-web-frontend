@@ -7,6 +7,7 @@ import type { Detail, Event, Summary } from '@/contracts/knowbots'
 import { Link } from '@/i18n/navigation'
 import { fetchDetail } from '@/lib/knowbots/client'
 
+import { IncubationMode } from './incubation-mode'
 import { AmendmentList } from './reference'
 import { SelfTests } from './self-test'
 import { Card, KEY, useWhen, type Translate } from './shared'
@@ -50,6 +51,8 @@ export function NameView({
           {t('name.published', { label: published })}
         </p>
       ) : null}
+      {/* 自己来还是请平台（SDD 0046 第四节）：切换不跳转 */}
+      {csrfToken ? <IncubationMode life={life} csrfToken={csrfToken} /> : null}
       {/* 孵化栏（专家孵化方案第六节）：点进去是这个专家的工作稿 */}
       <Card title={t('name.incubation')}>
         <p className="text-muted-foreground">{t('name.incubationHint')}</p>

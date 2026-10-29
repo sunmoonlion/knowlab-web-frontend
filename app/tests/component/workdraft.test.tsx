@@ -6,6 +6,7 @@ import type { CellEdit, Preview, Step, Workdraft, WorkdraftBody } from '@/contra
 import { ApiClientError } from '@/lib/common/api-client'
 import {
   copyWorkdraft,
+  decideProposal,
   fetchDetail,
   fetchWorkdraft,
   importWorkdraft,
@@ -33,6 +34,7 @@ vi.mock('@/lib/knowbots/client', () => ({
   startRound: vi.fn(),
   cancelRound: vi.fn(),
   decideSuggestion: vi.fn(),
+  decideProposal: vi.fn(),
   seedSkill: vi.fn(),
   fetchRoundComputers: vi.fn(),
 }))
@@ -558,5 +560,59 @@ describe('要存的几格', () => {
         value: [{ id: 'q1', question: '看哪几年？', options: ['近三年'] }],
       },
     ])
+  })
+})
+
+describe('平台人员的提议（专家孵化方案第十二节）', () => {
+  it('放在格子旁边，标明是平台人员提的；接受后换成后端那一份，不再显示', async () => {
+    server = workdraft({
+      revision: 3,
+      body: { ...emptyBody(), scope: { does: '财务分析', does_not: '', elsewhere: '' } },
+      proposals: [
+        {
+          proposal_id: '11111111-1111-4111-8111-111111111111',
+          path: 'scope/does',
+          op: 'set',
+          value: 'A 股非金融公司的财务分析',
+          reason: '范围写清楚',
+          state: 'pending',
+          proposed_at: '2026-10-29T08:00:00Z',
+          decided_at: null,
+        },
+      ],
+    })
+    const after = workdraft({
+      revision: 4,
+      body: {
+        ...emptyBody(),
+        scope: { does: 'A 股非金融公司的财务分析', does_not: '', elsewhere: '' },
+      },
+    })
+    vi.mocked(decideProposal).mockResolvedValue({
+      workdraft: after,
+      proposal: {
+        proposal_id: '11111111-1111-4111-8111-111111111111',
+        path: 'scope/does',
+        op: 'set',
+        value: 'A 股非金融公司的财务分析',
+        reason: '范围写清楚',
+        state: 'accepted',
+        proposed_at: '2026-10-29T08:00:00Z',
+        decided_at: '2026-10-29T09:00:00Z',
+      },
+    })
+    page()
+    expect(await screen.findByText(`${w.ai.operatorLabel} · ${w.ai.op.set}`)).toBeInTheDocument()
+    expect(screen.getByText(w.ai.fromOperator)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: w.ai.accept }))
+    await waitFor(() =>
+      expect(decideProposal).toHaveBeenCalledWith(
+        REQUEST,
+        '11111111-1111-4111-8111-111111111111',
+        { action: 'accept', revision: 3 },
+        CSRF,
+      ),
+    )
+    await waitFor(() => expect(screen.queryByText(w.ai.fromOperator)).toBeNull())
   })
 })

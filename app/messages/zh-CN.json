@@ -56,7 +56,7 @@
     "expandMenu": "展开导航",
     "collapseMenu": "收起导航",
     "applications": "申请",
-    "review": "审核"
+    "review": "待办"
   },
   "interaction": {
     "loading": "正在加载参考运行…",
@@ -132,7 +132,23 @@
       "submitRevision": "交上修改（出新版本）",
       "oneQuestion": "一句话问题",
       "questionText": "你想让专家回答什么问题",
-      "questionHint": "写一句就行，AI 会照它起草方法，你再改定。"
+      "questionHint": "写一句就行，AI 会照它起草方法，你再改定。",
+      "mode": {
+        "legend": "孵化自己来，还是请平台？",
+        "self": {
+          "title": "自己来",
+          "who": "只有你自己和程序看得到你的创意、工作稿和测试。",
+          "key": "AI 帮你写、测试都在你自己的电脑上，用你自己的模型 key。",
+          "pay": "费用你自己出、自己设上限。"
+        },
+        "platform": {
+          "title": "请平台孵化",
+          "who": "平台受理后，做这件事的平台人员看得到你的创意、工作稿和平台这边的问答，到你点「我自己来」或平台交还为止，最长 30 天、可续。",
+          "key": "平台发起的 AI 一轮、平台测试仍在你的电脑上，用你的模型 key。",
+          "pay": "费用你出，平台只能在你下面设的上限内发起。"
+        },
+        "budget": "平台发起 AI 一轮时每轮的费用上限（元）"
+      }
     },
     "amend": {
       "status": {
@@ -231,7 +247,7 @@
     "toName": "这个名称的全部记录",
     "columns": {
       "applications": "申请",
-      "review": "审核",
+      "review": "待办",
       "experts": "专家"
     },
     "categories": {
@@ -239,7 +255,7 @@
       "has_expert": "已出专家",
       "rejected": "没受理",
       "answer": "等你回答",
-      "review": "等你审核",
+      "review": "等你处理",
       "decide": "等你决定要不要",
       "new": "新交回",
       "accepted": "你已同意，等我们审核",
@@ -281,15 +297,15 @@
       "empty": "你还没有申请过。",
       "now": "最新这一版",
       "pending": "创意 v{version} 交上来了，等我们受理。",
-      "accepted": "创意 v{version} 受理了：我们照它孵化、测试，有要你做的会在「审核」里。",
+      "accepted": "创意 v{version} 受理了：平台照它孵化、测试，有要你做的会在「待办」里。",
       "rejected": "创意 v{version} 没受理：{reason}。改一改再交，就是新版本。",
       "revise": "修改创意",
       "reviseHint": "改了再交是一个新版本；旧版本留着，正在跑的测试不受影响。",
       "reviseFrom": "「{title}」：从创意 v{version} 改起，交了出一个新版本。"
     },
     "review": {
-      "title": "审核",
-      "intro": "要你做的事都在这里：回答测试中的问题、审核准专家、决定要不要测试通过的这一版。",
+      "title": "待办",
+      "intro": "要你做的事都在这里：回答测试中的问题和 AI 列的缺口、看准专家、决定要不要测试通过的这一版。",
       "empty": "这一类没有要你做的。",
       "allDone": "现在没有要你做的事。",
       "history": "你答过、定过的",
@@ -322,13 +338,13 @@
       "versions": "这个名称的各版",
       "hint": "去 knowbench 工作台请它：在工作台选专家时找「{name}」。",
       "trial": "这一版在试行期就上架了（那时还没有这两道门）。",
-      "toReview": "去「审核」里定要不要",
+      "toReview": "去「待办」里定要不要",
       "stopReason": "停用的原因",
       "stop": "停用这一版",
       "stopFailed": "没停成，请稍后再试。",
       "stoppedAt": "{at} 停用：{reason}",
       "now": {
-        "to_return": "测试通过了，交回你之后在「审核」里定要不要。",
+        "to_return": "测试通过了，交回你之后在「待办」里定要不要。",
         "awaiting_user": "测试通过了，等你决定要不要这一版。",
         "declined": "你没要这一版，它不上架。",
         "to_review": "你已同意，等我们审核；审过就能请。",
@@ -378,7 +394,7 @@
       "todoSome": "有 {n} 件事等你：",
       "reviewDraft": "审核准专家 {label}",
       "decideExpert": "定要不要第 {version} 版",
-      "toReview": "去审核",
+      "toReview": "去待办",
       "applications": "在做的申请",
       "applicationsNone": "没有在做的申请。",
       "allApplications": "全部申请",
@@ -455,6 +471,57 @@
         "waiting": "正在取",
         "unusable": "不能用"
       }
+    },
+    "mode": {
+      "title": "孵化方式",
+      "self": "自己来",
+      "platform": "平台孵化",
+      "state": {
+        "pending": "等平台受理",
+        "active": "平台在孵化，授权到 {until}；平台发起 AI 一轮每轮最多 {budget} 元",
+        "expired": "授权已到期（{until}），平台看不到了；续了才能接着孵化",
+        "declined": "平台没受理",
+        "revoked": "授权已撤销",
+        "ended": "平台已交还"
+      },
+      "declined": "平台没受理：{reason}。你可以自己接着孵化。",
+      "revoked": "平台的授权已撤销，平台人员看不到这个名称了。",
+      "renewed": "已续期 30 天。",
+      "failed": "没办成，请稍后再试。",
+      "ask": "请平台孵化",
+      "askTitle": "请平台孵化：平台会看到什么、到什么时候",
+      "askLines": {
+        "who": "平台受理后，做这件事的平台人员看得到你的创意各版本、工作稿和平台这边的问答；看不到你之前自己测试的测试集与结果。",
+        "until": "到你点「我自己来」或平台把草稿交还为止，最长 30 天，到期你可以一键续。",
+        "key": "平台发起的 AI 一轮、平台测试都在你的电脑上跑，用你的模型 key。",
+        "pay": "费用你出；平台只能在你下面设的上限内发起。平台人员改的格子都是提议，你接受了才算。"
+      },
+      "budget": "平台发起 AI 一轮时每轮的费用上限（元）",
+      "agree": "同意，请平台孵化",
+      "cancel": "取消",
+      "takeBack": "我自己来",
+      "backConfirm": "确定自己来？平台的授权立即撤销，平台人员立即看不到这个名称；平台还没被你接受的提议作废。工作稿归你接着改。",
+      "backYes": "确定，我自己来",
+      "renew": "续期 30 天"
+    },
+    "platformTest": {
+      "ask": "或者交平台测这一次",
+      "confirmTitle": "交平台测这一次：平台会看到什么",
+      "lines": {
+        "who": "平台接了以后，做测试的平台人员看得到这一版准专家、这次的测试集和结果；看不到之前的草稿、问答和你自己测的那几次。",
+        "key": "测试仍在你的电脑上、用你的模型 key 跑，跟你自己测一样。",
+        "pay": "费用你出，平台只能在你下面设的上限内发起；测完授权就结束。"
+      },
+      "budget": "这次测试的费用上限（元）",
+      "agree": "同意，交平台测",
+      "cancel": "取消",
+      "state": {
+        "pending": "已交平台测，等平台接（上限 {budget} 元）",
+        "active": "平台已接，等平台发起（上限 {budget} 元）"
+      },
+      "withdraw": "收回",
+      "declined": "平台没接：{reason}",
+      "failed": "没办成，请稍后再试。"
     }
   },
   "workdraft": {
@@ -755,15 +822,17 @@
       "instructionWas": "这一轮的指令：{text}",
       "error": "原因：{error}",
       "gapsTitle": "待你定的（缺口）：{count} 条",
-      "gapsHint": "这些是你的方法上的判断，AI 只列问题、附提议，要你来定。到「审核」里答，可以答「按提议」；答完可以自己写进格子，或点「让 AI 改…」带上答复。",
+      "gapsHint": "这些是你的方法上的判断，AI 只列问题、附提议，要你来定。到「待办」里答，可以答「按提议」；答完可以自己写进格子，或点「让 AI 改…」带上答复。",
       "proposal": "提议：{proposal}",
       "gapAnswered": "你答过了",
-      "toReview": "去审核里答",
+      "toReview": "去待办里答",
       "reviseWithAnswers": "让 AI 按我的答复改…",
       "started": "第 {n} 轮发起了：跑完会把建议显示在格子旁边。",
       "cancelFailed": "没取消成（{code}），请再试一次。",
       "decideFailed": "没处理成（{code}），请再试一次。",
-      "withAnswers": "按我答过的缺口改"
+      "withAnswers": "按我答过的缺口改",
+      "operatorLabel": "平台人员的提议",
+      "fromOperator": "这是平台人员提的，你接受了才算。"
     }
   }
 }

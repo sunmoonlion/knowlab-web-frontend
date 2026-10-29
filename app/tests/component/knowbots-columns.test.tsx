@@ -114,7 +114,7 @@ describe('审核', () => {
     vi.mocked(answerMyQuestion).mockResolvedValue(undefined)
     renderWith(<ReviewView csrfToken={CSRF} />)
     expect(await screen.findByRole('button', { name: '等你回答 · 1' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '等你审核 · 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '等你处理 · 1' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '等你决定要不要 · 1' })).toBeInTheDocument()
     expect(screen.getAllByText('毛利率按哪个口径？').length).toBeGreaterThan(0)
     expect(screen.getByText(/准专家 2.3 · 你的第 1 条用例/)).toBeInTheDocument()

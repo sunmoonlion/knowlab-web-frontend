@@ -56,7 +56,7 @@
     "expandMenu": "Expand navigation",
     "collapseMenu": "Collapse navigation",
     "applications": "Applications",
-    "review": "Review"
+    "review": "To do"
   },
   "interaction": {
     "loading": "Loading the reference run...",
@@ -132,7 +132,23 @@
       "submitRevision": "Hand in the revision (new version)",
       "oneQuestion": "One question",
       "questionText": "What question should the expert answer",
-      "questionHint": "One sentence is enough: AI drafts the method from it, and you revise and settle it."
+      "questionHint": "One sentence is enough: AI drafts the method from it, and you revise and settle it.",
+      "mode": {
+        "legend": "Incubate it yourself, or ask the platform?",
+        "self": {
+          "title": "Do it myself",
+          "who": "Only you and the programs see your idea, workdraft and tests.",
+          "key": "AI drafting and tests run on your own computer with your own model key.",
+          "pay": "You pay and set your own limits."
+        },
+        "platform": {
+          "title": "Ask the platform",
+          "who": "Once accepted, the platform staff doing the work see your idea, workdraft and the platform's questions — until you take it back or the platform hands it back, at most 30 days, renewable.",
+          "key": "AI rounds and tests the platform starts still run on your computer with your model key.",
+          "pay": "You pay; the platform can only start within the limit you set below."
+        },
+        "budget": "Cost limit per AI round the platform starts (CNY)"
+      }
     },
     "amend": {
       "status": {
@@ -231,7 +247,7 @@
     "toName": "Everything about this name",
     "columns": {
       "applications": "Applications",
-      "review": "Review",
+      "review": "To do",
       "experts": "Experts"
     },
     "categories": {
@@ -281,15 +297,15 @@
       "empty": "You have not applied yet.",
       "now": "Latest version",
       "pending": "Idea v{version} is in; waiting for us to accept it.",
-      "accepted": "Idea v{version} is accepted: we incubate and test from it, and anything we need from you shows up in Review.",
+      "accepted": "Idea v{version} is accepted: the platform incubates and tests from it, and anything it needs from you shows up in To do.",
       "rejected": "Idea v{version} was not accepted: {reason}. Change it and hand it in again as a new version.",
       "revise": "Revise the idea",
       "reviseHint": "A revision is a new version; old versions stay, and a test already running is not affected.",
       "reviseFrom": "“{title}”: start from idea v{version}; handing it in makes a new version."
     },
     "review": {
-      "title": "Review",
-      "intro": "Everything waiting for you: questions from tests, candidates to review, and whether to take the version that passed.",
+      "title": "To do",
+      "intro": "Everything waiting for you: questions from tests and AI gaps, candidates to look at, and whether to take the version that passed.",
       "empty": "Nothing waiting for you in this category.",
       "allDone": "Nothing is waiting for you.",
       "history": "What you answered and decided",
@@ -322,13 +338,13 @@
       "versions": "Versions of this name",
       "hint": "Ask it in the knowbench workbench: look for “{name}” when choosing an expert.",
       "trial": "This version was listed in the trial period (before the two gates existed).",
-      "toReview": "Decide in Review",
+      "toReview": "Decide in To do",
       "stopReason": "Why you stop it",
       "stop": "Stop this version",
       "stopFailed": "Could not stop it. Please try again later.",
       "stoppedAt": "stopped {at}: {reason}",
       "now": {
-        "to_return": "It passed; once it is returned to you, decide in Review.",
+        "to_return": "It passed; once it is returned to you, decide in To do.",
         "awaiting_user": "It passed; waiting for you to decide whether to take this version.",
         "declined": "You declined this version; it is not listed.",
         "to_review": "You took it; waiting for our review. Once reviewed you can ask it.",
@@ -378,7 +394,7 @@
       "todoSome": "{n} things are waiting for you:",
       "reviewDraft": "review candidate {label}",
       "decideExpert": "decide on version {version}",
-      "toReview": "Go to Review",
+      "toReview": "Go to To do",
       "applications": "Applications in progress",
       "applicationsNone": "No applications in progress.",
       "allApplications": "All applications",
@@ -455,6 +471,57 @@
         "waiting": "Being fetched",
         "unusable": "Cannot be used"
       }
+    },
+    "mode": {
+      "title": "How it is incubated",
+      "self": "By me",
+      "platform": "By the platform",
+      "state": {
+        "pending": "Waiting for the platform to accept",
+        "active": "The platform is incubating; authorised until {until}; at most {budget} CNY per AI round it starts",
+        "expired": "The authorisation expired ({until}); the platform cannot see it until you renew",
+        "declined": "The platform declined",
+        "revoked": "Authorisation revoked",
+        "ended": "Handed back by the platform"
+      },
+      "declined": "The platform declined: {reason}. You can go on yourself.",
+      "revoked": "The platform's authorisation is revoked; platform staff no longer see this name.",
+      "renewed": "Renewed for 30 days.",
+      "failed": "That did not work; try again later.",
+      "ask": "Ask the platform",
+      "askTitle": "Ask the platform: what it sees and until when",
+      "askLines": {
+        "who": "Once accepted, the platform staff doing the work see your idea versions, the workdraft and the platform's questions — not the test sets and results of your own earlier tests.",
+        "until": "Until you take it back or the platform hands it back, at most 30 days; you can renew with one click.",
+        "key": "AI rounds and tests the platform starts run on your computer with your model key.",
+        "pay": "You pay; the platform can only start within the limit below. Cells the staff change are proposals that count only once you accept them."
+      },
+      "budget": "Cost limit per AI round the platform starts (CNY)",
+      "agree": "Agree and ask the platform",
+      "cancel": "Cancel",
+      "takeBack": "I'll do it myself",
+      "backConfirm": "Do it yourself? The platform's authorisation is revoked at once and its staff no longer see this name; proposals you have not accepted are void. The workdraft stays yours.",
+      "backYes": "Yes, I'll do it myself",
+      "renew": "Renew for 30 days"
+    },
+    "platformTest": {
+      "ask": "Or have the platform test it once",
+      "confirmTitle": "Have the platform test it once: what it sees",
+      "lines": {
+        "who": "Once the platform takes it, the staff running the test see this candidate, this test set and the results — not earlier drafts, questions or your own tests.",
+        "key": "The test still runs on your computer with your model key, as when you test it yourself.",
+        "pay": "You pay; the platform can only start within the limit below; the authorisation ends when the test does."
+      },
+      "budget": "Cost limit for this test (CNY)",
+      "agree": "Agree and hand it to the platform",
+      "cancel": "Cancel",
+      "state": {
+        "pending": "Handed to the platform; waiting for it to take it (limit {budget} CNY)",
+        "active": "The platform took it and will start the test (limit {budget} CNY)"
+      },
+      "withdraw": "Take it back",
+      "declined": "The platform did not take it: {reason}",
+      "failed": "That did not work; try again later."
     }
   },
   "workdraft": {
@@ -755,15 +822,17 @@
       "instructionWas": "Instruction: {text}",
       "error": "Reason: {error}",
       "gapsTitle": "Yours to decide (gaps): {count}",
-      "gapsHint": "These are judgements in your method: AI only asks and proposes, you decide. Answer them under Review (you can answer “as proposed”); then write the answer into the cells yourself, or click “Ask AI to change…” to take your answers along.",
+      "gapsHint": "These are judgements in your method: AI only asks and proposes, you decide. Answer them under To do (you can answer “as proposed”); then write the answer into the cells yourself, or click “Ask AI to change…” to take your answers along.",
       "proposal": "Proposal: {proposal}",
       "gapAnswered": "Answered",
-      "toReview": "Answer under Review",
+      "toReview": "Answer in To do",
       "reviseWithAnswers": "Ask AI to change by my answers…",
       "started": "Round {n} started: its suggestions will show next to the cells.",
       "cancelFailed": "Could not cancel ({code}). Please try again.",
       "decideFailed": "Could not do that ({code}). Please try again.",
-      "withAnswers": "Change it by the gaps I answered"
+      "withAnswers": "Change it by the gaps I answered",
+      "operatorLabel": "Proposal from the platform staff",
+      "fromOperator": "Proposed by the platform staff; it counts only once you accept it."
     }
   }
 }

@@ -5,16 +5,24 @@ import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import type { Detail, TestDataItem, TestDataNeed, TestDataRequest } from '@/contracts/knowbots'
+import type {
+  Detail,
+  Grant,
+  TestDataItem,
+  TestDataNeed,
+  TestDataRequest,
+} from '@/contracts/knowbots'
 import { ApiClientError } from '@/lib/common/api-client'
 import {
   confirmTestData,
   declineTestData,
   fetchComputers,
   fetchTestData,
+  askPlatformTest,
   refreshMyTest,
   startSelfTest,
   type TestDataChoice,
+  withdrawPlatformTest,
 } from '@/lib/knowbots/client'
 
 import { Card, KEY } from './shared'
@@ -42,6 +50,15 @@ export function SelfTests({ life, csrfToken }: { life: Detail; csrfToken: string
   return (
     <Card title={t('title')}>
       {pending ? <StartSelfTest draftId={pending.draft_id} csrfToken={csrfToken} /> : null}
+      {pending && pending.mode === 'self' ? (
+        <PlatformTest
+          draftId={pending.draft_id}
+          grant={[...life.grants]
+            .reverse()
+            .find((g) => g.kind === 'test' && g.draft_id === pending.draft_id)}
+          csrfToken={csrfToken}
+        />
+      ) : null}
       {active.map((x) => (
         <ActiveTest key={x.test_id} testId={x.test_id} number={x.number} csrfToken={csrfToken} />
       ))}
@@ -145,6 +162,97 @@ function StartSelfTest({ draftId, csrfToken }: { draftId: string; csrfToken: str
       {start.isError ? (
         <p role="alert" className="text-destructive">
           {startFailure(start.error, (key) => t(key as never))}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+// 交平台测这一次（SDD 0046 第四节「自助孵化 + 平台测试」）：确认框写明平台会看到什么，同意就是
+// 本人授权；平台轻受理后由平台发起，仍在我的电脑上、用我的 key 跑，上限我设。还没开测可以收回。
+function PlatformTest({
+  draftId,
+  grant,
+  csrfToken,
+}: {
+  draftId: string
+  grant: Grant | undefined
+  csrfToken: string
+}) {
+  const t = useTranslations('knowbots.platformTest')
+  const client = useQueryClient()
+  const [asking, setAsking] = useState(false)
+  const [budget, setBudget] = useState('10')
+  const run = useMutation({
+    mutationFn: async (action: 'ask' | 'withdraw') => {
+      if (action === 'ask') await askPlatformTest(draftId, budget, csrfToken)
+      else if (grant) await withdrawPlatformTest(grant.grant_id, csrfToken)
+    },
+    onSuccess: async () => {
+      setAsking(false)
+      await client.invalidateQueries({ queryKey: KEY })
+    },
+  })
+  const okBudget = /^[0-9]{1,4}(\.[0-9]{1,2})?$/.test(budget) && Number(budget) > 0
+  const live = grant && (grant.state === 'pending' || grant.state === 'active')
+  return (
+    <div className="space-y-2 border-t pt-2" data-testid="platform-test">
+      {live ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span>{t(`state.${grant.state}`, { budget: grant.budget_limit })}</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={run.isPending}
+            onClick={() => run.mutate('withdraw')}
+          >
+            {t('withdraw')}
+          </Button>
+        </div>
+      ) : asking ? (
+        <div role="dialog" className="space-y-2 rounded-lg border p-3">
+          <p className="font-medium">{t('confirmTitle')}</p>
+          <ul className="text-muted-foreground list-disc space-y-0.5 pl-5">
+            {(['who', 'key', 'pay'] as const).map((line) => (
+              <li key={line}>{t(`lines.${line}`)}</li>
+            ))}
+          </ul>
+          <label className="flex items-center gap-1">
+            {t('budget')}
+            <input
+              aria-label={t('budget')}
+              className={`${field} w-20`}
+              inputMode="decimal"
+              value={budget}
+              onChange={(event) => setBudget(event.target.value)}
+            />
+          </label>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              disabled={!okBudget || run.isPending}
+              onClick={() => run.mutate('ask')}
+            >
+              {t('agree')}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setAsking(false)}>
+              {t('cancel')}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          {grant?.state === 'declined' && grant.reason ? (
+            <span className="text-muted-foreground">{t('declined', { reason: grant.reason })}</span>
+          ) : null}
+          <Button size="sm" variant="outline" onClick={() => setAsking(true)}>
+            {t('ask')}
+          </Button>
+        </div>
+      )}
+      {run.isError ? (
+        <p role="alert" className="text-destructive">
+          {t('failed')}
         </p>
       ) : null}
     </div>

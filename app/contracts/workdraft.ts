@@ -109,7 +109,29 @@ export const workdraftSchema = z.object({
   updated_at: z.string().nullable(),
   // 导入、复制时没能留下的东西
   notes: z.array(z.string()).optional(),
+  // 平台孵化时平台人员的提议（专家孵化方案第十二节）
+  proposals: z.array(z.lazy(() => proposalSchema)).optional(),
 })
+
+export const PROPOSAL_STATES = [
+  'pending',
+  'accepted',
+  'accepted_edited',
+  'rejected',
+  'withdrawn',
+  'void',
+] as const
+export const proposalSchema = z.object({
+  proposal_id: z.string().uuid(),
+  path: z.string(),
+  op: z.enum(['set', 'add', 'remove', 'move']),
+  value: z.unknown().optional(),
+  reason: z.string(),
+  state: z.enum(PROPOSAL_STATES),
+  proposed_at: z.string().nullable(),
+  decided_at: z.string().nullable(),
+})
+export type Proposal = z.infer<typeof proposalSchema>
 
 export const problemSchema = z.object({ path: z.string(), message: z.string() })
 
@@ -157,7 +179,8 @@ export const suggestionSchema = z.object({
   value: z.unknown().optional(),
   reason: z.string(),
   sources: z.array(sourceRowSchema),
-  kinds: z.array(z.enum(['idea', 'answer', 'proposal'])),
+  // operator：平台人员的提议（不是 AI 的），作者接受了才算（专家孵化方案第十二节）
+  kinds: z.array(z.enum(['idea', 'answer', 'proposal', 'operator'])),
   verified: z.boolean(),
   problems: z.array(z.object({ path: z.string(), problem: z.string() })),
   state: z.enum(DECISION_STATES),
@@ -239,3 +262,9 @@ export type Problem = z.infer<typeof problemSchema>
 export type Preview = z.infer<typeof previewSchema>
 export type Published = z.infer<typeof publishedSchema>
 export type CellEdit = { path: string; value: unknown }
+
+export const decidedProposalSchema = z.object({
+  contract_version: z.literal(1),
+  workdraft: workdraftSchema.omit({ contract_version: true }),
+  proposal: proposalSchema,
+})

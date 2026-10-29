@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   ACTIVE_ROUNDS,
+  type Proposal,
   type Round,
   type RoundStart,
   type Suggestion,
@@ -18,6 +19,7 @@ import { ApiClientError } from '@/lib/common/api-client'
 import {
   cancelRound,
   copyWorkdraft,
+  decideProposal,
   decideSuggestion,
   fetchRound,
   fetchRounds,
@@ -199,9 +201,15 @@ function Editor({
     queryFn: () => fetchRound(requestId, done?.incubation_id ?? ''),
   })
   const shown: Round | undefined = done ? shownRound.data : undefined
+  // 平台孵化时平台人员的提议（专家孵化方案第十二节）：和 AI 的建议一样放在格子旁边，标明是平台
+  // 人员提的，接受了才算
+  const [proposals, setProposals] = useState<Proposal[]>(() => initial.proposals ?? [])
   const pending = useMemo(
-    () => (shown?.suggestions ?? []).filter((s) => s.state === 'pending'),
-    [shown],
+    () => [
+      ...(shown?.suggestions ?? []).filter((s) => s.state === 'pending'),
+      ...proposals.filter((p) => p.state === 'pending').map(asSuggestion),
+    ],
+    [shown, proposals],
   )
 
   const commit = (next: Doc) => {
@@ -366,7 +374,8 @@ function Editor({
 
   // 一条建议：接受、改了再接受（改工作稿，带 revision）、不要
   const decide = async (suggestion: Suggestion, choice: Choice, value?: unknown) => {
-    if (!done) return
+    const operator = suggestion.kinds.includes('operator')
+    if (!operator && !done) return
     setDeciding(true)
     setMessage(null)
     try {
@@ -376,15 +385,29 @@ function Editor({
         setMessage({ tone: 'bad', text: t('publish.unsaved') })
         return
       }
+      const body = {
+        action: choice,
+        ...(choice === 'reject' ? {} : { revision: docRef.current.revision }),
+        ...(value !== undefined ? { value } : {}),
+      }
+      if (operator) {
+        const got = await decideProposal(requestId, suggestion.id.slice(3), body, csrfToken)
+        if (dead.current) return
+        if (choice !== 'reject') {
+          commit(docOf(got.workdraft))
+          setStatus({ kind: 'saved' })
+        }
+        setProposals((all) =>
+          all.map((p) => (p.proposal_id === got.proposal.proposal_id ? got.proposal : p)),
+        )
+        return
+      }
+      if (!done) return
       const got = await decideSuggestion(
         requestId,
         done.incubation_id,
         suggestion.id,
-        {
-          action: choice,
-          ...(choice === 'reject' ? {} : { revision: docRef.current.revision }),
-          ...(value !== undefined ? { value } : {}),
-        },
+        body,
         csrfToken,
       )
       if (dead.current) return
@@ -758,4 +781,20 @@ function Editor({
       </SuggestionsContext.Provider>
     </MarksContext.Provider>
   )
+}
+
+/** 平台人员的一条提议，放进建议框（编号带 op: 前缀，处理时走提议的接口）。 */
+function asSuggestion(p: Proposal): Suggestion {
+  return {
+    id: `op:${p.proposal_id}`,
+    path: p.path,
+    op: p.op,
+    value: p.value,
+    reason: p.reason,
+    sources: [],
+    kinds: ['operator'],
+    verified: true,
+    problems: [],
+    state: 'pending',
+  }
 }

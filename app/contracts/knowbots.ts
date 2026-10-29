@@ -49,6 +49,37 @@ const acceptanceSchema = z.object({
   reason: z.string().nullable(),
   decided_at: when,
   trial: z.boolean(),
+  // formal：平台正式受理；self：选了自己来，不过平台（SDD 0046 第二节）
+  kind: z.enum(['formal', 'self']).default('formal'),
+})
+
+// 我给平台的一张授权（SDD 0046 第四节）：孵化（请平台孵化）或测试（交平台测这一次）
+export const GRANT_STATES = [
+  'pending',
+  'active',
+  'declined',
+  'revoked',
+  'ended',
+  'expired',
+] as const
+export const grantSchema = z.object({
+  grant_id: z.string().uuid(),
+  kind: z.enum(['incubate', 'test']),
+  draft_id: z.string().uuid().nullable(),
+  state: z.enum(GRANT_STATES),
+  budget_limit: z.string(),
+  granted_at: when,
+  expires_at: when,
+  decided_at: when,
+  reason: z.string().nullable(),
+  ended_at: when,
+  basis: z.string(),
+})
+export type Grant = z.infer<typeof grantSchema>
+export const grantResultSchema = z.object({ contract_version: z.literal(1), grant: grantSchema })
+export const defaultsSchema = z.object({
+  contract_version: z.literal(1),
+  mode: z.enum(['self', 'platform']).nullable(),
 })
 
 const versionSchema = z.object({
@@ -67,6 +98,8 @@ const draftSchema = z.object({
   revision: z.number().int().min(1),
   request_version: z.number().int().min(1),
   status: z.enum(['pending_test', 'testing', 'passed', 'failed']),
+  // 自己出的一版（self）还是平台出的（platform）
+  mode: z.enum(['self', 'platform']).default('platform'),
   name: z.string().nullable(),
   created_at: when,
   user_review: z
@@ -186,6 +219,9 @@ const eventSchema = z.object({ at: z.string(), kind: z.string() }).catchall(z.un
 export const detailSchema = z.object({
   contract_version: z.literal(1),
   ...lifeFields,
+  // 现在的孵化是自己来还是平台；我给平台的授权
+  incubation_mode: z.enum(['self', 'platform']),
+  grants: z.array(grantSchema),
   versions: z.array(versionSchema),
   drafts: z.array(draftSchema),
   tests: z.array(testSchema),
@@ -291,6 +327,7 @@ export const submittedSchema = z.object({
   contract_version: z.literal(1),
   request_id: z.string().uuid(),
   version: z.number().int().min(1),
+  incubation_mode: z.enum(['self', 'platform']).optional(),
 })
 
 export const reviewedSchema = z.object({
@@ -396,7 +433,13 @@ export type IdeaIn =
   | { kind: 'skill'; skill: string }
   | { kind: 'question'; question: string }
 export type RevisionIn = { idea: IdeaIn; cases: CaseIn[]; consent_test_data: true }
-export type KnowbotRequestIn = RevisionIn & { title: string; runtime: string }
+// mode：孵化自己来还是请平台（SDD 0046 第四节）；请平台的同时设平台发起 AI 一轮的费用上限
+export type KnowbotRequestIn = RevisionIn & {
+  title: string
+  runtime: string
+  mode: 'self' | 'platform'
+  budget_limit?: string
+}
 
 export type Idea = z.infer<typeof ideaSchema>
 export type Version = z.infer<typeof versionSchema>

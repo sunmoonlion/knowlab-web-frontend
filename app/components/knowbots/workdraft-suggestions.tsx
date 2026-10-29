@@ -97,7 +97,7 @@ export function SuggestionBox({ suggestion: s }: { suggestion: Suggestion }) {
       data-testid={`suggestion-${s.id}`}
     >
       <p className="font-medium">
-        {t('label')} · {t(`op.${s.op}`)}
+        {s.kinds.includes('operator') ? t('operatorLabel') : t('label')} · {t(`op.${s.op}`)}
       </p>
       {s.op === 'move' ? (
         <p>{t('moveTo', { n: Number(s.value) + 1 })}</p>
@@ -164,6 +164,7 @@ function SourceLine({ suggestion: s }: { suggestion: Suggestion }) {
   const quotes = s.sources.filter((r) => r.kind === 'idea' && r.quote).map((r) => r.quote)
   return (
     <ul className="text-muted-foreground space-y-0.5">
+      {s.kinds.includes('operator') ? <li>{t('fromOperator')}</li> : null}
       {s.kinds.includes('proposal') ? <li>{t('fromProposal')}</li> : null}
       {quotes.map((q, i) => (
         <li key={i}>{t('fromIdea', { quote: q ?? '' })}</li>

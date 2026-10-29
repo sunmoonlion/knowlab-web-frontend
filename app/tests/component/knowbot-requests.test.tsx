@@ -8,6 +8,7 @@ import {
   acceptConsent,
   fetchApplications,
   fetchDetail,
+  fetchRequestDefaults,
   fetchRuntimes,
   reviseRequest,
   submitRequest,
@@ -22,6 +23,7 @@ vi.mock('@/lib/knowbots/client', () => ({
   acceptConsent: vi.fn(),
   fetchApplications: vi.fn(),
   fetchDetail: vi.fn(),
+  fetchRequestDefaults: vi.fn(),
   fetchRuntimes: vi.fn(),
   reviseRequest: vi.fn(),
   submitRequest: vi.fn(),
@@ -36,6 +38,8 @@ const k = messages.knowbots
 beforeEach(() => {
   vi.resetAllMocks()
   vi.mocked(fetchDetail).mockResolvedValue(detail())
+  // 上次选的是自己来（第一次是 null，见「第一次自己选模式」）
+  vi.mocked(fetchRequestDefaults).mockResolvedValue('self')
 })
 
 describe('申请', () => {
@@ -55,7 +59,7 @@ describe('申请', () => {
     expect(screen.getByRole('button', { name: '在做 · 1' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: '没受理 · 1' })).toBeInTheDocument()
     expect(
-      await screen.findByText('创意 v2 受理了：我们照它孵化、测试，有要你做的会在「审核」里。'),
+      await screen.findByText('创意 v2 受理了：平台照它孵化、测试，有要你做的会在「待办」里。'),
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: k.applications.revise })).toHaveAttribute(
       'href',
@@ -82,6 +86,7 @@ describe('申请', () => {
               reason: '要给买卖建议，这类不做',
               decided_at: '2026-10-24T08:00:00Z',
               trial: false,
+              kind: 'formal',
             },
           }),
         ],
@@ -126,6 +131,33 @@ describe('申请一个创意', () => {
     })
   }
 
+  it('第一次自己选模式，两边说明并排；请平台的带上费用上限', async () => {
+    vi.mocked(fetchRequestDefaults).mockResolvedValue(null)
+    vi.mocked(fetchRuntimes).mockResolvedValue(['knowbench'])
+    vi.mocked(submitRequest).mockResolvedValue(REQUEST)
+    renderWith(<RequestForm csrfToken={CSRF} />)
+    await waitFor(() => expect(screen.getByLabelText('在哪里运行')).toHaveValue('knowbench'))
+    fill()
+    fireEvent.click(screen.getByLabelText(/我同意/))
+    const submit = screen.getByRole('button', { name: '提交' })
+    expect(submit).toBeDisabled() // 还没选模式
+    expect(screen.getByText(messages.knowbotRequests.form.mode.self.key)).toBeInTheDocument()
+    expect(screen.getByText(messages.knowbotRequests.form.mode.platform.key)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('radio', { name: /请平台孵化/ }))
+    fireEvent.change(screen.getByLabelText(messages.knowbotRequests.form.mode.budget), {
+      target: { value: '0' },
+    })
+    expect(submit).toBeDisabled()
+    fireEvent.change(screen.getByLabelText(messages.knowbotRequests.form.mode.budget), {
+      target: { value: '30' },
+    })
+    expect(submit).toBeEnabled()
+    fireEvent.click(submit)
+    await waitFor(() => expect(submitRequest).toHaveBeenCalled())
+    const [body] = vi.mocked(submitRequest).mock.calls[0]!
+    expect([body.mode, body.budget_limit]).toEqual(['platform', '30'])
+  })
+
   it('要同意才能交；交上方法、用例、运行方，回到申请里那一个', async () => {
     vi.mocked(fetchRuntimes).mockResolvedValue(['knowbench'])
     vi.mocked(submitRequest).mockResolvedValue(REQUEST)
@@ -150,6 +182,8 @@ describe('申请一个创意', () => {
     expect(token).toBe(CSRF)
     expect(body.runtime).toBe('knowbench')
     expect(body.consent_test_data).toBe(true)
+    expect(body.mode).toBe('self') // 默认上次选的
+    expect(body).not.toHaveProperty('budget_limit')
     expect(body.idea).toMatchObject({ kind: 'six_questions' })
     expect(body.cases).toEqual([
       {

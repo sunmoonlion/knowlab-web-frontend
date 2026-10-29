@@ -54,7 +54,13 @@ export function version(overrides: Partial<Version> = {}): Version {
     ],
     consent_version: 2,
     created_at: '2026-10-18T10:00:00Z',
-    acceptance: { accepted: true, reason: null, decided_at: '2026-10-18T11:00:00Z', trial: true },
+    acceptance: {
+      accepted: true,
+      reason: null,
+      decided_at: '2026-10-18T11:00:00Z',
+      trial: true,
+      kind: 'formal',
+    },
     ...overrides,
   }
 }
@@ -81,6 +87,7 @@ export function draft(overrides: Partial<Draft> = {}): Draft {
     revision: 3,
     request_version: 2,
     status: 'pending_test',
+    mode: 'platform',
     name: '财务分析与预测',
     created_at: '2026-10-24T09:00:00Z',
     user_review: { state: 'pending', note: null, requested_at: '2026-10-24T09:05:00Z' },
@@ -171,6 +178,8 @@ export function detail(overrides: Partial<Detail> = {}): Detail {
     summary: SUMMARY,
     consent_version: 2,
     consent_current: 2,
+    incubation_mode: 'platform',
+    grants: [],
     versions: [
       version(),
       version({
@@ -181,6 +190,7 @@ export function detail(overrides: Partial<Detail> = {}): Detail {
           reason: null,
           decided_at: '2026-10-24T08:00:00Z',
           trial: false,
+          kind: 'formal',
         },
       }),
     ],

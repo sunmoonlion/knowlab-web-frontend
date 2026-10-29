@@ -15,7 +15,12 @@ import type {
 } from '@/contracts/knowbots'
 import { useRouter } from '@/i18n/navigation'
 import { ApiClientError } from '@/lib/common/api-client'
-import { fetchRuntimes, reviseRequest, submitRequest } from '@/lib/knowbots/client'
+import {
+  fetchRequestDefaults,
+  fetchRuntimes,
+  reviseRequest,
+  submitRequest,
+} from '@/lib/knowbots/client'
 
 import { KEY } from './shared'
 
@@ -150,6 +155,16 @@ export function RequestForm({
   )
   const [consent, setConsent] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // 孵化自己来还是请平台（SDD 0046 第四节）：第一次自己选，以后默认上次选的
+  const defaults = useQuery({
+    queryKey: ['web', 'knowbot-request-defaults'],
+    queryFn: fetchRequestDefaults,
+    enabled: !revise,
+  })
+  const [picked, setMode] = useState<'self' | 'platform' | null>(null)
+  const mode = picked ?? defaults.data ?? null
+  const [budget, setBudget] = useState('20')
+  const budgetOk = /^[0-9]{1,4}(\.[0-9]{1,2})?$/.test(budget) && Number(budget) > 0
 
   const chosenRuntime = runtime || (runtimes.data?.length === 1 ? runtimes.data[0] : '')
   const submit = useMutation({
@@ -165,7 +180,13 @@ export function RequestForm({
         await reviseRequest(revise.requestId, revision, csrfToken)
         return revise.requestId
       }
-      const body: KnowbotRequestIn = { title: title.trim(), runtime: chosenRuntime, ...revision }
+      const body: KnowbotRequestIn = {
+        title: title.trim(),
+        runtime: chosenRuntime,
+        ...revision,
+        mode: mode ?? 'self',
+        ...(mode === 'platform' ? { budget_limit: budget } : {}),
+      }
       return submitRequest(body, csrfToken)
     },
     onSuccess: async (requestId) => {
@@ -321,6 +342,50 @@ export function RequestForm({
         ) : null}
       </fieldset>
 
+      {revise ? null : (
+        <fieldset className="space-y-3">
+          <legend className="text-sm font-medium">{t('form.mode.legend')}</legend>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(['self', 'platform'] as const).map((m) => (
+              <label
+                key={m}
+                className={`cursor-pointer space-y-1 rounded-xl border p-3 text-sm ${
+                  mode === m ? 'border-primary ring-primary ring-1' : ''
+                }`}
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  <input
+                    type="radio"
+                    name="mode"
+                    value={m}
+                    checked={mode === m}
+                    onChange={() => setMode(m)}
+                  />
+                  {t(`form.mode.${m}.title`)}
+                </span>
+                <ul className="text-muted-foreground list-disc space-y-0.5 pl-5">
+                  {(['who', 'key', 'pay'] as const).map((line) => (
+                    <li key={line}>{t(`form.mode.${m}.${line}`)}</li>
+                  ))}
+                </ul>
+              </label>
+            ))}
+          </div>
+          {mode === 'platform' ? (
+            <label className="block text-sm">
+              {t('form.mode.budget')}
+              <input
+                className={FIELD}
+                inputMode="decimal"
+                value={budget}
+                onChange={(e) => setBudget(e.target.value)}
+                aria-invalid={!budgetOk}
+              />
+            </label>
+          ) : null}
+        </fieldset>
+      )}
+
       <label className="flex items-start gap-2 text-sm">
         <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
         <span>{t('form.consent')}</span>
@@ -331,7 +396,14 @@ export function RequestForm({
           {error}
         </p>
       ) : null}
-      <Button type="submit" disabled={!consent || (!revise && !chosenRuntime) || submit.isPending}>
+      <Button
+        type="submit"
+        disabled={
+          !consent ||
+          (!revise && (!chosenRuntime || mode === null || (mode === 'platform' && !budgetOk))) ||
+          submit.isPending
+        }
+      >
         {revise ? t('form.submitRevision') : t('form.submit')}
       </Button>
     </form>
