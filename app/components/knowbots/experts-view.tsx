@@ -14,8 +14,8 @@ import { Badge, Card, ColumnLayout, EXPERT_TONE, KEY, useWhen } from './shared'
 import { SidePanel } from './side-panel'
 import { TestResults } from './test-results'
 
-// 专家（SDD 0037 第八节）：成品，唯一不是过程的一栏，只列交回了我的各版。新交回的去「审核」
-// 定要不要；要了的等我们审核，审过就能在 knowbench 工作台请；能用的可以停用。
+// 专家（SDD 0037 第八节）：成品，唯一不是过程的一栏，列我看得到的各版（平台孵化、平台测的交回了才
+// 看得到）。待提交的去「交付」提交（SDD 0046 第五节）；审过就能在 knowbench 工作台请；能用的可以停用。
 // 请专家在 knowbench 工作台：能用的那一版给一个去工作台的链接（没配工作台地址时只写一句怎么去）。
 
 const FILTERS = ['new', 'accepted', 'usable', 'stopped', 'not_listed'] as const
@@ -81,6 +81,7 @@ function ExpertPage({
   csrfToken: string
 }) {
   const t = useTranslations('knowbots')
+  const td = useTranslations('knowbots.delivery')
   const when = useWhen()
   const client = useQueryClient()
   const [reason, setReason] = useState('')
@@ -115,15 +116,25 @@ function ExpertPage({
               ? t('experts.now.rejected', { reason: item.review_reason ?? '' })
               : t(`experts.now.${item.stage}`)}
           </p>
+          {item.market_status === 'held' ? (
+            <p className="text-destructive text-xs" role="status">
+              {td('held', {
+                reason: td.has(`heldReason.${item.held_reason}`)
+                  ? td(`heldReason.${item.held_reason}`)
+                  : (item.held_reason ?? ''),
+              })}
+            </p>
+          ) : null}
           {item.trial ? (
             <p className="text-muted-foreground text-xs">{t('experts.trial')}</p>
           ) : null}
-          {item.stage === 'awaiting_user' ? (
+          {item.stage === 'awaiting_user' ||
+          (item.stage === 'listed' && item.review_listing === 'self') ? (
             <Link
-              href={{ pathname: '/review', query: { item: item.expert_id } }}
+              href={{ pathname: '/delivery', query: { item: item.expert_id } }}
               className="font-medium underline underline-offset-2"
             >
-              {t('experts.toReview')}
+              {item.stage === 'listed' ? t('experts.toPublic') : t('experts.toDelivery')}
             </Link>
           ) : null}
           {item.stage === 'listed' ? (

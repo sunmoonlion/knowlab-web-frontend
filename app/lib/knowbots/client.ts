@@ -8,6 +8,7 @@ import {
   countsSchema,
   defaultsSchema,
   detailSchema,
+  deliverySubmittedSchema,
   expertMovedSchema,
   expertsSchema,
   grantResultSchema,
@@ -156,16 +157,38 @@ export async function reviewDraft(
   )
 }
 
-// 用户同意门：要这一版 / 不要
-export async function decideExpert(
+// 提交交付（SDD 0046 第五节）：定自用或公开、授权审核员看这次交付；这一下就是用户同意门。
+// 上架了的自用版本再提交一次公开，就是自用转公开（重查许可）
+export async function submitDelivery(
   expertId: string,
-  accept: boolean,
+  body: { listing: 'self' | 'public'; budget_limit?: string; raise_frozen?: boolean },
   csrfToken: string,
-): Promise<ExpertStage> {
-  const answer = await requestJson(`${BASE}/knowbot-experts/${enc(expertId)}/decision`, {
+): Promise<{ delivery_id: string; status: string }> {
+  const answer = await requestJson(`${BASE}/knowbot-experts/${enc(expertId)}/deliveries`, {
     method: 'POST',
     csrfToken,
-    body: { accept },
+    body: { ...body, authorize_reviewer: true },
+  })
+  return parse(deliverySubmittedSchema, answer)
+}
+
+// 撤回没走完的交付（在审的，或审过还没交成的）：停平台重跑、撤给审核员的授权
+export async function withdrawDelivery(
+  expertId: string,
+  csrfToken: string,
+): Promise<{ delivery_id: string; status: string }> {
+  const answer = await requestJson(`${BASE}/knowbot-experts/${enc(expertId)}/deliveries/withdraw`, {
+    method: 'POST',
+    csrfToken,
+  })
+  return parse(deliverySubmittedSchema, answer)
+}
+
+// 不要这一版：不上架
+export async function declineExpert(expertId: string, csrfToken: string): Promise<ExpertStage> {
+  const answer = await requestJson(`${BASE}/knowbot-experts/${enc(expertId)}/decline`, {
+    method: 'POST',
+    csrfToken,
   })
   return parse(expertMovedSchema, answer).stage
 }

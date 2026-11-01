@@ -7,12 +7,13 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import type { Answered, Draft, Expert, InboxItem, MyQuestion } from '@/contracts/knowbots'
 import { Link } from '@/i18n/navigation'
-import { decideExpert, fetchDetail, fetchInbox, reviewDraft } from '@/lib/knowbots/client'
+import { fetchDetail, fetchInbox, reviewDraft } from '@/lib/knowbots/client'
 
 import { QuestionsHere } from './my-questions'
 import { Cases, Method, RuleSources } from './reference'
 import { Badge, Card, ColumnLayout, KEY, useWhen, type Translate } from './shared'
 import { SidePanel } from './side-panel'
+import { DeliveryPanel } from './delivery-panel'
 import { TestResults } from './test-results'
 
 // 审核（SDD 0037 第八节）：我的待办箱——孵化、测试、交回里所有要我做的事：回答问题（含测试中
@@ -193,7 +194,8 @@ function DraftTodo({
   )
 }
 
-/** 用户同意门：看成稿与测试结果，要不要这一版。要了的等我们审核，审过才上架。 */
+/** 用户同意门：看成稿与测试结果，「提交交付」就是要这一版（选自用或公开、授权审核员），也可以不要
+ * （SDD 0046 第五节）。 */
 function ExpertTodo({
   item,
   csrfToken,
@@ -202,7 +204,6 @@ function ExpertTodo({
   csrfToken: string
 }) {
   const t = useTranslations('knowbots')
-  const client = useQueryClient()
   const detail = useQuery({
     queryKey: [...KEY, 'detail', item.request_id],
     queryFn: () => fetchDetail(item.request_id),
@@ -210,10 +211,6 @@ function ExpertTodo({
   const test = detail.data?.tests.find((x) => x.test_id === item.test_id)
   const draft = detail.data?.drafts.find((d) => d.draft_id === item.draft_id)
   const version = detail.data?.versions.find((v) => v.version === draft?.request_version)
-  const decide = useMutation({
-    mutationFn: (accept: boolean) => decideExpert(item.expert_id, accept, csrfToken),
-    onSuccess: () => client.invalidateQueries({ queryKey: KEY }),
-  })
   return (
     <>
       <Header
@@ -222,24 +219,8 @@ function ExpertTodo({
       />
       <Card title={t('review.expertTitle')}>
         <p>{t('review.expertHint')}</p>
-        {decide.isError ? (
-          <p className="text-destructive" role="alert">
-            {t('review.failed')}
-          </p>
-        ) : null}
-        <div className="flex flex-wrap gap-2">
-          <Button disabled={decide.isPending} onClick={() => decide.mutate(true)}>
-            {t('review.accept')}
-          </Button>
-          <Button
-            variant="outline"
-            disabled={decide.isPending}
-            onClick={() => decide.mutate(false)}
-          >
-            {t('review.decline')}
-          </Button>
-        </div>
       </Card>
+      <DeliveryPanel expert={item} csrfToken={csrfToken} />
       {test ? <TestResults test={test} cases={version?.cases} /> : null}
     </>
   )

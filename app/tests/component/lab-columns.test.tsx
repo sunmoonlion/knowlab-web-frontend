@@ -12,15 +12,18 @@ import {
   fetchLibrary,
   fetchOutputs,
   fetchRounds,
+  withdrawDelivery,
 } from '@/lib/knowbots/client'
 import messages from '@/messages/zh-CN.json'
 
 import {
   CSRF,
   DRAFT,
+  EXPERT,
   QUESTION,
   REQUEST,
   application,
+  delivery,
   detail,
   expertItem,
   outputs,
@@ -41,6 +44,9 @@ vi.mock('@/lib/knowbots/client', () => ({
   fetchRounds: vi.fn(),
   refreshMyTest: vi.fn(),
   fetchTestData: vi.fn(),
+  submitDelivery: vi.fn(),
+  declineExpert: vi.fn(),
+  withdrawDelivery: vi.fn(),
 }))
 vi.mock('@/i18n/navigation', async () => (await import('./knowbot-fixtures')).linkMock())
 
@@ -117,19 +123,52 @@ describe('测试栏', () => {
 })
 
 describe('交付栏', () => {
-  it('列各版专家与交付到哪了；交付的按钮还没有', async () => {
+  it('列各版专家与交付到哪了：自动查没过交人看、授权与进小店', async () => {
     vi.mocked(fetchExperts).mockResolvedValue([
-      expertItem({ category: 'accepted', stage: 'to_review', review_listing: 'self' }),
+      expertItem({
+        category: 'accepted',
+        stage: 'to_review',
+        review_listing: null,
+        deliveries: [delivery()],
+      }),
     ])
-    renderWith(<DeliveryColumn />)
+    renderWith(<DeliveryColumn csrfToken={CSRF} />)
     const rows = within(await screen.findByTestId('delivery-rows'))
-    expect(rows.getByText('自用')).toBeInTheDocument()
     expect(rows.getByText(k.deliveryColumn.notListed)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /交付/ })).toBeNull()
+    const progress = within(screen.getByTestId('delivery-progress'))
+    expect(progress.getByText(/用例 c1 的成稿里有「目标价」/)).toBeInTheDocument()
+    expect(progress.getByText(k.delivery.consentLive)).toBeInTheDocument()
+    // 在审的不能再提交；可以撤回（要再点一次确认）
+    expect(screen.queryByRole('button', { name: k.delivery.submit })).toBeNull()
+    vi.mocked(withdrawDelivery).mockResolvedValue({ delivery_id: EXPERT, status: 'withdrawn' })
+    fireEvent.click(screen.getByRole('button', { name: k.delivery.withdraw }))
+    expect(withdrawDelivery).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: k.delivery.withdrawSure }))
+    await waitFor(() => expect(withdrawDelivery).toHaveBeenCalledWith(EXPERT, CSRF))
     expect(screen.getByRole('link', { name: k.toName })).toHaveAttribute(
       'href',
       `/names/${REQUEST}`,
     )
+  })
+
+  it('上架了的自用版本可以转公开', async () => {
+    vi.mocked(fetchExperts).mockResolvedValue([
+      expertItem({
+        category: 'usable',
+        stage: 'listed',
+        review_listing: 'self',
+        listed_at: '2026-10-24T12:00:00Z',
+        market_status: 'held',
+        held_reason: 'binding_deleted',
+        deliveries: [delivery({ status: 'approved', delivered_at: '2026-10-24T12:00:00Z' })],
+      }),
+    ])
+    renderWith(<DeliveryColumn csrfToken={CSRF} picked={EXPERT} />)
+    expect(await screen.findByText(k.delivery.toPublicTitle)).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('你绑给这位专家的数据有一份删了')
+    expect(screen.getByLabelText(k.delivery.rerunBudget)).toBeInTheDocument()
+    expect(screen.getByLabelText(k.delivery.raiseFrozen)).not.toBeChecked()
+    expect(screen.getByText(k.delivery.status.approved)).toBeInTheDocument()
   })
 })
 

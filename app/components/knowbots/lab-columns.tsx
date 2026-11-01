@@ -12,6 +12,7 @@ import { fetchApplications, fetchDetail, fetchExperts, fetchRounds } from '@/lib
 
 import { IncubationMode } from './incubation-mode'
 import { summaryParts } from './name-view'
+import { DeliveryPanel } from './delivery-panel'
 import { PlatformView } from './platform-asks'
 import { Cases } from './reference'
 import { SelfTests } from './self-test'
@@ -28,8 +29,8 @@ import {
 import { TestResults } from './test-results'
 
 // web端左边的孵化、测试、交付三栏（SDD 0046 第六节）。名称页照旧在，栏是同一批东西的另一种入口：
-// 孵化按名称列、标现在的模式；测试列用例、测试集、确认数据、发起、历次测试；交付先把列表与入口的
-// 骨架搭好，交付的动作（定自用或公开、授权审核员、提交）在交付那一块做。
+// 孵化按名称列、标现在的模式；测试列用例、测试集、确认数据、发起、历次测试；交付列各版专家，
+// 在这里选一版、定自用或公开、授权审核员、提交，看审核进度，过了进 knowmart 小店（第五节）。
 
 const ACTIVE_TESTS = new Set(['queued', 'running', 'waiting'])
 
@@ -308,11 +309,17 @@ function TestHistory({ life, cases }: { life: Detail; cases?: Record<string, unk
   )
 }
 
-// ---------- 交付（骨架） ----------
+// ---------- 交付（SDD 0046 第五节） ----------
 const DELIVERY_FILTERS = ['new', 'accepted', 'usable', 'stopped', 'not_listed'] as const
 type DeliveryFilter = (typeof DELIVERY_FILTERS)[number]
 
-export function DeliveryColumn({ picked: initial }: { picked?: string }) {
+export function DeliveryColumn({
+  csrfToken,
+  picked: initial,
+}: {
+  csrfToken: string
+  picked?: string
+}) {
   const t = useTranslations('knowbots')
   const list = useQuery({ queryKey: [...KEY, 'experts'], queryFn: fetchExperts })
   const [picked, setPicked] = useState<string | null>(initial ?? null)
@@ -342,13 +349,17 @@ export function DeliveryColumn({ picked: initial }: { picked?: string }) {
         </>
       )}
     >
-      {(current) => (current ? <DeliveryMain key={current.expert_id} item={current} /> : null)}
+      {(current) =>
+        current ? (
+          <DeliveryMain key={current.expert_id} item={current} csrfToken={csrfToken} />
+        ) : null
+      }
     </ColumnLayout>
   )
 }
 
-/** 一版专家的交付：选哪一版、自用还是公开、审核员授权、审核进度、进没进小店。动作在交付那一块。 */
-function DeliveryMain({ item }: { item: ExpertItem }) {
+/** 一版专家的交付：这一版到哪了、自用还是公开、审核员授权、提交与审核进度、进没进小店。 */
+function DeliveryMain({ item, csrfToken }: { item: ExpertItem; csrfToken: string }) {
   const t = useTranslations('knowbots')
   const td = useTranslations('knowbots.deliveryColumn')
   const when = useWhen()
@@ -358,7 +369,6 @@ function DeliveryMain({ item }: { item: ExpertItem }) {
       td('listing'),
       item.review_listing ? td(`listingKind.${item.review_listing}`) : td('listingUnset'),
     ],
-    [td('reviewer'), td('reviewerHint')],
     [
       td('progress'),
       [t(`expertStage.${item.stage}`), item.review_reason ?? ''].filter(Boolean).join('：'),
@@ -379,7 +389,6 @@ function DeliveryMain({ item }: { item: ExpertItem }) {
         </p>
       </header>
       <Card title={td('card')}>
-        <p className="text-muted-foreground">{td('lead')}</p>
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5" data-testid="delivery-rows">
           {rows.map(([label, value]) => (
             <div key={label} className="contents">
@@ -388,7 +397,11 @@ function DeliveryMain({ item }: { item: ExpertItem }) {
             </div>
           ))}
         </dl>
+        {item.stage === 'to_return' ? (
+          <p className="text-muted-foreground">{td('waitReturn')}</p>
+        ) : null}
       </Card>
+      <DeliveryPanel expert={item} csrfToken={csrfToken} />
     </section>
   )
 }

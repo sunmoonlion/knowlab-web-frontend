@@ -337,9 +337,7 @@
       "notOk": "Not right",
       "failed": "Could not submit. Please try again.",
       "expertTitle": "Take this version?",
-      "expertHint": "This version passed its test. Read the write-ups and results below: take it and, once we review it, it is listed and you can ask it in the knowbench workbench; decline and this version is not listed.",
-      "accept": "Take this version",
-      "decline": "Decline",
+      "expertHint": "This version passed its test. Read the write-ups and results below: to take it, submit it for delivery below (choose own use or public and let the reviewers see this delivery); decline and this version is not listed.",
       "draftOk": "candidate {label}: you said fine ({at})",
       "draftNotOk": "candidate {label}: you said not right ({at})",
       "expertAccepted": "version {version}: you took it ({at})",
@@ -352,28 +350,29 @@
     },
     "experts": {
       "title": "Experts",
-      "intro": "The versions that passed and were returned to you; they belong only to you. Those you took and we reviewed can be asked in the knowbench workbench.",
-      "empty": "No expert has been returned to you yet.",
+      "intro": "The expert versions that passed and that you can see, yours alone. Once you submit one for delivery and it passes review, you can ask it in the knowbench workbench.",
+      "empty": "No experts of yours yet.",
       "versions": "Versions of this name",
       "hint": "Ask it in the knowbench workbench: look for “{name}” when choosing an expert.",
       "ask": "Ask it in knowbench",
       "askWithQuestion": "Ask it in knowbench with your original question",
       "trial": "This version was listed in the trial period (before the two gates existed).",
-      "toReview": "Decide in To do",
       "stopReason": "Why you stop it",
       "stop": "Stop this version",
       "stopFailed": "Could not stop it. Please try again later.",
       "stoppedAt": "stopped {at}: {reason}",
       "now": {
-        "to_return": "It passed; once it is returned to you, decide in To do.",
-        "awaiting_user": "It passed; waiting for you to decide whether to take this version.",
+        "to_return": "It passed; submit it for delivery once the platform returns it to you.",
+        "awaiting_user": "It passed; waiting for you to submit it for delivery (or decline it).",
         "declined": "You declined this version; it is not listed.",
-        "to_review": "You took it; waiting for our review. Once reviewed you can ask it.",
+        "to_review": "You submitted it; waiting for the platform to review it. Once it passes you can ask it.",
         "rejected": "It did not pass our review and is not listed: {reason}",
         "to_deliver": "Reviewed; being listed now.",
         "listed": "Ready to use.",
         "stopped": "This version is stopped."
-      }
+      },
+      "toDelivery": "Submit it in Delivery",
+      "toPublic": "Make it public in Delivery"
     },
     "name": {
       "title": "Name",
@@ -581,7 +580,6 @@
       "intro": "Expert versions that passed a test are delivered here: pick the version, choose own use or public, authorize the reviewer, follow the review, then into the knowmart shop.",
       "empty": "No expert to deliver yet: once a test passes and an expert version exists, deliver it here.",
       "card": "Delivering this version",
-      "lead": "Delivery actions live on this page (coming in the next step); for now see where each version is.",
       "version": "Expert version",
       "listing": "Own use or public",
       "listingKind": {
@@ -589,12 +587,11 @@
         "public": "Public"
       },
       "listingUnset": "Chosen at delivery",
-      "reviewer": "Reviewer",
-      "reviewerHint": "At delivery you authorize the reviewer for this delivery; it is revoked after the review",
       "progress": "Review",
       "shop": "knowmart shop",
       "listed": "In the shop ({at})",
-      "notListed": "Not in the shop yet"
+      "notListed": "Not in the shop yet",
+      "waitReturn": "The platform incubated and tested this version; you can submit it once the platform returns it to you."
     },
     "knowledge": {
       "title": "Knowledge",
@@ -634,6 +631,84 @@
         "withdrawn": "Withdrawn by the platform",
         "void": "Void"
       }
+    },
+    "delivery": {
+      "submitTitle": "Submit for delivery",
+      "submitLead": "Submitting means you take this version. Own use: what can be checked automatically is checked (target prices, ratings and the like in the write-ups; whether the test results match the idea); if all pass it goes straight into your knowmart shop, otherwise a platform reviewer looks. Public: full platform review; if you tested it yourself, the platform also reruns it once under your account, on your computer, with your model key (events kept in knowbench, you cannot change them); reviewers see results, not raw data.",
+      "toPublicTitle": "Make public",
+      "toPublicLead": "This version is for your own use. Making it public rechecks whether the data you bound to this expert may serve others through it, then goes through full platform review; if you tested it yourself the platform reruns it once on your computer. Buyers keep their version; to change the bound data, make a new version.",
+      "listing": "Own use or public",
+      "listingKind": {
+        "self": "Own use",
+        "public": "Public"
+      },
+      "listingHint": {
+        "self": "Only you can ask it; data licensed for your use only is fine.",
+        "public": "Others can ask it too; every piece of bound data must allow serving others through an expert."
+      },
+      "rerunBudget": "Rerun cost limit (CNY)",
+      "rerunHint": "The platform rerun uses your model key and your money; all reruns together never exceed this, and after platform errors it is retried at most 3 times.",
+      "authorize": "I let the platform reviewers see this delivery (the manifest and results, and the list of data I bound to this expert); revoked automatically after the review.",
+      "submit": "Submit for delivery",
+      "decline": "Decline this version",
+      "failed": "That did not work. Please try again later.",
+      "problem": {
+        "binding_not_shareable": "Some data you bound to this expert is licensed for your use only, so it cannot be public: change the licence in knowbase, or deliver it for your own use.",
+        "binding_deleted": "Some data you bound to this expert was deleted: sort it out in knowbase and submit again.",
+        "binding_disabled": "Some data you bound to this expert was disabled by the platform; it cannot be delivered.",
+        "binding_gone": "Some data you bound to this expert is no longer available to you: have a look in knowbase.",
+        "budget_required": "A public, self-tested version needs a rerun cost limit.",
+        "delivery_open": "This version is already being delivered.",
+        "expert_state": "This version cannot be submitted now; please refresh.",
+        "knowbase_unconfigured": "knowbase is not connected yet, so delivery is not possible for now.",
+        "model_key_missing": "You have not set your model key in knowbench yet.",
+        "binding_frozen_self_only": "Some data was frozen with this version as for your use only: tick “I have the right…” above to raise the frozen licence (raise the data's licence in knowbase first), or make a new version.",
+        "delivery_state": "This delivery has already ended; please refresh.",
+        "license_too_low": "The data to raise is still licensed for your use only: change its licence in knowbase first.",
+        "delivered_in_knowmart": "knowmart already took this version, so it cannot be withdrawn: wait for the platform to record it, then stop it once listed if you no longer want it."
+      },
+      "progressTitle": "Delivery progress",
+      "conversion": "Make public",
+      "status": {
+        "reviewing": "In review",
+        "approved": "Passed",
+        "rejected": "Not passed",
+        "withdrawn": "Withdrawn"
+      },
+      "submittedAt": "Submitted {at}",
+      "autoPassed": "Automatic checks: all passed.",
+      "autoFailed": "Automatic checks did not pass; a platform reviewer looks: {items}",
+      "finding": {
+        "test_not_passed": "the test did not fully pass",
+        "not_accepted": "the idea version was not accepted",
+        "cases_mismatch": "the tested cases do not match the idea's cases",
+        "outputs_missing": "no write-up for case {case}, cannot check automatically",
+        "flagged_word": "the write-up of case {case} contains “{word}”"
+      },
+      "bindings": "{count} pieces of bound data, frozen with this version",
+      "rerun": "Platform rerun no. {number}: {status}",
+      "rerunWaiting": "Waiting for the platform to start the rerun (it runs on your computer, which must be online).",
+      "approvedAt": "Passed {at}",
+      "rejectedAt": "Not passed {at}: {reason}",
+      "inShop": "In your knowmart shop since {at}.",
+      "toShop": "Go to my shop",
+      "delivering": "Passed; being delivered to knowmart.",
+      "consentLive": "Your permission for the reviewers is still on (revoked automatically after the review).",
+      "consentEnded": "Your permission for the reviewers was revoked at {at}.",
+      "withdrawTitle": "Withdraw this delivery",
+      "withdrawLead": "After withdrawing: the platform rerun on your computer stops and your permission for the reviewers is revoked; this version goes back to waiting for you to submit, and you can submit it again later.",
+      "withdraw": "Withdraw",
+      "withdrawSure": "Confirm withdrawal",
+      "withdrawnAt": "Withdrawn {at} {reason}",
+      "held": "This version is on hold in knowmart and others cannot ask it now: {reason}. It comes back once you sort it out in knowbase; to change the data, make a new version.",
+      "heldReason": {
+        "binding_gone": "a piece of data you bound to this expert is no longer available to you",
+        "binding_disabled": "a piece of data you bound to this expert was disabled by the platform",
+        "binding_deleted": "a piece of data you bound to this expert was deleted",
+        "binding_not_shareable": "a piece of data you bound to this expert is now licensed for your use only"
+      },
+      "budgetRange": "The cost limit must be above 0 and at most CNY 1000 (all reruns together stay within it).",
+      "raiseFrozen": "Some data was frozen with this version as for my use only: I have the right to change it to may serve others through an expert (logged; raise the data's licence in knowbase first)."
     }
   },
   "workdraft": {

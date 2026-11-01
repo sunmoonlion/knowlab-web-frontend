@@ -6,6 +6,7 @@ import type {
   Application,
   Detail,
   Draft,
+  Delivery,
   Expert,
   ExpertItem,
   MyQuestion,
@@ -143,6 +144,38 @@ export function expert(overrides: Partial<Expert> = {}): Expert {
     stopped_at: null,
     stop_reason: null,
     trial: false,
+    needs_return: false,
+    test_mode: 'self',
+    deliveries: [],
+    ...overrides,
+  }
+}
+
+export function delivery(overrides: Partial<Delivery> = {}): Delivery {
+  return {
+    delivery_id: '7a8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f11',
+    listing: 'self',
+    conversion: false,
+    test_mode: 'self',
+    needs_rerun: false,
+    budget_limit: null,
+    status: 'reviewing',
+    submitted_at: '2026-10-24T12:00:00Z',
+    auto_check: {
+      passed: false,
+      findings: [{ kind: 'flagged_word', case_id: 'c1', word: '目标价' }],
+      checked_at: '2026-10-24T12:00:00Z',
+    },
+    binding_problem: null,
+    bindings: [{ material_id: 'm1', version_no: 1, license: 'via_expert' }],
+    rerun: null,
+    decided_at: null,
+    reason: null,
+    category: null,
+    delivered_at: null,
+    listing_status: null,
+    basis: 'platform:knowlab:review:7a8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f11',
+    consent_ended_at: null,
     ...overrides,
   }
 }

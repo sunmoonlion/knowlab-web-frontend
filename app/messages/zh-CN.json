@@ -337,9 +337,7 @@
       "notOk": "不行",
       "failed": "没有提交成功，请再试一次。",
       "expertTitle": "要不要这一版",
-      "expertHint": "这一版测试通过了。看下面的成稿与测试结果：要了，我们审过就上架，你在 knowbench 工作台就能请它；不要，这一版就不上架。",
-      "accept": "要这一版",
-      "decline": "不要",
+      "expertHint": "这一版测试通过了。看下面的成稿与测试结果：要了就在下面提交交付（定自用或公开、授权审核员看这次交付）；不要，这一版就不上架。",
       "draftOk": "准专家 {label}：你说行（{at}）",
       "draftNotOk": "准专家 {label}：你说不行（{at}）",
       "expertAccepted": "第 {version} 版：你要了（{at}）",
@@ -352,28 +350,29 @@
     },
     "experts": {
       "title": "专家",
-      "intro": "测试通过、交回你的各版专家，只归你自己。你要了、我们审过的，在 knowbench 工作台就能请。",
-      "empty": "还没有交回你的专家。",
+      "intro": "测试通过、你看得到的各版专家，只归你自己。你提交交付、审过的，在 knowbench 工作台就能请。",
+      "empty": "还没有你的专家。",
       "versions": "这个名称的各版",
       "hint": "去 knowbench 工作台请它：在工作台选专家时找「{name}」。",
       "ask": "去 knowbench 请它",
       "askWithQuestion": "带着当初那句问题去 knowbench 请它",
       "trial": "这一版在试行期就上架了（那时还没有这两道门）。",
-      "toReview": "去「待办」里定要不要",
       "stopReason": "停用的原因",
       "stop": "停用这一版",
       "stopFailed": "没停成，请稍后再试。",
       "stoppedAt": "{at} 停用：{reason}",
       "now": {
-        "to_return": "测试通过了，交回你之后在「待办」里定要不要。",
-        "awaiting_user": "测试通过了，等你决定要不要这一版。",
+        "to_return": "测试通过了，平台交回你之后再提交交付。",
+        "awaiting_user": "测试通过了，等你提交交付（或不要这一版）。",
         "declined": "你没要这一版，它不上架。",
-        "to_review": "你已同意，等我们审核；审过就能请。",
+        "to_review": "你已提交交付，等平台审核；审过就能请。",
         "rejected": "我们审核没通过，这一版不上架：{reason}",
         "to_deliver": "审过了，正在上架。",
         "listed": "能用了。",
         "stopped": "这一版停用了。"
-      }
+      },
+      "toDelivery": "去「交付」提交",
+      "toPublic": "去「交付」转公开"
     },
     "name": {
       "title": "名称",
@@ -578,10 +577,9 @@
     },
     "deliveryColumn": {
       "title": "交付",
-      "intro": "测试通过出的专家版本在这里交付：选哪一版、定自用或公开、授权审核员、看审核进度，过了进 knowmart 小店。",
+      "intro": "测试通过出的专家版本在这里交付：选一版、定自用或公开、授权审核员、提交，看审核进度，过了进 knowmart 小店。",
       "empty": "还没有能交付的专家：测试通过、出了专家版本后在这里交付。",
       "card": "这一版的交付",
-      "lead": "交付的动作在这一页做（下一步开通）；现在先看各版到哪了。",
       "version": "专家版本",
       "listing": "自用还是公开",
       "listingKind": {
@@ -589,12 +587,11 @@
         "public": "公开"
       },
       "listingUnset": "交付时选",
-      "reviewer": "审核员",
-      "reviewerHint": "交审时你授权审核员看这次交付，审完撤销",
       "progress": "审核进度",
       "shop": "knowmart 小店",
       "listed": "已进小店（{at}）",
-      "notListed": "还没进小店"
+      "notListed": "还没进小店",
+      "waitReturn": "这一版由平台孵化、平台测，平台交回你之后才能提交交付。"
     },
     "knowledge": {
       "title": "知识库",
@@ -634,6 +631,84 @@
         "withdrawn": "平台撤回了",
         "void": "作废了"
       }
+    },
+    "delivery": {
+      "submitTitle": "提交交付",
+      "submitLead": "点「提交交付」就是你要这一版。自用：能自动查的自动查（成稿里有没有目标价、评级这类内容，测试结果与创意对不对得上），都过马上进你的 knowmart 小店，查不过才交平台的人看。公开：平台完整审核；自助测的，平台还要在你的账号下、你的电脑上、用你的模型 key 重跑一次（事件记在 knowbench，你改不了），审核员看结果、不看原始数据。",
+      "toPublicTitle": "转公开",
+      "toPublicLead": "这一版现在自用。转公开要重查你绑给这位专家的数据能不能经专家给别人用，再走平台完整审核；自助测的还要平台在你的电脑上重跑一次。买家那一版不变；要改绑定的数据请出新一版。",
+      "listing": "自用还是公开",
+      "listingKind": {
+        "self": "自用",
+        "public": "公开"
+      },
+      "listingHint": {
+        "self": "只给你自己请；绑了「只许本人用」的数据也行。",
+        "public": "别人也能请；绑的每份数据都要「可以经专家给别人用」。"
+      },
+      "rerunBudget": "重跑的费用上限（元）",
+      "rerunHint": "平台重跑用你的模型 key，花的是你的钱；几次重跑加起来不会超过这个数，平台出错后最多再跑 3 次。",
+      "authorize": "我授权平台的审核员看这次交付（交付的清单与结果，以及我绑给这位专家的数据清单），审完自动撤销。",
+      "submit": "提交交付",
+      "decline": "不要这一版",
+      "failed": "没成，请稍后再试。",
+      "problem": {
+        "binding_not_shareable": "你绑给这位专家的数据里有许可是「只许本人用」的，不能公开：去 knowbase 改许可，或交到自用。",
+        "binding_deleted": "你绑给这位专家的数据里有删掉了的：去 knowbase 处理后再提交。",
+        "binding_disabled": "你绑给这位专家的数据里有被平台禁用的，不能交付。",
+        "binding_gone": "你绑给这位专家的数据里有你已经用不了的：去 knowbase 看看。",
+        "budget_required": "公开、自助测的要设重跑的费用上限。",
+        "delivery_open": "这一版已经在交付了。",
+        "expert_state": "这一版现在不能提交，请刷新看看。",
+        "knowbase_unconfigured": "knowbase 还没接上，暂时交不了。",
+        "model_key_missing": "你还没在 knowbench 填模型 key。",
+        "binding_frozen_self_only": "这一版冻结时你绑的数据有一份是「只许本人用」：勾上面「我有权……」把冻结的那一档改上去（先在 knowbase 改好这份数据的许可），或出新一版。",
+        "delivery_state": "这一次已经结束了，请刷新看看。",
+        "license_too_low": "要改上去的那份数据，现在的许可还是「只许本人用」：先去 knowbase 改许可。",
+        "delivered_in_knowmart": "knowmart 已经收下这一版了，不能撤回：等平台把交成补记上，要不用了就上架后停用。"
+      },
+      "progressTitle": "交付进度",
+      "conversion": "转公开",
+      "status": {
+        "reviewing": "审核中",
+        "approved": "审过了",
+        "rejected": "没通过",
+        "withdrawn": "撤回了"
+      },
+      "submittedAt": "{at} 提交",
+      "autoPassed": "自动查：都过了。",
+      "autoFailed": "自动查没过，交平台的人看：{items}",
+      "finding": {
+        "test_not_passed": "测试没全过",
+        "not_accepted": "创意那一版没受理",
+        "cases_mismatch": "测的用例和创意的用例对不上",
+        "outputs_missing": "用例 {case} 没取到成稿，没法自动查",
+        "flagged_word": "用例 {case} 的成稿里有「{word}」"
+      },
+      "bindings": "绑的数据 {count} 份，交付时冻结在这一版",
+      "rerun": "平台重跑第 {number} 次：{status}",
+      "rerunWaiting": "等平台发起重跑（在你的电脑上跑，电脑要在线）。",
+      "approvedAt": "{at} 审过了",
+      "rejectedAt": "{at} 没通过：{reason}",
+      "inShop": "{at} 进了 knowmart 小店。",
+      "toShop": "去我的小店",
+      "delivering": "审过了，正在交 knowmart。",
+      "consentLive": "你给审核员的授权还在（审完自动撤销）。",
+      "consentEnded": "你给审核员的授权已在 {at} 撤销。",
+      "withdrawTitle": "撤回这次交付",
+      "withdrawLead": "撤回后：平台在你电脑上的重跑会停下，你给审核员的授权撤销；这一版回到「等你提交」，以后还能再交。",
+      "withdraw": "撤回",
+      "withdrawSure": "确定撤回",
+      "withdrawnAt": "{at} 撤回了 {reason}",
+      "held": "这一版在 knowmart 待处理，别人现在请不了：{reason}。去 knowbase 处理好后会自动恢复；要换数据请出新一版。",
+      "heldReason": {
+        "binding_gone": "你绑给这位专家的数据有一份你已经用不了",
+        "binding_disabled": "你绑给这位专家的数据有一份被平台禁用",
+        "binding_deleted": "你绑给这位专家的数据有一份删了",
+        "binding_not_shareable": "你绑给这位专家的数据有一份许可改成了「只许本人用」"
+      },
+      "budgetRange": "费用上限要大于 0、不超过 1000 元（几次重跑加起来不超过它）。",
+      "raiseFrozen": "这一版冻结时有「只许本人用」的数据：我有权把它们改成「可以经专家给别人用」（会留痕；要先在 knowbase 把这些数据的许可改上去）。"
     }
   },
   "workdraft": {

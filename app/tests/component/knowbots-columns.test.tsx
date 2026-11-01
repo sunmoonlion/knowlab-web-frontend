@@ -8,7 +8,6 @@ import { ReviewView } from '@/components/knowbots/review-view'
 import { inboxSchema } from '@/contracts/knowbots'
 import {
   answerMyQuestion,
-  decideExpert,
   fetchApplications,
   fetchDetail,
   fetchExperts,
@@ -16,6 +15,7 @@ import {
   fetchOutputs,
   reviewDraft,
   stopExpert,
+  submitDelivery,
 } from '@/lib/knowbots/client'
 import messages from '@/messages/zh-CN.json'
 
@@ -37,7 +37,7 @@ import {
 
 vi.mock('@/lib/knowbots/client', () => ({
   answerMyQuestion: vi.fn(),
-  decideExpert: vi.fn(),
+  declineExpert: vi.fn(),
   fetchApplications: vi.fn(),
   fetchDetail: vi.fn(),
   fetchExperts: vi.fn(),
@@ -45,6 +45,7 @@ vi.mock('@/lib/knowbots/client', () => ({
   fetchOutputs: vi.fn(),
   reviewDraft: vi.fn(),
   stopExpert: vi.fn(),
+  submitDelivery: vi.fn(),
 }))
 vi.mock('@/i18n/navigation', async () => (await import('./knowbot-fixtures')).linkMock())
 
@@ -143,18 +144,46 @@ describe('审核', () => {
     )
   })
 
-  it('用户同意门：看成稿与测试结果，要这一版', async () => {
+  it('用户同意门：看成稿与测试结果，提交交付（授权审核员才点得了）', async () => {
     vi.mocked(fetchInbox).mockResolvedValue({
       contract_version: 1,
       items: [{ ...expert(), ...BRIEF, state: 'todo', type: 'expert' }],
       answered: [],
     })
-    vi.mocked(decideExpert).mockResolvedValue('to_review')
+    vi.mocked(submitDelivery).mockResolvedValue({ delivery_id: EXPERT, status: 'approved' })
     renderWith(<ReviewView csrfToken={CSRF} />)
     expect(await screen.findByText(/营业收入 2025 年下降/)).toBeInTheDocument()
     expect(fetchOutputs).toHaveBeenCalledWith(TEST)
-    fireEvent.click(screen.getByRole('button', { name: k.review.accept }))
-    await waitFor(() => expect(decideExpert).toHaveBeenCalledWith(EXPERT, true, CSRF))
+    const submit = screen.getByRole('button', { name: k.delivery.submit })
+    expect(submit).toBeDisabled()
+    fireEvent.click(screen.getByLabelText(k.delivery.authorize))
+    fireEvent.click(submit)
+    await waitFor(() =>
+      expect(submitDelivery).toHaveBeenCalledWith(EXPERT, { listing: 'self' }, CSRF),
+    )
+  })
+
+  it('公开、自助测的要设平台重跑的费用上限', async () => {
+    vi.mocked(fetchInbox).mockResolvedValue({
+      contract_version: 1,
+      items: [{ ...expert(), ...BRIEF, state: 'todo', type: 'expert' }],
+      answered: [],
+    })
+    vi.mocked(submitDelivery).mockResolvedValue({ delivery_id: EXPERT, status: 'reviewing' })
+    renderWith(<ReviewView csrfToken={CSRF} />)
+    fireEvent.click(await screen.findByLabelText(/公开/))
+    fireEvent.change(screen.getByLabelText(k.delivery.rerunBudget), { target: { value: '1001' } })
+    expect(screen.getByText(k.delivery.budgetRange)).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText(k.delivery.rerunBudget), { target: { value: '8' } })
+    fireEvent.click(screen.getByLabelText(k.delivery.authorize))
+    fireEvent.click(screen.getByRole('button', { name: k.delivery.submit }))
+    await waitFor(() =>
+      expect(submitDelivery).toHaveBeenCalledWith(
+        EXPERT,
+        { listing: 'public', budget_limit: '8' },
+        CSRF,
+      ),
+    )
   })
 
   it('答过、定过的在右边', async () => {
@@ -300,7 +329,7 @@ describe('专家', () => {
     await waitFor(() => expect(stopExpert).toHaveBeenCalledWith(EXPERT, '不用了', CSRF))
   })
 
-  it('新交回的指去审核；审核没通过的写理由', async () => {
+  it('待提交的指去交付；审核没通过的写理由', async () => {
     vi.mocked(fetchExperts).mockResolvedValue([
       expertItem(),
       expertItem({
@@ -312,9 +341,9 @@ describe('专家', () => {
       }),
     ])
     renderWith(<ExpertsView csrfToken={CSRF} />)
-    expect(await screen.findByRole('link', { name: k.experts.toReview })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: k.experts.toDelivery })).toHaveAttribute(
       'href',
-      `/review?item=${EXPERT}`,
+      `/delivery?item=${EXPERT}`,
     )
     fireEvent.click(screen.getByRole('button', { name: '没上架 · 1' }))
     expect(

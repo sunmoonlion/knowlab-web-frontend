@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : undefined)
 
-// 交付（SDD 0046 第六节）：先搭好列表与入口，交付的动作在交付那一块；?item=<专家版本> 打开那一版
+// 交付（SDD 0046 第五、六节）：选一版、定自用或公开、授权审核员、提交、看审核进度；?item=<专家版本> 打开那一版
 export default async function Page({
   params,
   searchParams,
@@ -24,13 +24,13 @@ export default async function Page({
 }) {
   const { locale } = await params
   const query = await searchParams
-  await requireBrowserSession(locale, `/${locale}/delivery`)
+  const session = await requireBrowserSession(locale, `/${locale}/delivery`)
   const t = await getTranslations('knowbots.deliveryColumn')
   return (
     <>
       <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
       <p className="text-muted-foreground mt-2">{t('intro')}</p>
-      <DeliveryColumn picked={one(query.item)} />
+      <DeliveryColumn csrfToken={session.csrf_token} picked={one(query.item)} />
     </>
   )
 }

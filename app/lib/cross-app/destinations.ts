@@ -13,6 +13,8 @@ export const destinations = defineDestinations({
   // 知识库栏「在 knowbase 管理」（SDD 0046 第六节：只展示给了 knowlab 的数据，链到 knowbase 去管）：
   // knowbase web端的总栏（SDD 0044 第 2.1 节）
   'knowbase.library': { target: 'knowbase', segments: ['dashboard'] },
+  // 交付过了「进 knowmart 小店」（SDD 0046 第五节）：knowmart 的「我的小店」
+  'knowmart.shop': { target: 'knowmart', segments: ['shop'] },
 })
 
 export type DestinationKey = keyof typeof destinations
