@@ -86,7 +86,7 @@ const versionSchema = z.object({
   version: z.number().int().min(1),
   idea: ideaSchema,
   cases: z.array(z.record(z.string(), z.unknown())),
-  consent_version: z.number().int().min(1),
+  consent_version: z.number().int().min(0),
   created_at: when,
   acceptance: acceptanceSchema.nullable(),
 })
@@ -270,7 +270,7 @@ const lifeFields = {
   latest_version: z.number().int().min(1),
   summary: summarySchema,
   // 同意的是第几版测试数据说明、现行是第几版（SDD 0037）
-  consent_version: z.number().int().min(1),
+  consent_version: z.number().int().min(0),
   consent_current: z.number().int().min(1),
   // 现在的孵化是自己来还是平台（孵化栏按它分，SDD 0046 第六节）
   incubation_mode: z.enum(['self', 'platform']).default('self'),
