@@ -34,9 +34,15 @@ import {
   seedSkill,
   startRound,
 } from '@/lib/knowbots/client'
-import { diffEdits, freshId, newStep, placed, withoutStep } from '@/lib/knowbots/workdraft'
+import { diffEdits, freshId, newStep, placed, same, withoutStep } from '@/lib/knowbots/workdraft'
+
+import type { BindMethodCommand } from '@/contracts/author-methods'
+import { bindMethod } from '@/lib/knowbots/methods'
 
 import { Card, KEY } from './shared'
+import { MethodPickerPanel } from './workdraft-method-picker'
+import { MethodFreezePanel } from './workdraft-method-freeze'
+import { PlanningCard } from './workdraft-planning'
 import { GapsCard, RoundBar, RoundPanel, startFailure } from './workdraft-ai'
 import { Field, Group, INPUT, MarksContext, useProblemText } from './workdraft-cells'
 import { DataCard } from './workdraft-data'
@@ -144,6 +150,8 @@ function Editor({
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
   const [panel, setPanel] = useState<Panels>(null)
   const [busy, setBusy] = useState(false)
+  const [methodTarget, setMethodTarget] = useState<string | null>(null)
+  const [freezeTarget, setFreezeTarget] = useState<string | null>(null)
   const [publishing, setPublishing] = useState(false)
   const [message, setMessage] = useState<{ tone: 'ok' | 'bad'; text: string } | null>(null)
   const [panelError, setPanelError] = useState<string | null>(null)
@@ -554,10 +562,65 @@ function Editor({
       ;[steps[index], steps[to]] = [steps[to], steps[index]]
       return { ...b, steps }
     })
+  const openMethod = async (alias: string, freeze = false) => {
+    setBusy(true)
+    setMessage(null)
+    try {
+      await flush()
+      if (dead.current) return
+      if (!same(docRef.current.saved, docRef.current.body) || docRef.current.revision < 1) {
+        setMessage({ tone: 'bad', text: t('publish.unsaved') })
+        return
+      }
+      if (freeze) setFreezeTarget(alias)
+      else setMethodTarget(alias)
+    } finally {
+      if (!dead.current) setBusy(false)
+    }
+  }
+  const applyMethod = async (id: string, version: number, command: BindMethodCommand) => {
+    const got = await bindMethod(id, version, command, csrfToken)
+    if (dead.current) return
+    commit(docOf(got))
+    setStatus({ kind: 'saved' })
+    setMethodTarget(null)
+    setMessage({ tone: 'ok', text: t('methods.saved') })
+  }
   const statusText =
     status.kind === 'failed'
       ? t('status.failed', { code: status.code })
       : t(`status.${status.kind}`)
+
+  const freezing = body.steps.find((step) => step.id === freezeTarget)
+  if (freezing)
+    return (
+      <MethodFreezePanel
+        requestId={requestId}
+        revision={doc.revision}
+        step={freezing}
+        csrfToken={csrfToken}
+        onClose={() => setFreezeTarget(null)}
+        onDone={(method) => {
+          void client.invalidateQueries({ queryKey: ['author-methods'] })
+          setFreezeTarget(null)
+          setMessage({ tone: 'ok', text: t('freeze.saved', { version: method.version }) })
+        }}
+      />
+    )
+  const selectedStep = body.steps.find((step) => step.id === methodTarget)
+  if (selectedStep)
+    return (
+      <MethodPickerPanel
+        requestId={requestId}
+        revision={doc.revision}
+        step={selectedStep}
+        sources={body.steps.filter((step) => step.id !== selectedStep.id)}
+        currentRef={body.method_refs?.[selectedStep.id]}
+        csrfToken={csrfToken}
+        onApply={applyMethod}
+        onClose={() => setMethodTarget(null)}
+      />
+    )
 
   return (
     <MarksContext.Provider value={{ problems, origins: doc.origins }}>
@@ -793,6 +856,12 @@ function Editor({
               </Field>
             ))}
           </Card>
+          <PlanningCard
+            value={body.planning}
+            steps={body.steps}
+            disabled={busy || running || deciding}
+            onSave={(planning) => edit((b) => ({ ...b, planning }))}
+          />
           <DataCard
             picks={body.data_picks}
             formats={doc.formats}
@@ -806,16 +875,52 @@ function Editor({
             ) : null}
             <div className="space-y-4">
               {body.steps.map((step, index) => (
-                <StepEditor
-                  key={step.id}
-                  step={step}
-                  number={index + 1}
-                  count={body.steps.length}
-                  earlier={body.steps.slice(0, index)}
-                  onChange={setStep}
-                  onMove={(by) => move(step.id, by)}
-                  onRemove={() => edit((b) => withoutStep(b, step.id))}
-                />
+                <div key={step.id} className="space-y-2">
+                  {body.planning ? (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy || running || deciding}
+                        onClick={() => void openMethod(step.id)}
+                      >
+                        {t(body.method_refs?.[step.id] ? 'methods.change' : 'methods.choose')}
+                      </Button>
+                      {!body.method_refs?.[step.id] && step.selection ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={busy || running || deciding}
+                          onClick={() => void openMethod(step.id, true)}
+                        >
+                          {t('freeze.open')}
+                        </Button>
+                      ) : null}
+
+                      {body.method_refs?.[step.id] ? (
+                        <p className="text-muted-foreground text-xs">
+                          {t('methods.frozen', { version: body.method_refs[step.id].version })}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <fieldset disabled={busy || Boolean(body.method_refs?.[step.id])}>
+                    <StepEditor
+                      step={step}
+                      number={index + 1}
+                      count={body.steps.length}
+                      earlier={
+                        body.planning
+                          ? body.steps.filter((s) => s.id !== step.id)
+                          : body.steps.slice(0, index)
+                      }
+                      dynamic={Boolean(body.planning)}
+                      onChange={setStep}
+                      onMove={(by) => move(step.id, by)}
+                      onRemove={() => edit((b) => withoutStep(b, step.id))}
+                    />
+                  </fieldset>
+                </div>
               ))}
             </div>
             <PendingSteps />

@@ -67,7 +67,7 @@ export class KnowbotContractError extends Error {
   }
 }
 
-function parse<T>(schema: z.ZodType<T>, value: unknown): T {
+export function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const parsed = schema.safeParse(value)
   if (!parsed.success) throw new KnowbotContractError({ cause: parsed.error })
   return parsed.data

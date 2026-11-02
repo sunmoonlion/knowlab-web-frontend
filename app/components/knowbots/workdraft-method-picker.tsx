@@ -1,208 +1,308 @@
 'use client'
 
+import { useQuery } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { CORE_20_FINANCIAL_METHODS } from '@/lib/knowbots/methods'
-import type { MethodReference, Step } from '@/contracts/workdraft'
 
-export function MethodPickerModal({
+import { Button } from '@/components/ui/button'
+import type { BindMethodCommand, BindingPreview, MethodVersion } from '@/contracts/author-methods'
+import type { MethodReference, Step } from '@/contracts/workdraft'
+import { ApiClientError } from '@/lib/common/api-client'
+import { getMethodVersion, listMethods, previewMethodBinding } from '@/lib/knowbots/methods'
+import { same } from '@/lib/knowbots/workdraft'
+
+import { INPUT, SELECT } from './workdraft-cells'
+import { Panel } from './workdraft-panels'
+
+const PAGE = 30
+
+export function MethodPickerPanel({
+  requestId,
+  revision,
   step,
-  earlier,
+  sources,
   currentRef,
-  onSelectMethod,
+  csrfToken,
+  onApply,
   onClose,
 }: {
+  requestId: string
+  revision: number
   step: Step
-  earlier: Step[]
+  sources: Step[]
   currentRef?: MethodReference
-  onSelectMethod: (ref: MethodReference) => void
+  csrfToken: string
+  onApply: (methodId: string, version: number, command: BindMethodCommand) => Promise<void>
   onClose: () => void
 }) {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [activeMethodId, setActiveMethodId] = useState<string>(
-    currentRef ? currentRef.method_id : CORE_20_FINANCIAL_METHODS[0].id
+  const t = useTranslations('workdraft.methods')
+  const [page, setPage] = useState(0)
+  const [chosen, setChosen] = useState<{ id: string; version: number } | null>(
+    currentRef ? { id: currentRef.method_id, version: currentRef.version } : null,
   )
-  const [slotMapping, setSlotMapping] = useState<Record<string, string>>(
-    currentRef ? { ...currentRef.inputs } : {}
-  )
-
-  const categories = [
-    { id: 'all', label: '全部方法 (20)' },
-    { id: 'accounting', label: '三表与勾稽' },
-    { id: 'profitability', label: '盈利与杜邦' },
-    { id: 'solvency', label: '偿债与流动性' },
-    { id: 'efficiency', label: '营运与CCC' },
-    { id: 'quality', label: '收益质量' },
-    { id: 'valuation', label: '估值模型' },
-    { id: 'strategy', label: '竞争与护城河' },
-    { id: 'capacity', label: '资本开支与产能' },
-    { id: 'rnd', label: '研发效能' },
-    { id: 'forecasting', label: '三表预测' },
-    { id: 'governance', label: '公司治理与质押' },
-    { id: 'impairment', label: '商誉与资产减值' },
-    { id: 'audit', label: '关键审计KAM' },
-  ]
-
-  const filtered = selectedCategory === 'all'
-    ? CORE_20_FINANCIAL_METHODS
-    : CORE_20_FINANCIAL_METHODS.filter((m) => m.category === selectedCategory)
-
-  const active = CORE_20_FINANCIAL_METHODS.find((m) => m.id === activeMethodId) || CORE_20_FINANCIAL_METHODS[0]
-
-  const handleApply = () => {
-    const fakeDigest = currentRef?.digest || `sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
-    const ref: MethodReference = {
-      method_id: active.id.length === 36 ? active.id : '00000000-0000-0000-0000-000000000001',
-      version: currentRef?.version || 1,
-      digest: fakeDigest,
-      inputs: {
-        [active.slot]: slotMapping[active.slot] || (earlier[0] ? earlier[0].id : 'financial_data_intake'),
-      },
-    }
-    onSelectMethod(ref)
-    onClose()
+  const [busy, setBusy] = useState(false)
+  const list = useQuery({
+    queryKey: ['author-methods', page],
+    queryFn: () => listMethods(page * PAGE, PAGE),
+    retry: false,
+  })
+  const exact = useQuery({
+    queryKey: ['author-method-version', chosen?.id, chosen?.version],
+    enabled: chosen !== null,
+    queryFn: () => getMethodVersion(chosen!.id, chosen!.version),
+    retry: false,
+  })
+  const close = () => {
+    if (!busy) onClose()
   }
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex h-[720px] w-[1020px] flex-col rounded-xl bg-white shadow-2xl dark:bg-zinc-900">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b px-6 py-4 dark:border-zinc-800">
-          <div>
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              装配作者方法库 (20项不可变版本)
-            </h3>
-            <p className="text-xs text-zinc-500">
-              精确绑定作者已冻结的方法版本，不可篡改方法正文与工具权限。
-            </p>
-          </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            ✕
+    <Panel title={t('title', { title: step.title || step.id })} onClose={close}>
+      <p>{t('hint')}</p>
+      {currentRef ? <p>{t('current', { version: currentRef.version })}</p> : null}
+      <fieldset disabled={busy} className="space-y-3">
+        {list.isError ? (
+          <p role="alert">{t('loadFailed')}</p>
+        ) : !list.data ? (
+          <p>{t('loading')}</p>
+        ) : !list.data.length ? (
+          <p>{t('empty')}</p>
+        ) : (
+          <ul className="space-y-2">
+            {list.data.map((item) => (
+              <li key={item.method_id}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setChosen({
+                      id: item.method_id,
+                      version:
+                        item.method_id === currentRef?.method_id
+                          ? currentRef.version
+                          : item.latest_version,
+                    })
+                  }
+                >
+                  {item.title || item.method_id} · {t('version', { version: item.latest_version })}
+                </Button>
+                {item.summary ? (
+                  <p className="text-muted-foreground text-xs">{item.summary}</p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={page === 0 || list.isFetching}
+            onClick={() => setPage(page - 1)}
+          >
+            {t('previous')}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!list.data || list.data.length < PAGE || list.isFetching}
+            onClick={() => setPage(page + 1)}
+          >
+            {t('next')}
           </Button>
         </div>
+        {chosen ? (
+          <label className="block">
+            {t('versionLabel')}
+            <input
+              className={INPUT}
+              type="number"
+              min={1}
+              max={999999}
+              value={chosen.version}
+              onChange={(e) => {
+                const version = Number(e.target.value)
+                if (Number.isInteger(version) && version >= 1 && version <= 999999)
+                  setChosen({ ...chosen, version })
+              }}
+            />
+          </label>
+        ) : null}
+      </fieldset>
+      {chosen && exact.isError ? <p role="alert">{t('versionFailed')}</p> : null}
+      {chosen && exact.isFetching ? <p>{t('loading')}</p> : null}
+      {chosen && exact.data && !exact.isFetching && !exact.isError ? (
+        <BindingForm
+          key={`${chosen.id}:${chosen.version}`}
+          method={exact.data}
+          requestId={requestId}
+          revision={revision}
+          step={step}
+          sources={sources}
+          currentRef={currentRef}
+          csrfToken={csrfToken}
+          onApply={onApply}
+          setBusy={setBusy}
+        />
+      ) : null}
+    </Panel>
+  )
+}
 
-        {/* Categories Bar */}
-        <div className="flex flex-wrap gap-1.5 border-b bg-zinc-50/50 px-6 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/50">
-          {categories.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setSelectedCategory(c.id)}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                selectedCategory === c.id
-                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                  : 'text-zinc-600 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800'
-              }`}
+function BindingForm({
+  method,
+  requestId,
+  revision,
+  step,
+  sources,
+  currentRef,
+  csrfToken,
+  onApply,
+  setBusy,
+}: {
+  method: MethodVersion
+  requestId: string
+  revision: number
+  step: Step
+  sources: Step[]
+  currentRef?: MethodReference
+  csrfToken: string
+  onApply: (id: string, version: number, command: BindMethodCommand) => Promise<void>
+  setBusy: (busy: boolean) => void
+}) {
+  const t = useTranslations('workdraft.methods')
+  const [inputs, setInputs] = useState<Record<string, string>>(() =>
+    currentRef?.method_id === method.method_id ? { ...currentRef.inputs } : {},
+  )
+  const [required, setRequired] = useState(step.selection?.required ?? false)
+  const [maxCalls, setMaxCalls] = useState(
+    Math.min(step.selection?.max_calls ?? 1, method.definition.step.selection.max_calls),
+  )
+  const [preview, setPreview] = useState<{
+    command: BindMethodCommand
+    value: BindingPreview
+  } | null>(null)
+  const [working, setWorking] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const slots = Object.keys(method.definition.input_schemas)
+  const selectedInputs = Object.fromEntries(
+    slots.filter((s) => inputs[s]).map((s) => [s, inputs[s]]),
+  )
+  const command: BindMethodCommand = {
+    request_id: requestId,
+    revision,
+    alias: step.id,
+    digest: method.digest,
+    inputs: selectedInputs,
+    required,
+    max_calls: maxCalls,
+  }
+  const valid =
+    slots.every((s) => sources.some((e) => e.id === inputs[s])) &&
+    new Set(Object.values(selectedInputs)).size === slots.length
+  const checked = preview !== null && same(preview.command, command)
+  const run = async (apply: boolean) => {
+    setWorking(true)
+    setBusy(true)
+    setError(null)
+    try {
+      if (apply) {
+        if (!checked) return
+        await onApply(method.method_id, method.version, command)
+      } else {
+        setPreview(null)
+        const value = await previewMethodBinding(
+          method.method_id,
+          method.version,
+          command,
+          csrfToken,
+        )
+        setPreview({ command, value })
+      }
+    } catch (err) {
+      setPreview(null)
+      setError(err instanceof ApiClientError ? err.problem.code : 'contract_or_network_error')
+    } finally {
+      setWorking(false)
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="space-y-3 border-t pt-3">
+      <h3 className="font-medium">
+        {method.definition.step.title} · {t('version', { version: method.version })}
+      </h3>
+      <p className="whitespace-pre-wrap">{method.definition.step.does}</p>
+      <p className="text-muted-foreground text-xs">
+        {t('applies')}: {method.definition.step.selection.applies_when}
+      </p>
+      <details>
+        <summary>{t('identity')}</summary>
+        <p className="text-xs break-all">
+          {method.method_id}
+          <br />
+          {method.digest}
+        </p>
+      </details>
+      <fieldset disabled={working} className="space-y-3">
+        {slots.map((slot) => (
+          <label key={slot} className="block">
+            {t('input', { slot })}
+            <select
+              className={SELECT}
+              value={inputs[slot] ?? ''}
+              onChange={(e) => setInputs({ ...inputs, [slot]: e.target.value })}
             >
-              {c.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Content Body */}
-        <div className="grid flex-1 grid-cols-12 overflow-hidden">
-          {/* Method List */}
-          <div className="col-span-5 overflow-y-auto border-r p-4 dark:border-zinc-800">
-            <div className="space-y-2">
-              {filtered.map((m) => (
-                <div
-                  key={m.id}
-                  onClick={() => setActiveMethodId(m.id)}
-                  className={`cursor-pointer rounded-lg border p-3 transition-all ${
-                    activeMethodId === m.id
-                      ? 'border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-950/20'
-                      : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-800 dark:hover:border-zinc-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                      {m.title}
-                    </span>
-                    <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                      v1
-                    </span>
-                  </div>
-                  <p className="mt-1 line-clamp-1 text-[11px] text-zinc-500">{m.provenance}</p>
-                </div>
+              <option value="">{t('chooseInput')}</option>
+              {sources.map((source) => (
+                <option value={source.id} key={source.id}>
+                  {source.title || source.id}
+                </option>
               ))}
-            </div>
-          </div>
-
-          {/* Details & Slot Binding */}
-          <div className="col-span-7 flex flex-col justify-between overflow-y-auto p-6">
-            <div className="space-y-4">
-              <div>
-                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
-                  方法不可变快照预览
-                </span>
-                <h4 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-                  {active.title}
-                </h4>
-                <p className="mt-1 text-xs text-zinc-500">出处依据：{active.provenance}</p>
-              </div>
-
-              {/* Slot Mapping */}
-              <div className="rounded-lg border bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
-                <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                  输入槽映射 (Input Slot Binding)
-                </span>
-                <p className="mt-0.5 text-[11px] text-zinc-500">
-                  为方法的独立输入槽匹配专家本地方案中的上游输出步骤。
-                </p>
-
-                <div className="mt-3 flex items-center justify-between text-xs">
-                  <span className="font-mono text-zinc-700 dark:text-zinc-300">
-                    插槽: <strong className="text-blue-600">{active.slot}</strong>
-                  </span>
-                  <span className="text-zinc-400">← 映射到 ←</span>
-                  <select
-                    className="rounded border bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
-                    value={slotMapping[active.slot] || (earlier[0] ? earlier[0].id : '')}
-                    onChange={(e) =>
-                      setSlotMapping({ ...slotMapping, [active.slot]: e.target.value })
-                    }
-                  >
-                    {earlier.length === 0 ? (
-                      <option value="financial_data_intake">financial_data_intake (前置总接入)</option>
-                    ) : (
-                      earlier.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.id} ({s.title || '步骤'})
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </div>
-              </div>
-
-              {/* Outputs Preview */}
-              <div>
-                <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                  方法固定输出项 (只读)
-                </span>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {active.outputs.map((out) => (
-                    <span
-                      key={out}
-                      className="rounded border bg-zinc-100 px-2 py-0.5 font-mono text-[11px] text-zinc-700 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
-                    >
-                      {out}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Footer Buttons */}
-            <div className="mt-6 flex justify-end gap-3 border-t pt-4 dark:border-zinc-800">
-              <Button variant="outline" size="sm" onClick={onClose}>
-                取消
-              </Button>
-              <Button size="sm" onClick={handleApply}>
-                确认装配至当前步骤
-              </Button>
-            </div>
-          </div>
-        </div>
+            </select>
+          </label>
+        ))}
+        {slots.length > 0 && sources.length === 0 ? <p>{t('noInput')}</p> : null}
+        <label className="flex gap-2">
+          <input
+            type="checkbox"
+            checked={required}
+            onChange={(e) => setRequired(e.target.checked)}
+          />
+          {t('required')}
+        </label>
+        <label className="block">
+          {t('maxCalls')}
+          <input
+            className={INPUT}
+            type="number"
+            min={1}
+            max={method.definition.step.selection.max_calls}
+            value={maxCalls}
+            onChange={(e) => {
+              const value = Number(e.target.value)
+              if (
+                Number.isInteger(value) &&
+                value >= 1 &&
+                value <= method.definition.step.selection.max_calls
+              )
+                setMaxCalls(value)
+            }}
+          />
+        </label>
+      </fieldset>
+      {error ? (
+        <p role="alert" className="text-destructive">
+          {t(error === 'workdraft_revision' ? 'conflict' : 'failed', { code: error })}
+        </p>
+      ) : null}
+      {checked ? <p role="status">{t('previewReady')}</p> : null}
+      <div className="flex gap-2">
+        <Button variant="outline" disabled={!valid || working} onClick={() => void run(false)}>
+          {t('preview')}
+        </Button>
+        <Button disabled={!valid || working || !checked} onClick={() => void run(true)}>
+          {t(currentRef ? 'replace' : 'bind')}
+        </Button>
       </div>
     </div>
   )

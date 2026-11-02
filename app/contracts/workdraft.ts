@@ -73,7 +73,12 @@ const advancedSchema = z.object({
   output_schema: z.record(z.string(), z.unknown()).nullable().default(null),
   output_file: z.string().nullable().default(null),
 })
-const stepSchema = z.object({
+export const selectionSchema = z.object({
+  applies_when: z.string().min(1).max(4000),
+  required: z.boolean(),
+  max_calls: z.number().int().min(1).max(100),
+})
+export const stepSchema = z.object({
   id: z.string(),
   title: z.string(),
   does: z.string(),
@@ -85,6 +90,7 @@ const stepSchema = z.object({
   checks: z.array(checkSchema),
   on_fail: onFailSchema,
   advanced: advancedSchema,
+  selection: selectionSchema.nullable().optional(),
 })
 export const planningSchema = z.object({
   method_text: z.string().min(1).max(20000),

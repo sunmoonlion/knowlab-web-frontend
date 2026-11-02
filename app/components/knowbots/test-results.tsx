@@ -195,6 +195,50 @@ function Deliverable({
   else if (state === 'failed') body = <p className="text-destructive">{t('outputs.loadFailed')}</p>
   else if (!outputs || outputs.error)
     body = <p className="text-muted-foreground">{t('outputs.none')}</p>
+  else if (outputs.final_outputs?.length)
+    body = (
+      <div className="space-y-3">
+        <p>{t('outputs.planVersion', { version: outputs.plan_version ?? '—' })}</p>
+        {outputs.final_outputs.map((final) => (
+          <section key={final.method_id} className="space-y-2 rounded-md border p-3">
+            <h5 className="font-medium">
+              {final.method_id} · {final.instance_id}
+            </h5>
+            {final.result ? (
+              <>
+                <p className="text-muted-foreground text-xs">
+                  {t('outputs.finalVersion', { version: final.result.version })}
+                </p>
+                {final.artifact_omitted_bytes != null ? (
+                  <p>{t('outputs.omitted', { bytes: final.artifact_omitted_bytes })}</p>
+                ) : final.artifact != null ? (
+                  <pre className="max-h-96 overflow-auto text-xs">
+                    {JSON.stringify(final.artifact, null, 2)}
+                  </pre>
+                ) : null}
+                {final.deliverable ? (
+                  <div className="max-h-[70vh] overflow-y-auto">
+                    {final.deliverable.truncated ? <p>{t('outputs.truncated')}</p> : null}
+                    <Markdown>{final.deliverable.text}</Markdown>
+                  </div>
+                ) : null}
+                <details>
+                  <summary>{t('outputs.finalIdentity')}</summary>
+                  <p className="text-xs break-all">
+                    {final.result.id}
+                    <br />
+                    {final.result.digest}
+                  </p>
+                </details>
+              </>
+            ) : (
+              <p>{t('outputs.finalMissing')}</p>
+            )}
+            {final.note ? <p className="text-muted-foreground text-xs">{final.note}</p> : null}
+          </section>
+        ))}
+      </div>
+    )
   else if (!outputs.deliverable)
     body = (
       <p className="text-muted-foreground">
@@ -233,6 +277,9 @@ function StepBlock({ step, n }: { step: StepOutput; n: number }) {
           {t(`outputs.outcome.${step.outcome}`)}
         </span>
       </p>
+      {step.current === false ? (
+        <p className="text-xs text-amber-700 dark:text-amber-400">{t('outputs.notCurrent')}</p>
+      ) : null}
       {checks.length > 0 ? (
         <ul className="space-y-0.5 text-xs">
           {checks.map((c, i) => (

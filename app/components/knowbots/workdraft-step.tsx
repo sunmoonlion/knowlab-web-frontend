@@ -16,7 +16,7 @@ import {
 import { freshId, nameProblem, outputsValid } from '@/lib/knowbots/workdraft'
 
 import { Checks } from './workdraft-checks'
-import { MethodPickerModal } from './workdraft-method-picker'
+import { SelectionEditor } from './workdraft-planning'
 import { AcceptStep, SuggestionsAt } from './workdraft-suggestions'
 import {
   CellMarks,
@@ -41,6 +41,7 @@ export function StepEditor({
   number,
   count,
   earlier,
+  dynamic = false,
   onChange,
   onMove,
   onRemove,
@@ -49,13 +50,13 @@ export function StepEditor({
   number: number
   count: number
   earlier: Step[]
+  dynamic?: boolean
   onChange: (step: Step) => void
   onMove: (by: -1 | 1) => void
   onRemove: () => void
 }) {
   const t = useTranslations('workdraft')
   const [confirming, setConfirming] = useState(false)
-  const [pickingMethod, setPickingMethod] = useState(false)
   const base = `steps/${step.id}`
   const set = <K extends keyof Step>(key: K, value: Step[K]) => onChange({ ...step, [key]: value })
   const heading = `${t('steps.step', { n: number })}${step.title ? ` · ${step.title}` : ''}`
@@ -65,32 +66,10 @@ export function StepEditor({
       className="bg-card space-y-4 rounded-xl border p-4 text-sm shadow-sm"
       data-testid={`step-${step.id}`}
     >
-      {pickingMethod && (
-        <MethodPickerModal
-          step={step}
-          earlier={earlier}
-          onSelectMethod={(ref) => {
-            const mappedUses = Object.values(ref.inputs)
-            onChange({
-              ...step,
-              uses: mappedUses.length > 0 ? mappedUses : step.uses,
-            })
-          }}
-          onClose={() => setPickingMethod(false)}
-        />
-      )}
       <header className="flex flex-wrap items-center gap-2">
         <h3 className="font-medium">{heading}</h3>
         <div className="ml-auto flex gap-1">
           <AcceptStep stepId={step.id} />
-          <Button
-            size="sm"
-            variant="secondary"
-            className="text-xs text-blue-600 dark:text-blue-400"
-            onClick={() => setPickingMethod(true)}
-          >
-            装配方法
-          </Button>
           <Button
             size="sm"
             variant="outline"
@@ -130,6 +109,7 @@ export function StepEditor({
           )}
         </div>
       </header>
+      {dynamic ? <SelectionEditor step={step} onChange={onChange} /> : null}
       <SuggestionsAt home={base} />
       <Field label={t('step.title')} path={`${base}/title`} filled={Boolean(step.title.trim())}>
         {(a11y) => (

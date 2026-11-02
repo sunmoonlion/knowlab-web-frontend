@@ -22,6 +22,7 @@ const STEP_FIELDS = [
   'checks',
   'on_fail',
   'advanced',
+  'selection',
 ] as const
 const MAX_EDITS = 200 // 后端一次最多收这么多格
 
@@ -119,6 +120,8 @@ export function diffEdits(saved: WorkdraftBody, local: WorkdraftBody): CellEdit[
     if (send.scope[key] !== saved.scope[key])
       edits.push({ path: `scope/${key}`, value: send.scope[key] })
   }
+  if (!same(send.planning, saved.planning))
+    edits.push({ path: 'planning', value: send.planning ?? null })
   const whole = { path: 'steps', value: send.steps }
   if (
     !same(
@@ -154,7 +157,15 @@ export function withoutStep(body: WorkdraftBody, id: string): WorkdraftBody {
 /** 页面上有这一格（问题能标到格子上）；没有的列在顶上。 */
 export function placed(path: string, body: WorkdraftBody): boolean {
   if (
-    ['name', 'tagline', 'steps', 'scope/does', 'scope/does_not', 'scope/elsewhere'].includes(path)
+    [
+      'name',
+      'tagline',
+      'steps',
+      'planning',
+      'scope/does',
+      'scope/does_not',
+      'scope/elsewhere',
+    ].includes(path)
   )
     return true
   const parts = path.split('/')
