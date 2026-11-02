@@ -1089,7 +1089,29 @@
       "choose": "选择已有方法",
       "change": "更换方法或版本",
       "frozen": "已引用版本 {version}，正文只读",
-      "saved": "方法引用已保存，尚未发布专家。"
+      "saved": "方法引用已保存，尚未发布专家。",
+      "viewLatest": "查看最新版本 {version}",
+      "originalFailed": "原引用版本未能核实，暂不能核对更换。请关闭后重试。",
+      "changes": {
+        "title": "名称",
+        "hint": "这里只查看差异。重新核对输入连接并确认保存后，才会更换工作稿引用；已发布专家和已有任务仍使用原版。",
+        "differentMethod": "本次选择的是另一个方法。",
+        "before": "原引用",
+        "after": "本次选择",
+        "sameDefinition": "方法定义没有变化。版本及出处记录仍分别保留。",
+        "input_schemas": "输入结构",
+        "does": "做法",
+        "why": "目的",
+        "uses": "输入槽",
+        "rules": "方法规则",
+        "ask_before": "执行前提问",
+        "outputs": "输出字段",
+        "checks": "验收规则",
+        "on_fail": "验收失败处理",
+        "advanced": "工具、预算与交付设置",
+        "selection": "适用条件与调用上限",
+        "heading": "核对方法变更：版本 {from} → 版本 {to}"
+      }
     },
     "freeze": {
       "open": "冻结为独立方法",

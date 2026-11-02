@@ -9,6 +9,7 @@ import type { MethodVersion } from '@/contracts/author-methods'
 import type { MethodChoice } from '@/contracts/method-choice'
 import { getMethodVersion, listMethods } from '@/lib/knowbots/methods'
 import { INPUT } from './workdraft-cells'
+import { MethodVersionChanges } from './method-version-changes'
 
 const PAGE = 30
 
@@ -38,6 +39,22 @@ export function MethodVersionBrowser({
     queryFn: () => getMethodVersion(chosen!.id, chosen!.version),
     retry: false,
   })
+  const changing = Boolean(
+    initialChoice &&
+    chosen &&
+    (chosen.id !== initialChoice.method_id || chosen.version !== initialChoice.version),
+  )
+  const original = useQuery({
+    queryKey: ['author-method-version', initialChoice?.method_id, initialChoice?.version],
+    enabled: changing,
+    queryFn: () => getMethodVersion(initialChoice!.method_id, initialChoice!.version),
+    retry: false,
+  })
+  const originalInvalid =
+    changing &&
+    (original.isError || Boolean(original.data && original.data.digest !== initialChoice?.digest))
+  const comparisonReady =
+    !changing || Boolean(original.data && !original.isFetching && !originalInvalid)
   const mismatch = Boolean(
     initialChoice &&
     exact.data &&
@@ -65,15 +82,22 @@ export function MethodVersionBrowser({
                   onClick={() =>
                     setChosen({
                       id: item.method_id,
-                      version:
-                        item.method_id === initialChoice?.method_id
-                          ? initialChoice.version
-                          : item.latest_version,
+                      version: item.latest_version,
                     })
                   }
                 >
                   {item.title || item.method_id} · {t('version', { version: item.latest_version })}
                 </Button>
+                {item.method_id === chosen?.id && item.latest_version > chosen.version ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setChosen({ id: item.method_id, version: item.latest_version })}
+                  >
+                    {t('viewLatest', { version: item.latest_version })}
+                  </Button>
+                ) : null}
                 {item.summary ? (
                   <p className="text-muted-foreground text-xs">{item.summary}</p>
                 ) : null}
@@ -120,10 +144,22 @@ export function MethodVersionBrowser({
         ) : null}
       </fieldset>
       {chosen && (exact.isError || mismatch) ? <p role="alert">{t('versionFailed')}</p> : null}
+      {originalInvalid ? <p role="alert">{t('originalFailed')}</p> : null}
+      {changing && original.isFetching ? <p>{t('loading')}</p> : null}
       {chosen && exact.isFetching ? <p>{t('loading')}</p> : null}
-      {chosen && exact.data && !exact.isFetching && !exact.isError && !mismatch
-        ? children(exact.data)
-        : null}
+      {chosen &&
+      exact.data &&
+      !exact.isFetching &&
+      !exact.isError &&
+      !mismatch &&
+      comparisonReady ? (
+        <>
+          {changing && original.data ? (
+            <MethodVersionChanges before={original.data} after={exact.data} />
+          ) : null}
+          {children(exact.data)}
+        </>
+      ) : null}
     </>
   )
 }

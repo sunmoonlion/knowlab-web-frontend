@@ -266,10 +266,95 @@ describe('author method contracts and exact binding', () => {
           }),
     )
     renderPicker({ currentRef: ref })
-    fireEvent.click(await screen.findByRole('button', { name: '作者合成文档方法 · 版本 2' }))
+    await screen.findByRole('button', { name: '查看最新版本 2' })
     await screen.findByLabelText('输入「records」来自')
     expect(screen.getByLabelText('要引用的版本')).toHaveValue(1)
     expect(fetcher.mock.calls.some(([url]) => url.endsWith('/versions/2'))).toBe(false)
+  })
+
+  it('shows version changes and requires a new preview before explicitly upgrading', async () => {
+    const newer = structuredClone(method)
+    newer.version = 2
+    newer.digest = 'sha256:' + 'b'.repeat(64)
+    newer.definition.step.does = '作者新增逐条核对，并保留未核事项。'
+    newer.definition.step.checks = [{ template: 'required', params: { keys: ['report'] } }]
+    const nextPath = path.replace('/versions/1', '/versions/2')
+    const original = fetcher.getMockImplementation()!
+    fetcher.mockImplementation(async (url: string, ...args: unknown[]) => {
+      if (url.startsWith('/api/web/v1/method-units?'))
+        return respond({
+          items: [
+            {
+              method_id: method.method_id,
+              latest_version: 2,
+              created_at: method.created_at,
+              title: '作者合成文档方法',
+            },
+          ],
+        })
+      if (url === nextPath) return respond(newer)
+      if (url === nextPath + '/preview-binding')
+        return respond({ ...preview, version: 2, digest: newer.digest })
+      return original(url, ...args)
+    })
+    const apply = vi.fn(async () => undefined)
+    renderPicker({ currentRef: ref, onApply: apply })
+    fireEvent.click(await screen.findByRole('button', { name: '核对这次装配' }))
+    await screen.findByText('输入连接和版本已通过核对；确认后才会保存到工作稿。')
+    fireEvent.click(screen.getByRole('button', { name: '查看最新版本 2' }))
+    await screen.findByRole('heading', { name: '核对方法变更：版本 1 → 版本 2' })
+    expect(screen.getByText('做法')).toBeInTheDocument()
+    expect(screen.getByText('验收规则')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '确认更换引用' })).toBeDisabled()
+    expect(apply).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '核对这次装配' }))
+    await screen.findByText('输入连接和版本已通过核对；确认后才会保存到工作稿。')
+    fireEvent.click(screen.getByRole('button', { name: '确认更换引用' }))
+    await waitFor(() =>
+      expect(apply).toHaveBeenCalledWith(method.method_id, 2, { ...command, digest: newer.digest }),
+    )
+  })
+
+  it('cannot change versions without verifying the original pinned digest', async () => {
+    const original = fetcher.getMockImplementation()!
+    fetcher.mockImplementation(async (url: string, ...args: unknown[]) => {
+      if (url.endsWith('/versions/2'))
+        return respond({ ...method, version: 2, digest: 'sha256:' + 'b'.repeat(64) })
+      return original(url, ...args)
+    })
+    renderPicker({ currentRef: { ...ref, digest: 'sha256:' + '0'.repeat(64) } })
+    await screen.findByRole('alert')
+    fireEvent.change(screen.getByLabelText('要引用的版本'), { target: { value: '2' } })
+    await waitFor(() =>
+      expect(fetcher.mock.calls.some(([url]) => url.endsWith('/versions/2'))).toBe(true),
+    )
+    await screen.findByText('原引用版本未能核实，暂不能核对更换。请关闭后重试。')
+    expect(screen.queryByRole('button', { name: '核对这次装配' })).not.toBeInTheDocument()
+  })
+
+  it('requires remapping a renamed input slot and preserves the old reference until confirmed', async () => {
+    const newer = structuredClone(method)
+    newer.version = 2
+    newer.digest = 'sha256:' + 'c'.repeat(64)
+    newer.definition.input_schemas = { observations: method.definition.input_schemas.records }
+    newer.definition.step.uses = ['observations']
+    const original = fetcher.getMockImplementation()!
+    fetcher.mockImplementation(async (url: string, ...args: unknown[]) => {
+      if (url.endsWith('/versions/2')) return respond(newer)
+      return original(url, ...args)
+    })
+    const apply = renderPicker({ currentRef: ref })
+    await screen.findByLabelText('输入「records」来自')
+    fireEvent.change(screen.getByLabelText('要引用的版本'), { target: { value: '2' } })
+    expect(await screen.findByLabelText('输入「observations」来自')).toHaveValue('')
+    expect(screen.getByText('输入结构')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '核对这次装配' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '确认更换引用' })).toBeDisabled()
+    expect(apply).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByLabelText('要引用的版本'), { target: { value: '1' } })
+    expect(await screen.findByLabelText('输入「records」来自')).toHaveValue('inspect')
+    expect(screen.queryByText('输入结构')).not.toBeInTheDocument()
+    expect(fetcher.mock.calls.some(([url]) => url.endsWith('/bind'))).toBe(false)
   })
 
   it('leaves the selection visible after a revision conflict without reporting success', async () => {

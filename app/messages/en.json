@@ -1089,7 +1089,29 @@
       "choose": "Choose existing method",
       "change": "Change method or version",
       "frozen": "Version {version} referenced; body is read-only",
-      "saved": "Method reference saved. The expert has not been published."
+      "saved": "Method reference saved. The expert has not been published.",
+      "viewLatest": "View latest version {version}",
+      "originalFailed": "The original reference could not be verified. Close and retry before changing it.",
+      "changes": {
+        "title": "Name",
+        "hint": "This only compares versions. Check the input bindings again and confirm to replace the workdraft reference. Published experts and existing tasks retain their original versions.",
+        "differentMethod": "You have selected a different method.",
+        "before": "Original reference",
+        "after": "Selected version",
+        "sameDefinition": "The method definition is unchanged. Each version retains its own provenance.",
+        "input_schemas": "Input structure",
+        "does": "Procedure",
+        "why": "Purpose",
+        "uses": "Input slots",
+        "rules": "Method rules",
+        "ask_before": "Questions before execution",
+        "outputs": "Output fields",
+        "checks": "Acceptance checks",
+        "on_fail": "Handling failed checks",
+        "advanced": "Tools, budget and delivery settings",
+        "selection": "Applicability and call limits",
+        "heading": "Review method changes: version {from} → version {to}"
+      }
     },
     "freeze": {
       "open": "Freeze as an independent method",
