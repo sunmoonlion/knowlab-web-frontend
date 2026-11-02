@@ -35,3 +35,13 @@
 语义不变，没有产品 UI 代码改动。前端 182 passed / 2 skipped、tsc --noEmit 通过，
 日志 /tmp/luna-coverage-author-web-{tests,types}.log。provider 全量 807 passed / 5 skipped
 验证跨端 fixture 与真实模型/摘要一致。此夹具不是正式财务方法，也不是生产发布。
+
+
+## 2026-11-02：方法验收扩展作者编辑
+
+以 kimi 与 Luna 最新作者 UI 合并基线 55877da 开发。工作稿参数表单增加期望数值、
+与计算输入同名绑定字段、非空字段及联合唯一字段；零值正常保存，清空才移除参数。
+选版/只读冻结/CSRF/工作稿保存路径继续使用既有实现。
+完整前端 183 passed、2 skipped，新增自动保存的参数往返测试；typecheck、定向
+eslint、i18n 通过。证据 /tmp/kimi-method-web-tests.txt。
+本次不在前端内置财务方法资产、不替作者冻结发布版本、不更改生产运行任务。

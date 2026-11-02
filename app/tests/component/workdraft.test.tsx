@@ -283,6 +283,71 @@ describe('工作稿：格子与自动保存（专家孵化方案第六节）', (
     )
   })
 
+  it('保存零目标值、计算输入绑定和表格约束，清空可选值才移除规则参数', async () => {
+    server = workdraft({
+      body: {
+        ...emptyBody(),
+        steps: [
+          step('s1', {
+            outputs: [{ name: 'rows', type: 'table', items: null }],
+            checks: [
+              { template: 'computed', params: { path: 'rows' } },
+              { template: 'each_has', params: { path: 'rows' } },
+            ],
+          }),
+        ],
+      },
+    })
+    page()
+    const region = within(await screen.findByRole('region', { name: '第 1 步' }))
+    fireEvent.change(region.getByLabelText(w.params.expected_value), { target: { value: '0' } })
+    fireEvent.change(region.getByLabelText(w.params.input_keys), {
+      target: { value: 'assets、liabilities' },
+    })
+    fireEvent.change(region.getByLabelText(w.params.non_empty_keys), {
+      target: { value: 'period、metric' },
+    })
+    fireEvent.change(region.getByLabelText(w.params.unique_by), {
+      target: { value: 'period、metric' },
+    })
+    await waitFor(() =>
+      expect(saveWorkdraftCells).toHaveBeenLastCalledWith(
+        REQUEST,
+        expect.objectContaining({
+          cells: [
+            {
+              path: 'steps/s1/checks',
+              value: [
+                {
+                  template: 'computed',
+                  params: {
+                    path: 'rows',
+                    expected_value: 0,
+                    input_keys: ['assets', 'liabilities'],
+                  },
+                },
+                {
+                  template: 'each_has',
+                  params: {
+                    path: 'rows',
+                    non_empty_keys: ['period', 'metric'],
+                    unique_by: ['period', 'metric'],
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+        CSRF,
+      ),
+    )
+    fireEvent.change(region.getByLabelText(w.params.expected_value), { target: { value: '' } })
+    await waitFor(() =>
+      expect(server.body.steps[0].checks[0].params).not.toHaveProperty('expected_value'),
+    )
+    expect(server.body.steps[0].checks[0].params.input_keys).toEqual(['assets', 'liabilities'])
+  })
+
   it('怎样算对：选验收模板，参数表单跟着模板换；换模板时「哪一项」留着', async () => {
     server = workdraft({
       body: {

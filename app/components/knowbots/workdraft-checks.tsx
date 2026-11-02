@@ -214,6 +214,32 @@ function TemplateParams({
       />,
     )
   }
+  for (const key of ['non_empty_keys', 'unique_by', 'input_keys'] as const) {
+    if (takes.has(key)) {
+      fields.push(
+        <CheckedInput<string[]>
+          key={key}
+          label={t(key)}
+          value={list(params[key])}
+          show={(v) => (v ?? []).join('、')}
+          parse={(s) => ({ ok: true, value: splitList(s) })}
+          onChange={(v) => set(key, v)}
+        />,
+      )
+    }
+  }
+  if (takes.has('expected_value')) {
+    fields.push(
+      <CheckedInput<number>
+        key="expected_value"
+        label={t('expected_value')}
+        value={typeof params.expected_value === 'number' ? params.expected_value : undefined}
+        show={(v) => (v === undefined ? '' : String(v))}
+        parse={numberParser({})}
+        onChange={(v) => set('expected_value', v)}
+      />,
+    )
+  }
   if (takes.has('field')) {
     fields.push(
       <label key="field" className="block text-xs">

@@ -34,9 +34,15 @@ export const TEMPLATES = {
   list_min: { required: ['path'], optional: ['min'] },
   list_empty: { required: ['path'], optional: [] },
   blank: { required: ['path'], optional: [] },
-  each_has: { required: ['path'], optional: ['keys', 'field', 'values'] },
+  each_has: {
+    required: ['path'],
+    optional: ['keys', 'field', 'values', 'non_empty_keys', 'unique_by'],
+  },
   all_equal: { required: ['path', 'field', 'equals'], optional: [] },
-  computed: { required: ['path'], optional: ['expression', 'tolerance'] },
+  computed: {
+    required: ['path'],
+    optional: ['expression', 'tolerance', 'expected_value', 'input_keys'],
+  },
   identity: { required: ['path'], optional: ['tolerance'] },
   sourced: { required: ['path'], optional: ['tolerance'] },
   quoted: { required: ['path'], optional: ['field', 'equals'] },
