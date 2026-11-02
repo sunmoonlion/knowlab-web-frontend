@@ -460,9 +460,24 @@
       },
       "noModelKey": "你还没有在 knowbench 填模型 key：填了才能发起测试。",
       "toSettings": "去 knowbench 填模型 key",
-      "toMachines": "去 knowbench 接入电脑"
+      "toMachines": "去 knowbench 接入电脑",
+      "activeStatus": {
+        "queued": "第 {number} 次测试在排队",
+        "running": "第 {number} 次测试在执行",
+        "waiting": "第 {number} 次测试在等待处理"
+      },
+      "draft": "准专家 {label}",
+      "executionLocation": "在 knowlab 管理测试和验收；knowbench 中的对应会话是同一次测试的执行记录。",
+      "failedCases": "已完成的用例中，{cases} 未通过。原因和交回物请查看下方“历次测试”。",
+      "dataRefreshFailed": "没有更新到测试数据状态，请稍后再试。"
     },
     "testData": {
+      "reading": {
+        "original": "原文件",
+        "pages": "分页原文（核对页码与引文）",
+        "text": "提取文本",
+        "table": "结构化数据（计算用）"
+      },
       "lead": "用例 {caseId}：专家要这些数据。你可以换一份、改主体或年份、去掉、自己加一样；确认了才去签、去取，测试停在这里等你。",
       "supplying": "在取你确认的数据，取齐了测试自动接着跑。",
       "missing": "这几样没取到：{items}。",
@@ -579,8 +594,9 @@
       "history": "历次测试",
       "historyNone": "还没测过。",
       "mode": {
-        "self": "自助",
-        "platform": "平台"
+        "self": "作者自测",
+        "platform": "平台人员测试",
+        "rerun": "平台交付复测"
       },
       "noReport": "这次还没有结果。"
     },

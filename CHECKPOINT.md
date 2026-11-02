@@ -89,3 +89,16 @@ fix/test-row-selector候选。原列表标版本2却点击仍选旧版1，且切
 故障先复现3项失败（/tmp/luna-method-upgrade-before.log），补输入槽变更后全量
 198 passed/2既有skipped（/tmp/luna-method-upgrade-full.log）；typecheck、定向eslint、
 i18n 983 keys通过。沿用真实路由形状的组件测试，不是生产浏览器或真实专家业务验收。
+
+## 2026-11-03 测试身份与当前状态整理
+
+基线 e8ca90b，feat/idea-method-entry。所有者要求清理混乱测试，明确 zymun 是作者自测还是平台测试。
+活动区与历史统一按 Test.mode 展示作者自测 / 平台人员测试 / 平台交付复测；不按账号权限、电脑名、Key 持有人推断。
+活动区显示准专家版本、开始时间、排队/执行/等待与已失败用例摘要，并说明 knowbench 是同一次测试的执行记录。
+测试数据定时刷新后同步详情。存在活动测试时隐藏旧稿发起表单；结束后仅最新准专家待测才显示，避免回退到2.4和默认10元误认本次预算。
+确认单显示 table/pages/text/original 读法。数据确认、费用上限、测试判据与运行模式均未改写。
+
+开发树全量203通过、2既有跳过；typecheck、i18n995键、定向ESLint通过。
+日志 /tmp/luna-test-ui-cleanup-tests.log。首轮全量有一条旧“自助”文案断言失败，更新为“作者自测”后通过。
+线上会话整理使用现有 SessionService.rename/archive 和 ProjectService.rename；仅第4次c1新增归档，先前4条已归档保持，c2等待不动。
+未部署；发布走 #60 隔离补丁候选，不带本树方法换版等累计开发。回退只撤本UI提交，历史记录保留。

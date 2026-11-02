@@ -77,7 +77,7 @@ function page(life = detail()) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
-      <NextIntlClientProvider locale="zh-CN" messages={messages}>
+      <NextIntlClientProvider locale="zh-CN" messages={messages} timeZone="Asia/Shanghai">
         <SelfTests life={life} csrfToken={CSRF} />
       </NextIntlClientProvider>
     </QueryClientProvider>,
@@ -102,6 +102,54 @@ beforeEach(() => {
 })
 
 describe('自助测试（SDD 0046 第三节）', () => {
+  it('在测时不显示旧准专家的发起表单，并区分等待、作者自测与失败用例', async () => {
+    page(
+      detail({
+        drafts: [draft({ status: 'pending_test' }), draft({ status: 'testing', revision: 5 })],
+        tests: [
+          testRecord({
+            status: 'waiting',
+            mode: 'self',
+            report: {
+              status: 'waiting',
+              cases: [
+                { case_id: 'c1', status: 'failed', steps: [], expectations: [false], note: null },
+              ],
+              cost: null,
+              finished_at: null,
+            },
+          }),
+        ],
+      }),
+    )
+    const active = within(await screen.findByTestId('self-test-active'))
+    expect(active.getByText('第 5 次测试在等待处理')).toBeInTheDocument()
+    expect(active.getByText(/作者自测 · 准专家 2.3/)).toBeInTheDocument()
+    expect(active.getByRole('status')).toHaveTextContent('c1 未通过')
+    expect(screen.queryByTestId('self-test-start')).toBeNull()
+    expect(fetchComputers).not.toHaveBeenCalled()
+    expect(startSelfTest).not.toHaveBeenCalled()
+  })
+
+  it.each(['platform', 'rerun'] as const)(
+    '平台模式 %s 使用本次记录的身份，不按电脑推断',
+    async (mode) => {
+      page(detail({ drafts: [], tests: [testRecord({ status: 'queued', mode })] }))
+      const active = within(await screen.findByTestId('self-test-active'))
+      expect(active.getByText('第 5 次测试在排队')).toBeInTheDocument()
+      expect(
+        active.getByText(new RegExp(messages.knowbots.testsColumn.mode[mode])),
+      ).toBeInTheDocument()
+      expect(active.queryByText(/作者自测/)).toBeNull()
+    },
+  )
+
+  it('新准专家已经测过，不退回显示更早的待测稿', () => {
+    page(detail({ drafts: [draft(), draft({ revision: 5, status: 'failed' })], tests: [] }))
+    expect(screen.queryByTestId('self-test-start')).toBeNull()
+    expect(fetchComputers).not.toHaveBeenCalled()
+  })
+
   it('只有一台在线就默认它，设费用上限后自己测一次', async () => {
     page(detail({ drafts: [draft({ status: 'pending_test', draft_id: DRAFT })], tests: [] }))
     const start = within(await screen.findByTestId('self-test-start'))
@@ -172,6 +220,20 @@ describe('自助测试（SDD 0046 第三节）', () => {
 })
 
 describe('测试里专家提出的数据（decisions ⑭）', () => {
+  it('同一报告的结构化数据与分页原文标明不同读法', async () => {
+    vi.mocked(fetchTestData).mockResolvedValue([
+      {
+        ...proposed,
+        needs: proposed.needs.map((need, i) => ({ ...need, reading: i ? 'pages' : 'table' })),
+      },
+    ])
+    page(detail({ drafts: [], tests: [testRecord({ status: 'waiting' })] }))
+    const panel = within(await screen.findByTestId('test-data-request'))
+    expect(panel.getByText(/结构化数据（计算用）/)).toBeInTheDocument()
+    expect(panel.getByText(/分页原文（核对页码与引文）/)).toBeInTheDocument()
+    expect(confirmTestData).not.toHaveBeenCalled()
+  })
+
   it('列出每一样；去掉一样后确认，带去掉的条目编号', async () => {
     page(detail({ drafts: [], tests: [testRecord({ status: 'waiting', test_id: TEST })] }))
     const panel = within(await screen.findByTestId('test-data-request'))

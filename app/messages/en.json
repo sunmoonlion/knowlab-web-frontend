@@ -460,9 +460,24 @@
       },
       "noModelKey": "You have no model key in knowbench yet: add one before starting a test.",
       "toSettings": "Add a model key in knowbench",
-      "toMachines": "Connect a computer in knowbench"
+      "toMachines": "Connect a computer in knowbench",
+      "activeStatus": {
+        "queued": "Test {number} is queued",
+        "running": "Test {number} is executing",
+        "waiting": "Test {number} is waiting"
+      },
+      "draft": "Candidate {label}",
+      "executionLocation": "Manage testing and acceptance in knowlab. The matching knowbench conversation is the execution record of this same test.",
+      "failedCases": "Completed cases {cases} did not pass. See Test history below for reasons and outputs.",
+      "dataRefreshFailed": "Could not refresh the test data status. Please try again."
     },
     "testData": {
+      "reading": {
+        "original": "Original file",
+        "pages": "Page evidence (citations and page numbers)",
+        "text": "Extracted text",
+        "table": "Structured data (calculations)"
+      },
       "lead": "Case {caseId}: the expert asks for this data. Switch to another copy, change the company or years, drop an item or add one; nothing is signed or fetched until you confirm, and the test waits here.",
       "supplying": "Fetching the data you confirmed; the test goes on once it is all here.",
       "missing": "These did not arrive: {items}.",
@@ -579,8 +594,9 @@
       "history": "Past tests",
       "historyNone": "Not tested yet.",
       "mode": {
-        "self": "Own",
-        "platform": "Platform"
+        "self": "Author self-test",
+        "platform": "Platform staff test",
+        "rerun": "Platform delivery retest"
       },
       "noReport": "No result yet."
     },
