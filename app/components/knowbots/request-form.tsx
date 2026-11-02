@@ -23,6 +23,8 @@ import {
 } from '@/lib/knowbots/client'
 
 import { KEY } from './shared'
+import { IdeaMethodChooser } from './idea-methods'
+import type { MethodChoice } from '@/contracts/method-choice'
 
 const QUESTIONS = ['solves', 'not_solves', 'inputs', 'steps', 'outputs', 'correctness'] as const
 const FIELD = 'mt-1 w-full rounded-md border px-3 py-2 text-sm'
@@ -142,6 +144,7 @@ export function RequestForm({
     enabled: !revise,
   })
   const before = revise?.version.idea
+  const [methodChoices, setMethodChoices] = useState<MethodChoice[]>(before?.method_choices ?? [])
   const [title, setTitle] = useState('')
   const [runtime, setRuntime] = useState('')
   const [kind, setKind] = useState<IdeaIn['kind']>(before?.kind ?? 'six_questions')
@@ -175,6 +178,7 @@ export function RequestForm({
           : kind === 'question'
             ? { kind, question: question.trim() }
             : { kind, answers }
+      if (methodChoices.length) idea.method_choices = methodChoices
       const revision = { idea, cases: toCases(cases), consent_test_data: true as const }
       if (revise) {
         await reviseRequest(revise.requestId, revision, csrfToken)
@@ -317,6 +321,12 @@ export function RequestForm({
           </label>
         )}
       </fieldset>
+
+      <IdeaMethodChooser
+        choices={methodChoices}
+        onChange={setMethodChoices}
+        disabled={submit.isPending}
+      />
 
       <fieldset className="space-y-4">
         <legend className="text-sm font-medium">{t('form.cases')}</legend>

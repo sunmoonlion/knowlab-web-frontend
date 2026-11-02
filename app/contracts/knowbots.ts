@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { methodChoiceSchema, type MethodChoice } from './method-choice'
+
 // 创意、准专家、测试、专家的约定（后端 app/interfaces/endpoints/knowbot_routes.py 与
 // knowbot_views.py，SDD 0037）。代码里仍叫 request（创意的名称）、draft（准专家）。用户只看到
 // 自己的：创意各版本与受理结果、准专家（规则与出自哪句话）、测试结果、交回了的专家；没有清单
@@ -39,9 +41,21 @@ const sixAnswersSchema = z.object({
 
 // 创意的种类：六问、一份 skill、一句话问题（专家孵化方案第四节：方法由 AI 按问题起草）
 export const ideaSchema = z.union([
-  z.object({ kind: z.literal('six_questions'), answers: sixAnswersSchema }),
-  z.object({ kind: z.literal('skill'), skill: z.string() }),
-  z.object({ kind: z.literal('question'), question: z.string() }),
+  z.object({
+    kind: z.literal('six_questions'),
+    answers: sixAnswersSchema,
+    method_choices: z.array(methodChoiceSchema).max(30).optional(),
+  }),
+  z.object({
+    kind: z.literal('skill'),
+    skill: z.string(),
+    method_choices: z.array(methodChoiceSchema).max(30).optional(),
+  }),
+  z.object({
+    kind: z.literal('question'),
+    question: z.string(),
+    method_choices: z.array(methodChoiceSchema).max(30).optional(),
+  }),
 ])
 
 const acceptanceSchema = z.object({
@@ -551,10 +565,11 @@ export type SixAnswers = {
   outputs: string
   correctness: string
 }
-export type IdeaIn =
+export type IdeaIn = (
   | { kind: 'six_questions'; answers: SixAnswers }
   | { kind: 'skill'; skill: string }
   | { kind: 'question'; question: string }
+) & { method_choices?: MethodChoice[] }
 export type RevisionIn = { idea: IdeaIn; cases: CaseIn[]; consent_test_data: true }
 // mode：孵化自己来还是请平台（SDD 0046 第四节）；请平台的同时设平台发起 AI 一轮的费用上限
 export type KnowbotRequestIn = RevisionIn & {

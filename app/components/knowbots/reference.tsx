@@ -5,10 +5,20 @@ import { useTranslations } from 'next-intl'
 import type { Amendment, Draft, Idea } from '@/contracts/knowbots'
 
 import { caseName, caseQuestion } from './shared'
+import { IdeaMethodChoices } from './idea-methods'
 
 // 我交来的方法、用例，和准专家的规则出处（SDD 0037 第八节）：都用用户的说法，不放原始 JSON。
 
 export function Method({ idea }: { idea: Idea }) {
+  return (
+    <>
+      <MethodText idea={idea} />
+      <IdeaMethodChoices choices={idea.method_choices ?? []} />
+    </>
+  )
+}
+
+function MethodText({ idea }: { idea: Idea }) {
   const t = useTranslations('knowbotRequests')
   if (idea.kind === 'skill')
     return (

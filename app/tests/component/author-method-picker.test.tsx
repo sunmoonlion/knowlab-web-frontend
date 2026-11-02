@@ -13,7 +13,7 @@ import {
 } from '@/lib/knowbots/methods'
 import { diffEdits } from '@/lib/knowbots/workdraft'
 import fixture from '../fixtures/author-method.json'
-import { CSRF, renderWith } from './knowbot-fixtures'
+import { CSRF, detail, version, renderWith } from './knowbot-fixtures'
 
 vi.mock('@/i18n/navigation', async () => (await import('./knowbot-fixtures')).linkMock())
 
@@ -102,12 +102,71 @@ beforeEach(() => {
     if (url === path) return respond(method)
     if (url === path + '/preview-binding') return respond(preview)
     if (url === path + '/bind') return respond(bound)
+    if (url === `/api/web/v1/knowbot-requests/${doc.request_id}`)
+      return respond(detail({ request_id: doc.request_id }))
     throw new Error('Unexpected route: ' + url)
   })
 })
 afterEach(() => vi.unstubAllGlobals())
 
 describe('author method contracts and exact binding', () => {
+  it('assembles a shortlisted idea version through preview and the real binding endpoint', async () => {
+    const original = fetcher.getMockImplementation()!
+    fetcher.mockImplementation(async (url: string, ...args: unknown[]) => {
+      if (url === `/api/web/v1/knowbot-requests/${doc.request_id}`)
+        return respond(
+          detail({
+            request_id: doc.request_id,
+            latest_version: 1,
+            versions: [
+              version({
+                idea: {
+                  kind: 'question',
+                  question: '整理证据',
+                  method_choices: [
+                    {
+                      method_id: method.method_id,
+                      version: method.version,
+                      digest: method.digest,
+                    },
+                  ],
+                },
+              }),
+            ],
+          }),
+        )
+      return original(url, ...args)
+    })
+    renderWith(<WorkdraftView requestId={doc.request_id} csrfToken={CSRF} />)
+    fireEvent.change(await screen.findByLabelText('装配到哪个方法位置', {}, { timeout: 5000 }), {
+      target: { value: 'report' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '核对并装配' }))
+    fireEvent.change(await screen.findByLabelText('输入「records」来自'), {
+      target: { value: 'inspect' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '核对这次装配' }))
+    await screen.findByText('输入连接和版本已通过核对；确认后才会保存到工作稿。')
+    expect(fetcher.mock.calls.some(([url]) => url === path + '/bind')).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: '确认保存引用' }))
+    await screen.findByText('方法引用已保存，尚未发布专家。')
+    expect(screen.getByText('已装配到：' + step.title)).toBeInTheDocument()
+    const [, options] = fetcher.mock.calls.find(([url]) => url === path + '/bind')!
+    expect(JSON.parse(options.body)).toEqual(command)
+  })
+
+  it('does not offer binding when the idea digest does not match its pinned version', async () => {
+    renderPicker({
+      initialChoice: {
+        method_id: method.method_id,
+        version: 1,
+        digest: 'sha256:' + '0'.repeat(64),
+      },
+    })
+    await screen.findByRole('alert')
+    expect(screen.queryByRole('button', { name: '核对这次装配' })).not.toBeInTheDocument()
+    expect(fetcher.mock.calls.some(([url]) => url === path + '/bind')).toBe(false)
+  })
   it('commits the server workdraft after binding and locks the referenced method body', async () => {
     renderWith(<WorkdraftView requestId={doc.request_id} csrfToken={CSRF} />)
     fireEvent.click((await screen.findAllByRole('button', { name: '选择已有方法' }))[0])

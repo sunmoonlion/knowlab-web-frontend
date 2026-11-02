@@ -1,6 +1,5 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
@@ -8,13 +7,14 @@ import { Button } from '@/components/ui/button'
 import type { BindMethodCommand, BindingPreview, MethodVersion } from '@/contracts/author-methods'
 import type { MethodReference, Step } from '@/contracts/workdraft'
 import { ApiClientError } from '@/lib/common/api-client'
-import { getMethodVersion, listMethods, previewMethodBinding } from '@/lib/knowbots/methods'
+import { previewMethodBinding } from '@/lib/knowbots/methods'
 import { same } from '@/lib/knowbots/workdraft'
 
 import { INPUT, SELECT } from './workdraft-cells'
 import { Panel } from './workdraft-panels'
 
-const PAGE = 30
+import type { MethodChoice } from '@/contracts/method-choice'
+import { MethodVersionBrowser } from './method-version-browser'
 
 export function MethodPickerPanel({
   requestId,
@@ -22,6 +22,7 @@ export function MethodPickerPanel({
   step,
   sources,
   currentRef,
+  initialChoice,
   csrfToken,
   onApply,
   onClose,
@@ -31,119 +32,38 @@ export function MethodPickerPanel({
   step: Step
   sources: Step[]
   currentRef?: MethodReference
+  initialChoice?: MethodChoice
   csrfToken: string
   onApply: (methodId: string, version: number, command: BindMethodCommand) => Promise<void>
   onClose: () => void
 }) {
   const t = useTranslations('workdraft.methods')
-  const [page, setPage] = useState(0)
-  const [chosen, setChosen] = useState<{ id: string; version: number } | null>(
-    currentRef ? { id: currentRef.method_id, version: currentRef.version } : null,
-  )
   const [busy, setBusy] = useState(false)
-  const list = useQuery({
-    queryKey: ['author-methods', page],
-    queryFn: () => listMethods(page * PAGE, PAGE),
-    retry: false,
-  })
-  const exact = useQuery({
-    queryKey: ['author-method-version', chosen?.id, chosen?.version],
-    enabled: chosen !== null,
-    queryFn: () => getMethodVersion(chosen!.id, chosen!.version),
-    retry: false,
-  })
-  const close = () => {
-    if (!busy) onClose()
-  }
   return (
-    <Panel title={t('title', { title: step.title || step.id })} onClose={close}>
+    <Panel
+      title={t('title', { title: step.title || step.id })}
+      onClose={() => {
+        if (!busy) onClose()
+      }}
+    >
       <p>{t('hint')}</p>
       {currentRef ? <p>{t('current', { version: currentRef.version })}</p> : null}
-      <fieldset disabled={busy} className="space-y-3">
-        {list.isError ? (
-          <p role="alert">{t('loadFailed')}</p>
-        ) : !list.data ? (
-          <p>{t('loading')}</p>
-        ) : !list.data.length ? (
-          <p>{t('empty')}</p>
-        ) : (
-          <ul className="space-y-2">
-            {list.data.map((item) => (
-              <li key={item.method_id}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setChosen({
-                      id: item.method_id,
-                      version:
-                        item.method_id === currentRef?.method_id
-                          ? currentRef.version
-                          : item.latest_version,
-                    })
-                  }
-                >
-                  {item.title || item.method_id} · {t('version', { version: item.latest_version })}
-                </Button>
-                {item.summary ? (
-                  <p className="text-muted-foreground text-xs">{item.summary}</p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+      <MethodVersionBrowser initialChoice={initialChoice ?? currentRef} disabled={busy}>
+        {(method) => (
+          <BindingForm
+            key={`${method.method_id}:${method.version}`}
+            method={method}
+            requestId={requestId}
+            revision={revision}
+            step={step}
+            sources={sources}
+            currentRef={currentRef}
+            csrfToken={csrfToken}
+            onApply={onApply}
+            setBusy={setBusy}
+          />
         )}
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page === 0 || list.isFetching}
-            onClick={() => setPage(page - 1)}
-          >
-            {t('previous')}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={!list.data || list.data.length < PAGE || list.isFetching}
-            onClick={() => setPage(page + 1)}
-          >
-            {t('next')}
-          </Button>
-        </div>
-        {chosen ? (
-          <label className="block">
-            {t('versionLabel')}
-            <input
-              className={INPUT}
-              type="number"
-              min={1}
-              max={999999}
-              value={chosen.version}
-              onChange={(e) => {
-                const version = Number(e.target.value)
-                if (Number.isInteger(version) && version >= 1 && version <= 999999)
-                  setChosen({ ...chosen, version })
-              }}
-            />
-          </label>
-        ) : null}
-      </fieldset>
-      {chosen && exact.isError ? <p role="alert">{t('versionFailed')}</p> : null}
-      {chosen && exact.isFetching ? <p>{t('loading')}</p> : null}
-      {chosen && exact.data && !exact.isFetching && !exact.isError ? (
-        <BindingForm
-          key={`${chosen.id}:${chosen.version}`}
-          method={exact.data}
-          requestId={requestId}
-          revision={revision}
-          step={step}
-          sources={sources}
-          currentRef={currentRef}
-          csrfToken={csrfToken}
-          onApply={onApply}
-          setBusy={setBusy}
-        />
-      ) : null}
+      </MethodVersionBrowser>
     </Panel>
   )
 }

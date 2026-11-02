@@ -145,6 +145,7 @@ function withRound(full: Round) {
 
 beforeEach(() => {
   vi.resetAllMocks()
+  vi.mocked(fetchDetail).mockResolvedValue(detail())
   vi.mocked(fetchWorkdraft).mockResolvedValue(workdraft())
   vi.mocked(saveWorkdraftCells).mockResolvedValue(workdraft())
   vi.mocked(previewWorkdraft).mockResolvedValue({

@@ -41,6 +41,8 @@ import { bindMethod } from '@/lib/knowbots/methods'
 
 import { Card, KEY } from './shared'
 import { MethodPickerPanel } from './workdraft-method-picker'
+import { IdeaMethodsToAssemble } from './idea-methods'
+import type { MethodChoice } from '@/contracts/method-choice'
 import { MethodFreezePanel } from './workdraft-method-freeze'
 import { PlanningCard } from './workdraft-planning'
 import { GapsCard, RoundBar, RoundPanel, startFailure } from './workdraft-ai'
@@ -150,6 +152,7 @@ function Editor({
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
   const [panel, setPanel] = useState<Panels>(null)
   const [busy, setBusy] = useState(false)
+  const [ideaMethod, setIdeaMethod] = useState<MethodChoice | undefined>()
   const [methodTarget, setMethodTarget] = useState<string | null>(null)
   const [freezeTarget, setFreezeTarget] = useState<string | null>(null)
   const [publishing, setPublishing] = useState(false)
@@ -562,7 +565,8 @@ function Editor({
       ;[steps[index], steps[to]] = [steps[to], steps[index]]
       return { ...b, steps }
     })
-  const openMethod = async (alias: string, freeze = false) => {
+  const openMethod = async (alias: string, freeze = false, choice?: MethodChoice) => {
+    setIdeaMethod(choice)
     setBusy(true)
     setMessage(null)
     try {
@@ -616,6 +620,7 @@ function Editor({
         step={selectedStep}
         sources={body.steps.filter((step) => step.id !== selectedStep.id)}
         currentRef={body.method_refs?.[selectedStep.id]}
+        initialChoice={ideaMethod}
         csrfToken={csrfToken}
         onApply={applyMethod}
         onClose={() => setMethodTarget(null)}
@@ -856,6 +861,12 @@ function Editor({
               </Field>
             ))}
           </Card>
+          <IdeaMethodsToAssemble
+            requestId={requestId}
+            body={body}
+            disabled={busy || running || deciding}
+            onChoose={(choice, alias) => void openMethod(alias, false, choice)}
+          />
           <PlanningCard
             value={body.planning}
             steps={body.steps}

@@ -1127,5 +1127,28 @@
       "calls": "Maximum calls per plan (1–100)",
       "selectionSave": "Confirm selection conditions"
     }
+  },
+  "ideaMethods": {
+    "title": "Methods to use",
+    "hint": "Choose your saved method versions as a starting point. Bind their inputs and selection rules in the expert workdraft.",
+    "chosenMethod": "Chosen method",
+    "version": "Version {version}",
+    "unavailable": "This exact version could not be verified. Reload it or remove this choice.",
+    "remove": "Remove choice",
+    "close": "Close method library",
+    "browse": "Choose from method library",
+    "inputs": "Inputs: {names}",
+    "outputs": "Outputs: {names}",
+    "none": "None",
+    "chooseVersion": "Use version {version}",
+    "toAssemble": "Methods chosen for this idea",
+    "assemblyHint": "Choose a method position, review its inputs and preview the binding before applying it.",
+    "enablePlanning": "Add method positions and configure task planning below before assembling these methods.",
+    "loadFailed": "Could not load the method choices for this idea. Reload before continuing.",
+    "bound": "Assembled at: {names}",
+    "target": "Method position",
+    "chooseTarget": "Choose a position",
+    "addPosition": "Add a method position below to continue.",
+    "assemble": "Review and assemble"
   }
 }

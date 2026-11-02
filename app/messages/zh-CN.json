@@ -1127,5 +1127,28 @@
       "calls": "一次计划最多调用几次（1～100）",
       "selectionSave": "确认保存选择条件"
     }
+  },
+  "ideaMethods": {
+    "title": "选用的方法",
+    "hint": "可以从自己的方法库选定版本，作为孵化起点；进入工作稿后再配置输入和选择规则。",
+    "chosenMethod": "已选方法",
+    "version": "第 {version} 版",
+    "unavailable": "未能核实这个确切版本，请重新加载或移除此项。",
+    "remove": "移除此项",
+    "close": "收起方法库",
+    "browse": "从方法库选择",
+    "inputs": "需要输入：{names}",
+    "outputs": "交回内容：{names}",
+    "none": "无",
+    "chooseVersion": "选用第 {version} 版",
+    "toAssemble": "创意中选用的方法",
+    "assemblyHint": "选择装配位置，核对方法输入并预览，确认后写入工作稿。",
+    "enablePlanning": "请先在下方添加方法位置并设置任务计划，再装配这些方法。",
+    "loadFailed": "未能读取创意中选用的方法，请刷新后继续。",
+    "bound": "已装配到：{names}",
+    "target": "装配到哪个方法位置",
+    "chooseTarget": "选择位置",
+    "addPosition": "请先在下方添加方法位置。",
+    "assemble": "核对并装配"
   }
 }

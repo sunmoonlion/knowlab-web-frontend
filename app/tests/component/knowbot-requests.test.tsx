@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ApplicationsView } from '@/components/knowbots/applications-view'
 import { RequestForm } from '@/components/knowbots/request-form'
+import { methodVersionSchema } from '@/contracts/author-methods'
+import { getMethodVersion, listMethods } from '@/lib/knowbots/methods'
+import methodFixture from '../fixtures/author-method.json'
 import { ApiClientError } from '@/lib/common/api-client'
 import {
   acceptConsent,
@@ -18,6 +21,10 @@ import messages from '@/messages/zh-CN.json'
 import { CSRF, REQUEST, application, detail, renderWith, version } from './knowbot-fixtures'
 
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }))
+const method = methodVersionSchema.parse(methodFixture.method)
+const choice = { method_id: method.method_id, version: method.version, digest: method.digest }
+
+vi.mock('@/lib/knowbots/methods', () => ({ getMethodVersion: vi.fn(), listMethods: vi.fn() }))
 
 vi.mock('@/lib/knowbots/client', () => ({
   acceptConsent: vi.fn(),
@@ -40,6 +47,15 @@ beforeEach(() => {
   vi.mocked(fetchDetail).mockResolvedValue(detail())
   // 上次选的是自己来（第一次是 null，见「第一次自己选模式」）
   vi.mocked(fetchRequestDefaults).mockResolvedValue('self')
+  vi.mocked(getMethodVersion).mockResolvedValue(method)
+  vi.mocked(listMethods).mockResolvedValue([
+    {
+      method_id: method.method_id,
+      latest_version: method.version,
+      title: '作者已冻结的方法',
+      created_at: method.created_at,
+    },
+  ])
 })
 
 describe('申请', () => {
@@ -132,6 +148,40 @@ describe('申请一个创意', () => {
       target: { value: '分析 2025 年报' },
     })
   }
+
+  it('从真实方法库选版随创意提交，浏览和选择不会提前提交表单', async () => {
+    vi.mocked(fetchRuntimes).mockResolvedValue(['knowbench'])
+    vi.mocked(submitRequest).mockResolvedValue(REQUEST)
+    renderWith(<RequestForm csrfToken={CSRF} />)
+    await waitFor(() => expect(screen.getByLabelText('在哪里运行')).toHaveValue('knowbench'))
+    fill()
+    fireEvent.click(screen.getByLabelText(/我同意/))
+    fireEvent.click(screen.getByRole('button', { name: '从方法库选择' }))
+    fireEvent.click(await screen.findByRole('button', { name: '作者已冻结的方法 · 版本 1' }))
+    fireEvent.click(await screen.findByRole('button', { name: '选用第 1 版' }))
+    expect(submitRequest).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '提交' }))
+    await waitFor(() => expect(submitRequest).toHaveBeenCalled())
+    expect(vi.mocked(submitRequest).mock.calls[0]![0].idea.method_choices).toEqual([choice])
+    expect(getMethodVersion).toHaveBeenCalledWith(choice.method_id, choice.version)
+  })
+
+  it.each([false, true])('修改创意保留或移除确切引用（移除=%s），不修改旧版本', async (remove) => {
+    vi.mocked(reviseRequest).mockResolvedValue(3)
+    const previous = version({ idea: { kind: 'skill', skill: '# 方法', method_choices: [choice] } })
+    renderWith(<RequestForm csrfToken={CSRF} revise={{ requestId: REQUEST, version: previous }} />)
+    await screen.findByText(method.definition.step.title + ' · 第 1 版')
+    if (remove) fireEvent.click(screen.getByRole('button', { name: messages.ideaMethods.remove }))
+    fireEvent.click(screen.getByLabelText(/我同意/))
+    fireEvent.click(
+      screen.getByRole('button', { name: messages.knowbotRequests.form.submitRevision }),
+    )
+    await waitFor(() => expect(reviseRequest).toHaveBeenCalled())
+    expect(vi.mocked(reviseRequest).mock.calls[0]![1].idea.method_choices).toEqual(
+      remove ? undefined : [choice],
+    )
+    expect(previous.idea.method_choices).toEqual([choice])
+  })
 
   it('第一次自己选模式，两边说明并排；请平台的带上费用上限', async () => {
     vi.mocked(fetchRequestDefaults).mockResolvedValue(null)
