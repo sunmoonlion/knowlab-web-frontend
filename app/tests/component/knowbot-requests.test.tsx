@@ -53,6 +53,7 @@ beforeEach(() => {
       method_id: method.method_id,
       latest_version: method.version,
       title: '作者已冻结的方法',
+      summary: method.definition.step.does,
       created_at: method.created_at,
     },
   ])
