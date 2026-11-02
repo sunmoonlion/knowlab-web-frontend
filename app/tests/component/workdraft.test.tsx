@@ -141,6 +141,33 @@ beforeEach(() => {
 })
 
 describe('工作稿：格子与自动保存（专家孵化方案第六节）', () => {
+  it('成稿文件随工作稿保存，重新载入保留，清空恢复仅对话交回', async () => {
+    server = workdraft({ body: { ...emptyBody(), steps: [step('s1')] } })
+    const view = page()
+    fireEvent.change(await screen.findByLabelText(w.step.outputFile), {
+      target: { value: '财务分析报告.md' },
+    })
+    await waitFor(() => expect(server.body.steps[0].advanced.output_file).toBe('财务分析报告.md'))
+    expect(saveWorkdraftCells).toHaveBeenLastCalledWith(
+      REQUEST,
+      {
+        revision: 0,
+        cells: [
+          {
+            path: 'steps/s1/advanced',
+            value: expect.objectContaining({ output_file: '财务分析报告.md' }),
+          },
+        ],
+      },
+      CSRF,
+    )
+    view.unmount()
+    page()
+    expect(await screen.findByLabelText(w.step.outputFile)).toHaveValue('财务分析报告.md')
+    fireEvent.change(screen.getByLabelText(w.step.outputFile), { target: { value: '' } })
+    await waitFor(() => expect(server.body.steps[0].advanced.output_file).toBeNull())
+  })
+
   it('改一格过一会儿自动存，带读到的 revision；存了标「作者写的」，下一次带新的 revision', async () => {
     page()
     const name = await screen.findByLabelText(w.expert.name)

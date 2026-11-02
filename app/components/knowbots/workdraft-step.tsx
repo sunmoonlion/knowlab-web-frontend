@@ -635,6 +635,22 @@ function AdvancedCell({
       <summary className="cursor-pointer text-sm font-medium">{t('step.advanced')}</summary>
       <div className="mt-2 space-y-3">
         <p className="text-muted-foreground text-xs">{t('step.advancedHint')}</p>
+        <Field
+          label={t('step.outputFile')}
+          hint={t('step.outputFileHint')}
+          path={`${base}/advanced`}
+          filled={!!advanced.output_file}
+        >
+          {(a11y) => (
+            <input
+              {...a11y}
+              className={INPUT}
+              placeholder={t('step.outputFilePlaceholder')}
+              value={advanced.output_file ?? ''}
+              onChange={(e) => onChange({ ...advanced, output_file: e.target.value || null })}
+            />
+          )}
+        </Field>
         <Group title={t('step.tools')} path={`${base}/advanced`}>
           <div className="flex flex-wrap gap-3">
             {TOOLS.map((tool) => (
