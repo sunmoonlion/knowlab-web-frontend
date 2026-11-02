@@ -19,16 +19,19 @@
           "title": "汇总",
           "does": "列出每一条的核对结果。",
           "why": "",
-          "uses": [
-            "inspect"
-          ],
+          "uses": ["inspect"],
           "rules": [],
           "ask_before": [],
           "outputs": [
             {
               "name": "rows",
               "type": "list",
-              "items": null
+              "items": [
+                {
+                  "name": "id",
+                  "type": "text"
+                }
+              ]
             }
           ],
           "checks": [
@@ -72,7 +75,12 @@
             {
               "name": "rows",
               "type": "list",
-              "items": null
+              "items": [
+                {
+                  "name": "id",
+                  "type": "text"
+                }
+              ]
             }
           ],
           "checks": [
@@ -88,9 +96,7 @@
             "back_to": null
           },
           "advanced": {
-            "tools": [
-              "read_input"
-            ],
+            "tools": ["read_input"],
             "reserve": null,
             "input_max_chars": null,
             "output_schema": null,
@@ -107,9 +113,7 @@
           "title": "复核",
           "does": "再按同一原文逐项复核。",
           "why": "",
-          "uses": [
-            "inspect"
-          ],
+          "uses": ["inspect"],
           "rules": [],
           "ask_before": [],
           "outputs": [
@@ -125,9 +129,7 @@
             "back_to": null
           },
           "advanced": {
-            "tools": [
-              "read_input"
-            ],
+            "tools": ["read_input"],
             "reserve": null,
             "input_max_chars": null,
             "output_schema": null,
@@ -142,9 +144,7 @@
       ],
       "planning": {
         "method_text": "按问题选择核对方法。逐项核对后汇总，要求复核时再复核。",
-        "final_units": [
-          "report"
-        ],
+        "final_units": ["report"],
         "max_steps": 8,
         "max_replans": 2,
         "reserve": "0.05",
@@ -159,7 +159,7 @@
   "method": {
     "method_id": "32adb685-ab1a-4ad3-a542-b7df318f67da",
     "version": 1,
-    "digest": "sha256:42ff710fc17f1c4476013c4add63bbc58c833b730e9300d88fe49a74dc4613dd",
+    "digest": "sha256:53812d358d319de371aa6d3242af71eb1cd0404a485905609c0942a6933cca4d",
     "definition": {
       "schema": "knowlab/method-definition/v1",
       "step": {
@@ -167,16 +167,19 @@
         "title": "汇总",
         "does": "列出每一条的核对结果。",
         "why": "",
-        "uses": [
-          "records"
-        ],
+        "uses": ["records"],
         "rules": [],
         "ask_before": [],
         "outputs": [
           {
             "name": "rows",
             "type": "list",
-            "items": null
+            "items": [
+              {
+                "name": "id",
+                "type": "text"
+              }
+            ]
           }
         ],
         "checks": [
@@ -201,7 +204,9 @@
           "input_max_chars": 8000,
           "output_schema": {
             "rows": [
-              "string"
+              {
+                "id": "string"
+              }
             ]
           },
           "output_file": null
@@ -215,7 +220,9 @@
       "input_schemas": {
         "records": {
           "rows": [
-            "string"
+            {
+              "id": "string"
+            }
           ]
         }
       }
