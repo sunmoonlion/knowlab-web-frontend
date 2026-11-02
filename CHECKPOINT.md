@@ -27,3 +27,11 @@
 这些是本地组件、契约与构建证据，不是实际浏览器/服务端/模型的联合验收。
 动态 v3 外部准入继续关闭；财务方法内容与真实作者出处尚未验收。
 未发版、不改 Jenkins/sources/旧采单；qwen 保持发布职责。无 Wind 调用。
+
+
+## 2026-11-02 WP-10：对齐覆盖规则的合成作者夹具
+
+非财务方法夹具使用实际 provider 编译的对象行 schema 与对应摘要，组件/生命周期
+语义不变，没有产品 UI 代码改动。前端 182 passed / 2 skipped、tsc --noEmit 通过，
+日志 /tmp/luna-coverage-author-web-{tests,types}.log。provider 全量 807 passed / 5 skipped
+验证跨端 fixture 与真实模型/摘要一致。此夹具不是正式财务方法，也不是生产发布。

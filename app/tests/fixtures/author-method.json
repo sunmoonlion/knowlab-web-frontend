@@ -19,9 +19,7 @@
           "title": "汇总",
           "does": "列出每一条的核对结果。",
           "why": "",
-          "uses": [
-            "inspect"
-          ],
+          "uses": ["inspect"],
           "rules": [],
           "ask_before": [],
           "outputs": [
@@ -98,9 +96,7 @@
             "back_to": null
           },
           "advanced": {
-            "tools": [
-              "read_input"
-            ],
+            "tools": ["read_input"],
             "reserve": null,
             "input_max_chars": null,
             "output_schema": null,
@@ -117,9 +113,7 @@
           "title": "复核",
           "does": "再按同一原文逐项复核。",
           "why": "",
-          "uses": [
-            "inspect"
-          ],
+          "uses": ["inspect"],
           "rules": [],
           "ask_before": [],
           "outputs": [
@@ -135,9 +129,7 @@
             "back_to": null
           },
           "advanced": {
-            "tools": [
-              "read_input"
-            ],
+            "tools": ["read_input"],
             "reserve": null,
             "input_max_chars": null,
             "output_schema": null,
@@ -152,9 +144,7 @@
       ],
       "planning": {
         "method_text": "按问题选择核对方法。逐项核对后汇总，要求复核时再复核。",
-        "final_units": [
-          "report"
-        ],
+        "final_units": ["report"],
         "max_steps": 8,
         "max_replans": 2,
         "reserve": "0.05",
@@ -177,9 +167,7 @@
         "title": "汇总",
         "does": "列出每一条的核对结果。",
         "why": "",
-        "uses": [
-          "records"
-        ],
+        "uses": ["records"],
         "rules": [],
         "ask_before": [],
         "outputs": [
