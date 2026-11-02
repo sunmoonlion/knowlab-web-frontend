@@ -545,12 +545,33 @@ export const runtimesSchema = z.object({
 })
 
 // 提交、修改的形状与后端 KnowbotRequestIn、RevisionIn 一致；后端会再核一遍
+export const rowSelectionSchema = z
+  .object({
+    where: z
+      .record(
+        z
+          .string()
+          .min(1)
+          .max(128)
+          .refine((s) => s.trim().length > 0),
+        z.union([z.string(), z.number().finite(), z.boolean()]),
+      )
+      .refine((v) => Object.keys(v).length >= 1 && Object.keys(v).length <= 8),
+    field: z
+      .string()
+      .min(1)
+      .max(256)
+      .refine((s) => s.trim().length > 0),
+  })
+  .strict()
+
 export type ExpectationIn = {
   artifact: string
   path: string
   kind: 'equals' | 'approx' | 'contains'
   value: string | number
   tolerance?: number
+  row?: z.infer<typeof rowSelectionSchema>
 }
 export type CaseIn = {
   case_id: string

@@ -71,3 +71,8 @@ build 通过。新增覆盖真实 API 形状的选用→提交、保留/移除�
 前端 189 passed / 2 skipped；typecheck、定向 eslint 通过。
 顺带补齐已有创意选择器测试缺失的 MethodSummary.summary（单独测试修复提交）。
 与 knowlab 后端文件模板修复同批；未改变已发布财务专家版本，需要作者新版本流程。
+
+
+## 2026-11-03 所有者确认新版财务测试
+
+新版测试选行条件(row.where/field)随创意编辑保存，支持查看/修改，非法条件在提交前拦截，不静默丢弃。全量195 passed/2 skipped，typecheck、eslint、i18n通过。和两个后端同批；未改自动通过含义，不代作者决定数据范围。

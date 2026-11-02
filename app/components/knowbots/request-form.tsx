@@ -13,6 +13,7 @@ import type {
   SixAnswers,
   Version,
 } from '@/contracts/knowbots'
+import { rowSelectionSchema } from '@/contracts/knowbots'
 import { useRouter } from '@/i18n/navigation'
 import { ApiClientError } from '@/lib/common/api-client'
 import {
@@ -35,6 +36,8 @@ type ExpectationDraft = {
   kind: ExpectationIn['kind']
   value: string
   tolerance: string
+  rowWhere: string
+  rowField: string
 }
 // answers：开步前提问预先给好的答案（改创意时照原样带上）
 // caseId：从上一版带过来的用例保留原编号；新加的才发新号（Fable 评审 P1-6）
@@ -52,7 +55,22 @@ const emptyExpectation = (): ExpectationDraft => ({
   kind: 'equals',
   value: '',
   tolerance: '',
+  rowWhere: '',
+  rowField: '',
 })
+
+class RowSelectionError extends Error {}
+
+function rowOf(e: ExpectationDraft): Pick<ExpectationIn, 'row'> {
+  if (!e.rowWhere.trim() && !e.rowField.trim()) return {}
+  try {
+    return {
+      row: rowSelectionSchema.parse({ where: JSON.parse(e.rowWhere), field: e.rowField.trim() }),
+    }
+  } catch {
+    throw new RowSelectionError()
+  }
+}
 
 function caseIds(cases: CaseDraft[]): string[] {
   const taken = new Set(cases.flatMap((c) => (c.caseId ? [c.caseId] : [])))
@@ -81,8 +99,15 @@ function toCases(cases: CaseDraft[]): CaseIn[] {
             kind: e.kind,
             value: Number(e.value),
             tolerance: Number(e.tolerance),
+            ...rowOf(e),
           }
-        : { artifact: e.artifact.trim(), path: e.path.trim(), kind: e.kind, value: e.value },
+        : {
+            artifact: e.artifact.trim(),
+            path: e.path.trim(),
+            kind: e.kind,
+            value: e.value,
+            ...rowOf(e),
+          },
     ),
   }))
 }
@@ -110,6 +135,8 @@ function fromVersion(version: Version): CaseDraft[] {
           : 'equals') as ExpectationIn['kind'],
         value: String(e.value ?? ''),
         tolerance: e.tolerance == null ? '' : String(e.tolerance),
+        rowWhere: e.row == null ? '' : JSON.stringify((e.row as ExpectationIn['row'])?.where ?? {}),
+        rowField: e.row == null ? '' : String((e.row as ExpectationIn['row'])?.field ?? ''),
       })),
     }
   })
@@ -199,9 +226,11 @@ export function RequestForm({
     },
     onError: (e) =>
       setError(
-        e instanceof ApiClientError && (e.status === 400 || e.status === 422)
-          ? t('form.invalid')
-          : t('form.failed'),
+        e instanceof RowSelectionError
+          ? t('form.rowInvalid')
+          : e instanceof ApiClientError && (e.status === 400 || e.status === 422)
+            ? t('form.invalid')
+            : t('form.failed'),
       ),
   })
 
@@ -494,6 +523,24 @@ function CaseEditor({ index, value, onChange, onRemove }: CaseEditorProps) {
               onChange={(x) => setExpectation(j, { ...e, tolerance: x.target.value })}
             />
           ) : null}
+          <div className="col-span-full grid grid-cols-2 gap-2">
+            <label>
+              {t('form.rowWhere')}
+              <input
+                className={FIELD}
+                value={e.rowWhere}
+                onChange={(x) => setExpectation(j, { ...e, rowWhere: x.target.value })}
+              />
+            </label>
+            <label>
+              {t('form.rowField')}
+              <input
+                className={FIELD}
+                value={e.rowField}
+                onChange={(x) => setExpectation(j, { ...e, rowField: x.target.value })}
+              />
+            </label>
+          </div>
         </div>
       ))}
       <div className="flex gap-2">
