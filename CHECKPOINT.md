@@ -62,3 +62,12 @@ build 通过。新增覆盖真实 API 形状的选用→提交、保留/移除�
 证据 /tmp/luna-idea-entry-web-{final,build,lint}.txt。
 
 未发布，不移动 qwen 已钉的 72db347；新请求字段须与同分支 backend 同批上线。
+
+
+## 2026-11-03 作者配置成稿文件
+
+步骤“高级”补成稿文件入口，使用已有 advanced.output_file 契约；留空为对话交回。
+保存、重载、清空走原有 revision/CSRF 工作稿格子接口；引用方法的只读边界保持。
+前端 189 passed / 2 skipped；typecheck、定向 eslint 通过。
+顺带补齐已有创意选择器测试缺失的 MethodSummary.summary（单独测试修复提交）。
+与 knowlab 后端文件模板修复同批；未改变已发布财务专家版本，需要作者新版本流程。
