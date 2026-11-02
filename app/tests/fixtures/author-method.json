@@ -28,7 +28,12 @@
             {
               "name": "rows",
               "type": "list",
-              "items": null
+              "items": [
+                {
+                  "name": "id",
+                  "type": "text"
+                }
+              ]
             }
           ],
           "checks": [
@@ -72,7 +77,12 @@
             {
               "name": "rows",
               "type": "list",
-              "items": null
+              "items": [
+                {
+                  "name": "id",
+                  "type": "text"
+                }
+              ]
             }
           ],
           "checks": [
@@ -159,7 +169,7 @@
   "method": {
     "method_id": "32adb685-ab1a-4ad3-a542-b7df318f67da",
     "version": 1,
-    "digest": "sha256:42ff710fc17f1c4476013c4add63bbc58c833b730e9300d88fe49a74dc4613dd",
+    "digest": "sha256:53812d358d319de371aa6d3242af71eb1cd0404a485905609c0942a6933cca4d",
     "definition": {
       "schema": "knowlab/method-definition/v1",
       "step": {
@@ -176,7 +186,12 @@
           {
             "name": "rows",
             "type": "list",
-            "items": null
+            "items": [
+              {
+                "name": "id",
+                "type": "text"
+              }
+            ]
           }
         ],
         "checks": [
@@ -201,7 +216,9 @@
           "input_max_chars": 8000,
           "output_schema": {
             "rows": [
-              "string"
+              {
+                "id": "string"
+              }
             ]
           },
           "output_file": null
@@ -215,7 +232,9 @@
       "input_schemas": {
         "records": {
           "rows": [
-            "string"
+            {
+              "id": "string"
+            }
           ]
         }
       }
