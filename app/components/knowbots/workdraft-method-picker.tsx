@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { CORE_14_FINANCIAL_METHODS } from '@/lib/knowbots/methods'
+import { CORE_20_FINANCIAL_METHODS } from '@/lib/knowbots/methods'
 import type { MethodReference, Step } from '@/contracts/workdraft'
 
 export function MethodPickerModal({
@@ -20,14 +20,14 @@ export function MethodPickerModal({
 }) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [activeMethodId, setActiveMethodId] = useState<string>(
-    currentRef ? currentRef.method_id : CORE_14_FINANCIAL_METHODS[0].id
+    currentRef ? currentRef.method_id : CORE_20_FINANCIAL_METHODS[0].id
   )
   const [slotMapping, setSlotMapping] = useState<Record<string, string>>(
     currentRef ? { ...currentRef.inputs } : {}
   )
 
   const categories = [
-    { id: 'all', label: '全部方法 (14)' },
+    { id: 'all', label: '全部方法 (20)' },
     { id: 'accounting', label: '三表与勾稽' },
     { id: 'profitability', label: '盈利与杜邦' },
     { id: 'solvency', label: '偿债与流动性' },
@@ -35,23 +35,28 @@ export function MethodPickerModal({
     { id: 'quality', label: '收益质量' },
     { id: 'valuation', label: '估值模型' },
     { id: 'strategy', label: '竞争与护城河' },
+    { id: 'capacity', label: '资本开支与产能' },
+    { id: 'rnd', label: '研发效能' },
+    { id: 'forecasting', label: '三表预测' },
+    { id: 'governance', label: '公司治理与质押' },
+    { id: 'impairment', label: '商誉与资产减值' },
+    { id: 'audit', label: '关键审计KAM' },
   ]
 
   const filtered = selectedCategory === 'all'
-    ? CORE_14_FINANCIAL_METHODS
-    : CORE_14_FINANCIAL_METHODS.filter((m) => m.category === selectedCategory)
+    ? CORE_20_FINANCIAL_METHODS
+    : CORE_20_FINANCIAL_METHODS.filter((m) => m.category === selectedCategory)
 
-  const active = CORE_14_FINANCIAL_METHODS.find((m) => m.id === activeMethodId) || CORE_14_FINANCIAL_METHODS[0]
+  const active = CORE_20_FINANCIAL_METHODS.find((m) => m.id === activeMethodId) || CORE_20_FINANCIAL_METHODS[0]
 
   const handleApply = () => {
-    // Generate synthetic digest for demo / assembly preview
     const fakeDigest = currentRef?.digest || `sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
     const ref: MethodReference = {
       method_id: active.id.length === 36 ? active.id : '00000000-0000-0000-0000-000000000001',
       version: currentRef?.version || 1,
       digest: fakeDigest,
       inputs: {
-        [active.slot]: slotMapping[active.slot] || (earlier[0] ? earlier[0].id : 'intake'),
+        [active.slot]: slotMapping[active.slot] || (earlier[0] ? earlier[0].id : 'financial_data_intake'),
       },
     }
     onSelectMethod(ref)
@@ -60,12 +65,12 @@ export function MethodPickerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex h-[680px] w-[960px] flex-col rounded-xl bg-white shadow-2xl dark:bg-zinc-900">
+      <div className="flex h-[720px] w-[1020px] flex-col rounded-xl bg-white shadow-2xl dark:bg-zinc-900">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-6 py-4 dark:border-zinc-800">
           <div>
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              装配作者方法库 (不可变版本)
+              装配作者方法库 (20项不可变版本)
             </h3>
             <p className="text-xs text-zinc-500">
               精确绑定作者已冻结的方法版本，不可篡改方法正文与工具权限。
@@ -77,12 +82,12 @@ export function MethodPickerModal({
         </div>
 
         {/* Categories Bar */}
-        <div className="flex gap-2 border-b bg-zinc-50/50 px-6 py-2 dark:border-zinc-800 dark:bg-zinc-900/50">
+        <div className="flex flex-wrap gap-1.5 border-b bg-zinc-50/50 px-6 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/50">
           {categories.map((c) => (
             <button
               key={c.id}
               onClick={() => setSelectedCategory(c.id)}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                 selectedCategory === c.id
                   ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
                   : 'text-zinc-600 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800'
@@ -157,7 +162,7 @@ export function MethodPickerModal({
                     }
                   >
                     {earlier.length === 0 ? (
-                      <option value="intake">financial_data_intake (前置接入)</option>
+                      <option value="financial_data_intake">financial_data_intake (前置总接入)</option>
                     ) : (
                       earlier.map((s) => (
                         <option key={s.id} value={s.id}>

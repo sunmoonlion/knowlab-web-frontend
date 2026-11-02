@@ -50,8 +50,9 @@ export interface BindMethodCommand {
   max_calls?: number
 }
 
-// 14 Core Financial & Valuation Methods Catalog (Author Guidance)
-export const CORE_14_FINANCIAL_METHODS = [
+// Complete 20 Financial & Valuation Methods Catalog (Author Guidance)
+export const CORE_20_FINANCIAL_METHODS = [
+  // --- Batch 1 ---
   {
     id: 'fin_statement_restructure',
     title: '财务三表标准化重构与口径对齐',
@@ -116,6 +117,7 @@ export const CORE_14_FINANCIAL_METHODS = [
     slot: 'dossier_components',
     outputs: ['executive_summary', 'full_dossier_markdown', 'components_included_count'],
   },
+  // --- Batch 2 ---
   {
     id: 'non_recurring_items_purification',
     title: '非经常性损益穿透与扣非还原',
@@ -164,7 +166,59 @@ export const CORE_14_FINANCIAL_METHODS = [
     slot: 'moat_inputs',
     outputs: ['moat_grade_rating', 'pricing_power_score', 'roic_wacc_spread', 'moat_synthesis_summary'],
   },
+  // --- Batch 3 ---
+  {
+    id: 'capex_capacity_cycle_tracker',
+    title: '资本开支与产能释放周期追踪',
+    category: 'capacity',
+    provenance: '《企业会计准则第4号——固定资产》及产能投资周期模型',
+    slot: 'capex_and_cip_data',
+    outputs: ['capex_to_revenue_ratio', 'cip_turn_fixed_assets_amount', 'capacity_cycle_outlook'],
+  },
+  {
+    id: 'rnd_capitalization_efficiency_eval',
+    title: '研发投入资本化与产出效能评估',
+    category: 'rnd',
+    provenance: '《企业会计准则第6号——无形资产》（开发支出资本化标准）',
+    slot: 'rnd_expenditure_notes',
+    outputs: ['rnd_total_expenditure', 'rnd_capitalization_ratio', 'rnd_efficiency_verdict'],
+  },
+  {
+    id: 'three_statement_linked_forecasting',
+    title: '三表联动预测模型',
+    category: 'forecasting',
+    provenance: '投资银行财务模型(Financial Modeling)三表配平公理',
+    slot: 'forecasting_assumptions_and_base',
+    outputs: ['forecasted_revenue_3y', 'forecasted_net_profit_3y', 'balance_sheet_plug_cash'],
+  },
+  {
+    id: 'pledge_reduction_related_transaction_scan',
+    title: '股权质押、减持与重大关联交易穿透',
+    category: 'governance',
+    provenance: '证监会《上市公司监管指引第8号——上市公司资金往来与对外担保》',
+    slot: 'governance_and_pledge_notes',
+    outputs: ['pledged_shares_ratio', 'insider_reduction_amount', 'governance_risk_rating'],
+  },
+  {
+    id: 'goodwill_asset_impairment_stress_test',
+    title: '商誉减值与资产质量压力测试',
+    category: 'impairment',
+    provenance: '《企业会计准则第8号——资产减值》及《会计监管风险提示第8号》',
+    slot: 'asset_impairment_notes',
+    outputs: ['goodwill_to_equity_ratio', 'goodwill_stress_impairment_loss', 'asset_quality_rating'],
+  },
+  {
+    id: 'kam_contingent_liability_audit',
+    title: '关键审计事项与或有负债排查',
+    category: 'audit',
+    provenance: '中国注册会计师审计准则第1504号及《企业会计准则第13号——或有事项》',
+    slot: 'audit_report_fulltext',
+    outputs: ['audit_opinion_type', 'kam_topics_count', 'contingent_liability_risk_verdict'],
+  },
 ] as const
+
+// Backwards compatibility alias
+export const CORE_14_FINANCIAL_METHODS = CORE_20_FINANCIAL_METHODS
 
 /**
  * Fetch available method units for authoring.
