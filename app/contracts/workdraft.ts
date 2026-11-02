@@ -73,7 +73,12 @@ const advancedSchema = z.object({
   output_schema: z.record(z.string(), z.unknown()).nullable().default(null),
   output_file: z.string().nullable().default(null),
 })
-const stepSchema = z.object({
+export const selectionSchema = z.object({
+  applies_when: z.string().min(1).max(4000),
+  required: z.boolean(),
+  max_calls: z.number().int().min(1).max(100),
+})
+export const stepSchema = z.object({
   id: z.string(),
   title: z.string(),
   does: z.string(),
@@ -85,13 +90,35 @@ const stepSchema = z.object({
   checks: z.array(checkSchema),
   on_fail: onFailSchema,
   advanced: advancedSchema,
+  selection: selectionSchema.nullable().optional(),
 })
+export const planningSchema = z.object({
+  method_text: z.string().min(1).max(20000),
+  final_units: z.array(z.string()).min(1).max(30),
+  max_steps: z.number().int().min(1).max(100),
+  max_replans: z.number().int().min(0).max(10),
+  reserve: z.string().regex(/^[0-9]{1,4}(\.[0-9]{1,4})?$/),
+  input_max_chars: z.number().int().min(500).max(200000),
+})
+
+export const methodReferenceSchema = z.object({
+  method_id: z.string().uuid(),
+  version: z.number().int().min(1).max(999999),
+  digest: z.string().regex(/^sha256:[0-9a-f]{64}$/),
+  inputs: z.record(z.string(), z.string()).default({}),
+})
+
+export type Planning = z.infer<typeof planningSchema>
+export type MethodReference = z.infer<typeof methodReferenceSchema>
+
 export const bodySchema = z.object({
   name: z.string(),
   tagline: z.string(),
   scope: z.object({ does: z.string(), does_not: z.string(), elsewhere: z.string() }),
   data_picks: z.array(z.string()),
   steps: z.array(stepSchema),
+  planning: planningSchema.nullable().optional(),
+  method_refs: z.record(z.string(), methodReferenceSchema).nullable().optional(),
 })
 
 // 每格的出处是怎么来的：在编辑器里写的、导入、复制、接受的建议、答过的缺口、创意原句

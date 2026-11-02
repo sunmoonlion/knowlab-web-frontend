@@ -1,0 +1,228 @@
+{
+  "workdraft": {
+    "contract_version": 1,
+    "request_id": "0b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10",
+    "title": "Synthetic document check",
+    "revision": 2,
+    "body": {
+      "name": "文档核对",
+      "tagline": "",
+      "scope": {
+        "does": "按作者标准核对给定文档",
+        "does_not": "",
+        "elsewhere": ""
+      },
+      "data_picks": [],
+      "steps": [
+        {
+          "id": "report",
+          "title": "汇总",
+          "does": "列出每一条的核对结果。",
+          "why": "",
+          "uses": [
+            "inspect"
+          ],
+          "rules": [],
+          "ask_before": [],
+          "outputs": [
+            {
+              "name": "rows",
+              "type": "list",
+              "items": null
+            }
+          ],
+          "checks": [
+            {
+              "template": "covers",
+              "params": {
+                "path": "rows",
+                "field": "id",
+                "source_step": "inspect",
+                "source_path": "rows",
+                "source_field": "id"
+              }
+            }
+          ],
+          "on_fail": {
+            "kind": "back",
+            "back_to": "inspect"
+          },
+          "advanced": {
+            "tools": [],
+            "reserve": null,
+            "input_max_chars": null,
+            "output_schema": null,
+            "output_file": null
+          },
+          "selection": {
+            "applies_when": "交回最终结果时",
+            "required": true,
+            "max_calls": 1
+          }
+        },
+        {
+          "id": "inspect",
+          "title": "核对",
+          "does": "只依据给定文档核对，不补充未提供的文字。",
+          "why": "",
+          "uses": [],
+          "rules": [],
+          "ask_before": [],
+          "outputs": [
+            {
+              "name": "rows",
+              "type": "list",
+              "items": null
+            }
+          ],
+          "checks": [
+            {
+              "template": "list_min",
+              "params": {
+                "path": "rows"
+              }
+            }
+          ],
+          "on_fail": {
+            "kind": "rework",
+            "back_to": null
+          },
+          "advanced": {
+            "tools": [
+              "read_input"
+            ],
+            "reserve": null,
+            "input_max_chars": null,
+            "output_schema": null,
+            "output_file": null
+          },
+          "selection": {
+            "applies_when": "需要核对文档时",
+            "required": true,
+            "max_calls": 3
+          }
+        },
+        {
+          "id": "review",
+          "title": "复核",
+          "does": "再按同一原文逐项复核。",
+          "why": "",
+          "uses": [
+            "inspect"
+          ],
+          "rules": [],
+          "ask_before": [],
+          "outputs": [
+            {
+              "name": "notes",
+              "type": "text",
+              "items": null
+            }
+          ],
+          "checks": [],
+          "on_fail": {
+            "kind": "rework",
+            "back_to": null
+          },
+          "advanced": {
+            "tools": [
+              "read_input"
+            ],
+            "reserve": null,
+            "input_max_chars": null,
+            "output_schema": null,
+            "output_file": null
+          },
+          "selection": {
+            "applies_when": "用户要求复核时",
+            "required": false,
+            "max_calls": 2
+          }
+        }
+      ],
+      "planning": {
+        "method_text": "按问题选择核对方法。逐项核对后汇总，要求复核时再复核。",
+        "final_units": [
+          "report"
+        ],
+        "max_steps": 8,
+        "max_replans": 2,
+        "reserve": "0.05",
+        "input_max_chars": 8000
+      }
+    },
+    "sources": {},
+    "origins": {},
+    "data_formats": {},
+    "updated_at": null
+  },
+  "method": {
+    "method_id": "32adb685-ab1a-4ad3-a542-b7df318f67da",
+    "version": 1,
+    "digest": "sha256:42ff710fc17f1c4476013c4add63bbc58c833b730e9300d88fe49a74dc4613dd",
+    "definition": {
+      "schema": "knowlab/method-definition/v1",
+      "step": {
+        "id": "method",
+        "title": "汇总",
+        "does": "列出每一条的核对结果。",
+        "why": "",
+        "uses": [
+          "records"
+        ],
+        "rules": [],
+        "ask_before": [],
+        "outputs": [
+          {
+            "name": "rows",
+            "type": "list",
+            "items": null
+          }
+        ],
+        "checks": [
+          {
+            "template": "covers",
+            "params": {
+              "path": "rows",
+              "field": "id",
+              "source_step": "records",
+              "source_path": "rows",
+              "source_field": "id"
+            }
+          }
+        ],
+        "on_fail": {
+          "kind": "back",
+          "back_to": "records"
+        },
+        "advanced": {
+          "tools": [],
+          "reserve": "0.05",
+          "input_max_chars": 8000,
+          "output_schema": {
+            "rows": [
+              "string"
+            ]
+          },
+          "output_file": null
+        },
+        "selection": {
+          "applies_when": "交回最终结果时",
+          "required": false,
+          "max_calls": 1
+        }
+      },
+      "input_schemas": {
+        "records": {
+          "rows": [
+            "string"
+          ]
+        }
+      }
+    },
+    "provenance": {
+      "synthetic_fixture": true
+    },
+    "created_at": "2026-11-02T00:00:00Z"
+  }
+}

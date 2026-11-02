@@ -474,24 +474,40 @@ const stepOutputSchema = z.object({
   artifact_omitted_bytes: z.number().int().min(0).nullable().optional(),
   returned_raw: z.string().nullable().optional(),
   checks: z.array(outputCheckSchema).max(64).optional(),
+  current: z.boolean().nullable().optional(),
 })
 
-const caseOutputsSchema = z.object({
+const deliverableSchema = z.object({
+  path: z.string().max(1024),
+  text: z.string(),
+  truncated: z.boolean().optional(),
+  step_id: z.string().max(128).nullable().optional(),
+})
+const finalOutputSchema = z.object({
+  method_id: z.string().min(1).max(48),
+  instance_id: z.string().min(1).max(48),
+  result: z
+    .object({
+      id: z.string().uuid(),
+      version: z.number().int().min(1),
+      digest: z.string().regex(/^[0-9a-f]{64}$/),
+    })
+    .nullable(),
+  artifact: z.unknown().optional(),
+  artifact_omitted_bytes: z.number().int().min(0).nullable().optional(),
+  deliverable: deliverableSchema.nullable().optional(),
+  note: z.string().max(500).nullable().optional(),
+})
+export const caseOutputsSchema = z.object({
   contract: z.literal('knowbot-test-run/v1'),
   run_id: z.string(),
   case_id: z.string().regex(CASE_ID),
-  deliverable: z
-    .object({
-      path: z.string().max(1024),
-      text: z.string(),
-      truncated: z.boolean().optional(),
-      step_id: z.string().max(128).nullable().optional(),
-    })
-    .nullable()
-    .optional(),
+  deliverable: deliverableSchema.nullable().optional(),
   deliverable_note: z.string().max(500).nullable().optional(),
   steps: z.array(stepOutputSchema).max(200).optional(),
   error: z.string().max(500).nullable().optional(),
+  plan_version: z.number().int().min(1).nullable().optional(),
+  final_outputs: z.array(finalOutputSchema).max(30).optional(),
 })
 
 export const outputsSchema = z.object({

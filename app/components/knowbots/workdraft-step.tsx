@@ -16,6 +16,7 @@ import {
 import { freshId, nameProblem, outputsValid } from '@/lib/knowbots/workdraft'
 
 import { Checks } from './workdraft-checks'
+import { SelectionEditor } from './workdraft-planning'
 import { AcceptStep, SuggestionsAt } from './workdraft-suggestions'
 import {
   CellMarks,
@@ -40,6 +41,7 @@ export function StepEditor({
   number,
   count,
   earlier,
+  dynamic = false,
   onChange,
   onMove,
   onRemove,
@@ -48,6 +50,7 @@ export function StepEditor({
   number: number
   count: number
   earlier: Step[]
+  dynamic?: boolean
   onChange: (step: Step) => void
   onMove: (by: -1 | 1) => void
   onRemove: () => void
@@ -106,6 +109,7 @@ export function StepEditor({
           )}
         </div>
       </header>
+      {dynamic ? <SelectionEditor step={step} onChange={onChange} /> : null}
       <SuggestionsAt home={base} />
       <Field label={t('step.title')} path={`${base}/title`} filled={Boolean(step.title.trim())}>
         {(a11y) => (
