@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ApplicationsView } from '@/components/knowbots/applications-view'
 import { RequestForm } from '@/components/knowbots/request-form'
+import { Cases } from '@/components/knowbots/reference'
 import { ApiClientError } from '@/lib/common/api-client'
 import {
   acceptConsent,
@@ -34,6 +35,58 @@ vi.mock('@/i18n/navigation', async () => ({
 }))
 
 const k = messages.knowbots
+
+describe('表格行测试条件', () => {
+  const row = { where: { year: '2024', consolidated: true }, field: 'revenue' }
+  const expectation = {
+    artifact: 'indicators',
+    path: 'annual_metrics',
+    kind: 'approx',
+    value: 100,
+    tolerance: 0.001,
+    row,
+  }
+  const cases = [{ case_id: 'c1', input: { question: '合成测试' }, expectations: [expectation] }]
+  const labels = messages.knowbotRequests.form
+
+  it('旧版本带入选行条件，编辑数值不丢条件或改变类型', async () => {
+    vi.mocked(reviseRequest).mockResolvedValue(3)
+    const previous = version({ cases })
+    renderWith(<RequestForm csrfToken={CSRF} revise={{ requestId: REQUEST, version: previous }} />)
+    expect(screen.getByLabelText(labels.rowWhere)).toHaveValue(JSON.stringify(row.where))
+    fireEvent.change(screen.getByLabelText(labels.value), { target: { value: '101' } })
+    fireEvent.click(screen.getByLabelText(/我同意/))
+    fireEvent.click(screen.getByRole('button', { name: labels.submitRevision }))
+    await waitFor(() => expect(reviseRequest).toHaveBeenCalled())
+    expect(vi.mocked(reviseRequest).mock.calls[0]![1].cases[0]!.expectations[0]).toEqual({
+      ...expectation,
+      value: 101,
+    })
+    expect(previous.cases).toEqual(cases)
+  })
+
+  it.each(['not json', '{}', '{"year":[]}', '{"year":2024,"other":null}'])(
+    '无效条件阻止提交：%s',
+    async (where) => {
+      renderWith(
+        <RequestForm
+          csrfToken={CSRF}
+          revise={{ requestId: REQUEST, version: version({ cases }) }}
+        />,
+      )
+      fireEvent.change(screen.getByLabelText(labels.rowWhere), { target: { value: where } })
+      fireEvent.click(screen.getByLabelText(/我同意/))
+      fireEvent.click(screen.getByRole('button', { name: labels.submitRevision }))
+      expect(await screen.findByText(labels.rowInvalid)).toBeInTheDocument()
+      expect(reviseRequest).not.toHaveBeenCalled()
+    },
+  )
+
+  it('查看测试时显示选行条件与唯一性要求', () => {
+    renderWith(<Cases cases={cases} />)
+    expect(screen.getByText(/按.*2024.*唯一选行.*revenue/)).toBeInTheDocument()
+  })
+})
 
 beforeEach(() => {
   vi.resetAllMocks()

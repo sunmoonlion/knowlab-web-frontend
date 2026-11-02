@@ -41,6 +41,7 @@ type Expectation = {
   kind?: unknown
   value?: unknown
   tolerance?: unknown
+  row?: { where?: unknown; field?: unknown } | null
 }
 
 const KINDS = ['equals', 'approx', 'contains'] as const
@@ -80,6 +81,14 @@ export function Cases({ cases }: { cases: Record<string, unknown>[] }) {
                       <tr key={j} className="border-t">
                         <td className="py-1 pr-2 break-all">
                           {String(e.artifact ?? '')} · {String(e.path ?? '')}
+                          {e.row ? (
+                            <p>
+                              {tForm('rowMatch', {
+                                where: JSON.stringify(e.row.where),
+                                field: String(e.row.field ?? ''),
+                              })}
+                            </p>
+                          ) : null}
                         </td>
                         <td className="py-1 pr-2">
                           {kind ? tForm(`kinds.${kind}`) : String(e.kind ?? '')}
