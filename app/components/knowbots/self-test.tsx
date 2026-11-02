@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import type {
   Detail,
   Grant,
+  Test,
   TestDataItem,
   TestDataNeed,
   TestDataRequest,
@@ -26,7 +27,7 @@ import {
   withdrawPlatformTest,
 } from '@/lib/knowbots/client'
 
-import { Card, KEY } from './shared'
+import { Card, KEY, useWhen } from './shared'
 
 const ACTIVE = new Set(['queued', 'running', 'waiting'])
 const field = 'h-8 rounded-lg border bg-transparent px-2 text-sm'
@@ -50,8 +51,9 @@ export function startFailure(error: unknown, t: (key: string) => string): string
 // 数据由我确认（换一份、改主体或年份、去掉、自己加一样），定下来的记成测试集，重测直接用。
 export function SelfTests({ life, csrfToken }: { life: Detail; csrfToken: string }) {
   const t = useTranslations('knowbots.selfTest')
-  const pending = [...life.drafts].reverse().find((d) => d.status === 'pending_test')
   const active = life.tests.filter((x) => ACTIVE.has(x.status))
+  const latest = life.drafts.at(-1)
+  const pending = active.length === 0 && latest?.status === 'pending_test' ? latest : undefined
   if (!pending && active.length === 0) return null
   return (
     <Card title={t('title')}>
@@ -66,7 +68,7 @@ export function SelfTests({ life, csrfToken }: { life: Detail; csrfToken: string
         />
       ) : null}
       {active.map((x) => (
-        <ActiveTest key={x.test_id} testId={x.test_id} number={x.number} csrfToken={csrfToken} />
+        <ActiveTest key={x.test_id} test={x} csrfToken={csrfToken} />
       ))}
     </Card>
   )
@@ -282,28 +284,45 @@ function PlatformTest({
   )
 }
 
-function ActiveTest({
-  testId,
-  number,
-  csrfToken,
-}: {
-  testId: string
-  number: number
-  csrfToken: string
-}) {
+function ActiveTest({ test, csrfToken }: { test: Test; csrfToken: string }) {
   const t = useTranslations('knowbots.selfTest')
+  const tc = useTranslations('knowbots.testsColumn')
+  const when = useWhen()
+  const client = useQueryClient()
+  const testId = test.test_id
+  const failedCases = test.report?.cases
+    .filter((c) => c.status === 'failed' || c.status === 'error')
+    .map((c) => c.case_id)
   // 先请后端问一次运行方（记下新问题、查在取的数据），再列这次测试里等我定的数据
   const data = useQuery({
     queryKey: [...KEY, 'test-data', testId],
     queryFn: async () => {
       await refreshMyTest(testId, csrfToken)
+      // 刷新实际状态与已完成用例；只失效详情，避免递归重取本查询。
+      await client.invalidateQueries({ queryKey: [...KEY, 'detail'] })
       return fetchTestData(testId)
     },
     refetchInterval: 15_000,
   })
   return (
     <div className="space-y-2 border-t pt-2" data-testid="self-test-active">
-      <p className="font-medium">{t('running', { number })}</p>
+      <p className="font-medium">{t(`activeStatus.${test.status}`, { number: test.number })}</p>
+      <p className="text-muted-foreground text-sm">
+        {[
+          tc(`mode.${test.mode}`),
+          test.label ? t('draft', { label: test.label }) : '',
+          when(test.started_at),
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      </p>
+      <p className="text-muted-foreground text-sm">{t('executionLocation')}</p>
+      {failedCases?.length ? (
+        <p role="status" className="text-amber-700">
+          {t('failedCases', { cases: failedCases.join('、') })}
+        </p>
+      ) : null}
+      {data.isError ? <p role="alert">{t('dataRefreshFailed')}</p> : null}
       {(data.data ?? []).map((request) => (
         <DataRequest key={request.question_id} request={request} csrfToken={csrfToken} />
       ))}
@@ -467,12 +486,17 @@ function Row({
     : [item.key.period_start, item.key.period_end].filter(Boolean).join(' ~ ')
   const c = normal(code)
   const [a, b] = [year(from), year(to)]
+  const reading =
+    typeof need?.reading === 'string' &&
+    ['original', 'pages', 'text', 'table'].includes(need.reading)
+      ? t(`reading.${need.reading}`)
+      : ''
   return (
     <li className={`rounded-lg border p-2 ${off ? 'opacity-60' : ''}`}>
       <div className="flex flex-wrap items-baseline gap-x-2">
         <span className="font-medium">{need?.name ?? item.need_key}</span>
         <span className="text-muted-foreground text-xs">
-          {[subject ?? t('anySubject'), period, need?.required ? t('essential') : '']
+          {[subject ?? t('anySubject'), period, reading, need?.required ? t('essential') : '']
             .filter(Boolean)
             .join(' · ')}
         </span>

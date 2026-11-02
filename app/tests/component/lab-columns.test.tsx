@@ -116,7 +116,7 @@ describe('测试栏', () => {
     expect(await screen.findByTestId('test-set')).toHaveTextContent('测试集第 3 版')
     const history = within(screen.getByTestId('test-history'))
     expect(history.getByText('测试 5')).toBeInTheDocument()
-    expect(history.getByText(/自助/)).toBeInTheDocument()
+    expect(history.getByText(/作者自测/)).toBeInTheDocument()
     expect(screen.getByText(k.testsColumn.nothingToTest)).toBeInTheDocument()
     expect(fetchComputers).not.toHaveBeenCalled()
   })
