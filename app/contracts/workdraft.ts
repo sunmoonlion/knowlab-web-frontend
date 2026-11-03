@@ -67,6 +67,7 @@ const outputSchema = z.object({
 const checkSchema = z.object({
   template: z.enum(TEMPLATE_NAMES as [Template, ...Template[]]),
   params: z.record(z.string(), z.unknown()),
+  when_input_present: z.string().regex(STEP_ID).optional(),
 })
 const onFailSchema = z.object({
   kind: z.enum(['rework', 'back', 'ask']),
@@ -97,7 +98,24 @@ export const stepSchema = z.object({
   on_fail: onFailSchema,
   advanced: advancedSchema,
   selection: selectionSchema.nullable().optional(),
+  input_required: z.record(z.string().regex(STEP_ID), z.boolean()).optional(),
 })
+export const publicCapabilitySchema = z.object({
+  id: z.string().regex(STEP_ID),
+  statement: z.string().trim().min(1).max(2000),
+  conditions: z.array(z.string().trim().min(1).max(2000)).max(30),
+  exclusions: z.array(z.string().trim().min(1).max(2000)).max(30),
+  delivers: z.array(z.string().trim().min(1).max(2000)).min(1).max(30),
+})
+export const capabilityBindingSchema = z.object({
+  required_units: z.array(z.string().regex(STEP_ID)).min(1).max(30),
+  evidence_outputs: z
+    .array(z.object({ method: z.string().regex(STEP_ID), field: z.string().min(1).max(64) }))
+    .min(1)
+    .max(30),
+})
+export type PublicCapability = z.infer<typeof publicCapabilitySchema>
+export type CapabilityBinding = z.infer<typeof capabilityBindingSchema>
 export const planningSchema = z.object({
   method_text: z.string().min(1).max(20000),
   final_units: z.array(z.string()).min(1).max(30),
@@ -105,6 +123,7 @@ export const planningSchema = z.object({
   max_replans: z.number().int().min(0).max(10),
   reserve: z.string().regex(/^[0-9]{1,4}(\.[0-9]{1,4})?$/),
   input_max_chars: z.number().int().min(500).max(200000),
+  capability_bindings: z.record(z.string().regex(STEP_ID), capabilityBindingSchema).optional(),
 })
 
 export const methodReferenceSchema = z.object({
@@ -125,6 +144,7 @@ export const bodySchema = z.object({
   steps: z.array(stepSchema),
   planning: planningSchema.nullable().optional(),
   method_refs: z.record(z.string(), methodReferenceSchema).nullable().optional(),
+  public_capabilities: z.array(publicCapabilitySchema).min(1).max(30).nullable().optional(),
 })
 
 // 每格的出处是怎么来的：在编辑器里写的、导入、复制、接受的建议、答过的缺口、创意原句

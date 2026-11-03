@@ -1129,7 +1129,9 @@
         "advanced": "Tools, budget and delivery settings",
         "selection": "Applicability and call limits",
         "heading": "Review method changes: version {from} → version {to}"
-      }
+      },
+      "slotRequired": "Required input",
+      "slotOptional": "Optional at runtime (bind when composing)"
     },
     "freeze": {
       "open": "Freeze as an independent method",
@@ -1173,6 +1175,33 @@
       "required": "Include in every plan",
       "calls": "Maximum calls per plan (1–100)",
       "selectionSave": "Confirm selection conditions"
+    },
+    "capabilities": {
+      "title": "Public capabilities and method support",
+      "lead": "Describe promised results, conditions and deliverables, then choose the supporting methods and outputs. Matching only uses the public declaration.",
+      "edit": "Edit declarations",
+      "statement": "What it solves",
+      "conditions": "Conditions (one per line)",
+      "exclusions": "Exclusions (one per line)",
+      "delivers": "Deliverables (one per line)",
+      "support": "Supporting methods (private)",
+      "evidence": "Evidence outputs",
+      "remove": "Remove capability",
+      "add": "Add capability",
+      "privateNote": "Saving confirms these declarations and their method support; candidate content is not automatically accepted.",
+      "incomplete": "Complete the declaration and select supporting methods and evidence outputs.",
+      "save": "Confirm and save",
+      "cancel": "Cancel"
+    },
+    "optionalInputs": {
+      "lead": "Authors may make inputs optional. Only explicitly conditional checks are skipped when a task omits that upstream method.",
+      "edit": "Edit input requirements and checks",
+      "required": "This input is required",
+      "guard": "Check {n}: apply only when this input is present",
+      "always": "Always check",
+      "invalid": "Optional inputs cannot be back targets. Coverage checks must use their own optional source as guard; required outputs are always checked.",
+      "save": "Confirm and save",
+      "cancel": "Cancel"
     }
   },
   "ideaMethods": {

@@ -17,6 +17,7 @@ import { freshId, nameProblem, outputsValid } from '@/lib/knowbots/workdraft'
 
 import { Checks } from './workdraft-checks'
 import { SelectionEditor } from './workdraft-planning'
+import { InputRequirements } from './workdraft-inputs'
 import { AcceptStep, SuggestionsAt } from './workdraft-suggestions'
 import {
   CellMarks,
@@ -42,6 +43,7 @@ export function StepEditor({
   count,
   earlier,
   dynamic = false,
+  capabilities = false,
   onChange,
   onMove,
   onRemove,
@@ -51,6 +53,7 @@ export function StepEditor({
   count: number
   earlier: Step[]
   dynamic?: boolean
+  capabilities?: boolean
   onChange: (step: Step) => void
   onMove: (by: -1 | 1) => void
   onRemove: () => void
@@ -155,7 +158,32 @@ export function StepEditor({
           />
         )}
       </Field>
-      <Uses step={step} earlier={earlier} base={base} onChange={(uses) => set('uses', uses)} />
+      <Uses
+        step={step}
+        earlier={earlier}
+        base={base}
+        onChange={(uses) =>
+          onChange({
+            ...step,
+            uses,
+            ...(step.input_required
+              ? {
+                  input_required: Object.fromEntries(
+                    uses.map((id) => [id, step.input_required?.[id] ?? true]),
+                  ),
+                }
+              : {}),
+          })
+        }
+      />
+      {capabilities && step.uses.length > 0 ? (
+        <InputRequirements
+          key={JSON.stringify([step.uses, step.input_required, step.checks])}
+          step={step}
+          earlier={earlier}
+          onChange={onChange}
+        />
+      ) : null}
       <Rules step={step} base={base} onChange={(rules) => set('rules', rules)} />
       <Asks step={step} base={base} onChange={(asks) => set('ask_before', asks)} />
       <Outputs step={step} base={base} onChange={(outputs) => set('outputs', outputs)} />

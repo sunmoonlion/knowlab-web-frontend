@@ -23,6 +23,7 @@ const STEP_FIELDS = [
   'on_fail',
   'advanced',
   'selection',
+  'input_required',
 ] as const
 const MAX_EDITS = 200 // 后端一次最多收这么多格
 
@@ -122,6 +123,8 @@ export function diffEdits(saved: WorkdraftBody, local: WorkdraftBody): CellEdit[
   }
   if (!same(send.planning, saved.planning))
     edits.push({ path: 'planning', value: send.planning ?? null })
+  if (!same(send.public_capabilities, saved.public_capabilities))
+    edits.push({ path: 'public_capabilities', value: send.public_capabilities ?? null })
   const whole = { path: 'steps', value: send.steps }
   if (
     !same(
@@ -149,6 +152,13 @@ export function withoutStep(body: WorkdraftBody, id: string): WorkdraftBody {
       .map((s) => ({
         ...s,
         uses: s.uses.filter((u) => u !== id),
+        ...(s.input_required
+          ? {
+              input_required: Object.fromEntries(
+                Object.entries(s.input_required).filter(([slot]) => slot !== id),
+              ),
+            }
+          : {}),
         on_fail: s.on_fail.back_to === id ? { kind: 'rework' as const, back_to: null } : s.on_fail,
       })),
   }

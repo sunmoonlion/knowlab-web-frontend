@@ -15,15 +15,23 @@ export const methodsSchema = z.object({
   ),
 })
 
+const definitionFields = {
+  step: stepSchema.extend({ selection: selectionSchema }),
+  input_schemas: z.record(z.string(), z.record(z.string(), z.unknown())),
+}
+export const methodDefinitionSchema = z.discriminatedUnion('schema', [
+  z.object({ schema: z.literal('knowlab/method-definition/v1'), ...definitionFields }),
+  z.object({
+    schema: z.literal('knowlab/method-definition/v2'),
+    ...definitionFields,
+    input_required: z.record(z.string(), z.boolean()),
+  }),
+])
 export const methodVersionSchema = z.object({
   method_id: z.string().uuid(),
   version: z.number().int().min(1).max(999999),
   digest: z.string().regex(/^sha256:[0-9a-f]{64}$/),
-  definition: z.object({
-    schema: z.literal('knowlab/method-definition/v1'),
-    step: stepSchema.extend({ selection: selectionSchema }),
-    input_schemas: z.record(z.string(), z.record(z.string(), z.unknown())),
-  }),
+  definition: methodDefinitionSchema,
   provenance: z.record(z.string(), z.unknown()),
   created_at: z.string(),
 })

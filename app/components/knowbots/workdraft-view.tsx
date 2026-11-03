@@ -45,6 +45,7 @@ import { IdeaMethodsToAssemble } from './idea-methods'
 import type { MethodChoice } from '@/contracts/method-choice'
 import { MethodFreezePanel } from './workdraft-method-freeze'
 import { PlanningCard } from './workdraft-planning'
+import { CapabilityCard } from './workdraft-capabilities'
 import { GapsCard, RoundBar, RoundPanel, startFailure } from './workdraft-ai'
 import { Field, Group, INPUT, MarksContext, useProblemText } from './workdraft-cells'
 import { DataCard } from './workdraft-data'
@@ -873,6 +874,11 @@ function Editor({
             disabled={busy || running || deciding}
             onSave={(planning) => edit((b) => ({ ...b, planning }))}
           />
+          <CapabilityCard
+            body={body}
+            disabled={busy || running || deciding}
+            onSave={(next) => edit(() => next)}
+          />
           <DataCard
             picks={body.data_picks}
             formats={doc.formats}
@@ -926,6 +932,7 @@ function Editor({
                           : body.steps.slice(0, index)
                       }
                       dynamic={Boolean(body.planning)}
+                      capabilities={Boolean(body.planning?.capability_bindings)}
                       onChange={setStep}
                       onMove={(by) => move(step.id, by)}
                       onRemove={() => edit((b) => withoutStep(b, step.id))}

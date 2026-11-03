@@ -167,7 +167,16 @@ function BindingForm({
         {slots.map((slot) => (
           <label key={slot} className="block">
             {t('input', { slot })}
+            <span className="text-muted-foreground ml-2 text-xs">
+              {t(
+                method.definition.schema === 'knowlab/method-definition/v2' &&
+                  !method.definition.input_required[slot]
+                  ? 'slotOptional'
+                  : 'slotRequired',
+              )}
+            </span>
             <select
+              aria-label={t('input', { slot })}
               className={SELECT}
               value={inputs[slot] ?? ''}
               onChange={(e) => setInputs({ ...inputs, [slot]: e.target.value })}

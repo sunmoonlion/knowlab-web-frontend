@@ -31,7 +31,13 @@ type Params = Record<string, unknown>
 export function switchTemplate(check: Check, template: Template): Check {
   const takes = [...TEMPLATES[template].required, ...TEMPLATES[template].optional] as string[]
   const path = check.params.path
-  return { template, params: takes.includes('path') && path !== undefined ? { path } : {} }
+  return {
+    template,
+    params: takes.includes('path') && path !== undefined ? { path } : {},
+    ...(template !== 'required' && check.when_input_present
+      ? { when_input_present: check.when_input_present }
+      : {}),
+  }
 }
 
 function withParam(params: Params, name: string, value: unknown): Params {
