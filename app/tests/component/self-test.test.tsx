@@ -153,7 +153,7 @@ describe('自助测试（SDD 0046 第三节）', () => {
   it('只有一台在线就默认它，设费用上限后自己测一次', async () => {
     page(detail({ drafts: [draft({ status: 'pending_test', draft_id: DRAFT })], tests: [] }))
     const start = within(await screen.findByTestId('self-test-start'))
-    fireEvent.change(start.getByRole('textbox', { name: '费用上限（元）' }), {
+    fireEvent.change(start.getByRole('textbox', { name: '本次测试总费用上限（元）' }), {
       target: { value: '5' },
     })
     fireEvent.click(start.getByRole('button', { name: '自己测一次' }))
