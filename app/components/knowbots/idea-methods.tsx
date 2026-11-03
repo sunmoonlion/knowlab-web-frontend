@@ -63,33 +63,88 @@ export function IdeaMethodChooser({
   choices,
   onChange,
   disabled,
+  onTemplate,
+  onBuilding,
 }: {
   choices: MethodChoice[]
   onChange: (choices: MethodChoice[]) => void
   disabled: boolean
+  onTemplate?: (methods: MethodVersion[]) => void
+  onBuilding?: (building: boolean) => void
 }) {
   const t = useTranslations('ideaMethods')
+  const [building, setBuilding] = useState(false)
+  const [failed, setFailed] = useState(false)
+  async function generate() {
+    setBuilding(true)
+    onBuilding?.(true)
+    setFailed(false)
+    try {
+      const methods = await Promise.all(
+        choices.map(async (choice) => {
+          const method = await getMethodVersion(choice.method_id, choice.version)
+          if (method.digest !== choice.digest) throw new Error('method integrity')
+          return method
+        }),
+      )
+      onTemplate?.(methods)
+    } catch {
+      setFailed(true)
+    } finally {
+      setBuilding(false)
+      onBuilding?.(false)
+    }
+  }
   const [open, setOpen] = useState(false)
   return (
-    <fieldset disabled={disabled} className="space-y-3">
+    <fieldset disabled={disabled || building} className="space-y-3">
       <legend className="text-sm font-medium">{t('title')}</legend>
       <p className="text-muted-foreground text-sm">{t('hint')}</p>
       <ul className="space-y-2">
-        {choices.map((choice) => (
+        {choices.map((choice, index) => (
           <ChoiceRow key={`${choice.method_id}:${choice.version}`} choice={choice}>
             {() => (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => onChange(choices.filter((c) => c.method_id !== choice.method_id))}
-              >
-                {t('remove')}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={index === 0}
+                  onClick={() => {
+                    const reordered = [...choices]
+                    ;[reordered[index - 1], reordered[index]] = [
+                      reordered[index]!,
+                      reordered[index - 1]!,
+                    ]
+                    onChange(reordered)
+                  }}
+                >
+                  {t('moveUp')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onChange(choices.filter((c) => c.method_id !== choice.method_id))}
+                >
+                  {t('remove')}
+                </Button>
+              </div>
             )}
           </ChoiceRow>
         ))}
       </ul>
+      {onTemplate ? (
+        <Button
+          type="button"
+          variant="outline"
+          disabled={disabled || building || choices.length === 0}
+          onClick={() => void generate()}
+        >
+          {t('generateTemplate')}
+        </Button>
+      ) : null}
+      {failed ? <p role="alert">{t('templateFailed')}</p> : null}
       <Button type="button" variant="outline" onClick={() => setOpen(!open)}>
         {t(open ? 'close' : 'browse')}
       </Button>

@@ -14,6 +14,7 @@ export function Method({ idea }: { idea: Idea }) {
     <>
       <MethodText idea={idea} />
       <IdeaMethodChoices choices={idea.method_choices ?? []} />
+      <IdeaMethodChoices choices={idea.template_sources ?? []} />
     </>
   )
 }

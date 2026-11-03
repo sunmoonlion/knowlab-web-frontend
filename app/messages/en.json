@@ -1294,7 +1294,7 @@
   },
   "ideaMethods": {
     "title": "Methods to use",
-    "hint": "Choose your saved method versions as a starting point. Bind their inputs and selection rules in the expert workdraft.",
+    "hint": "Choose and order methods to compose an editable idea template. Refine it before incubation. A frozen version alone does not establish maturity or business validation.",
     "chosenMethod": "Chosen method",
     "version": "Version {version}",
     "unavailable": "This exact version could not be verified. Reload it or remove this choice.",
@@ -1313,6 +1313,22 @@
     "target": "Method position",
     "chooseTarget": "Choose a position",
     "addPosition": "Add a method position below to continue.",
-    "assemble": "Review and assemble"
+    "assemble": "Review and assemble",
+    "generateTemplate": "Compose an editable idea template",
+    "moveUp": "Move up",
+    "templateFailed": "Could not compose the template. Check source versions or select fewer methods. Your draft is unchanged.",
+    "templateSources": "Template sources",
+    "templateEditable": "These methods are now editable in your idea text above. Source versions are retained for traceability, not execution bindings or proof that your edits are valid.",
+    "templateLabels": {
+      "solves": "Problem to solve",
+      "not_solves": "Out of scope",
+      "inputs": "Inputs and data structure",
+      "steps": "Original method",
+      "outputs": "Deliverables",
+      "correctness": "Acceptance checks",
+      "rules": "Decision rules",
+      "applies_when": "Applicable when",
+      "when_input_present": "Check only when this input is present"
+    }
   }
 }

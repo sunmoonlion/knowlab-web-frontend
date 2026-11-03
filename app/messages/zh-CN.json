@@ -1294,7 +1294,7 @@
   },
   "ideaMethods": {
     "title": "选用的方法",
-    "hint": "可以从自己的方法库选定版本，作为孵化起点；进入工作稿后再配置输入和选择规则。",
+    "hint": "从库中选取方法、调整顺序，生成可加工的创意模板。模板需由你修改定型，再按同一流程孵化；选版和冻结不代表方法已成熟或经过业务验证。",
     "chosenMethod": "已选方法",
     "version": "第 {version} 版",
     "unavailable": "未能核实这个确切版本，请重新加载或移除此项。",
@@ -1313,6 +1313,22 @@
     "target": "装配到哪个方法位置",
     "chooseTarget": "选择位置",
     "addPosition": "请先在下方添加方法位置。",
-    "assemble": "核对并装配"
+    "assemble": "核对并装配",
+    "generateTemplate": "组合成可编辑创意模板",
+    "moveUp": "上移",
+    "templateFailed": "模板未生成。请检查所选版本是否仍可读取，或减少方法数量；原稿未改。",
+    "templateSources": "模板素材来源",
+    "templateEditable": "这些方法已写入上方创意原文，可以自由修改。来源版本仅供追溯，不锁定你的写法，也不自动成为专家绑定；修改后的适用性需重新核对。",
+    "templateLabels": {
+      "solves": "解决的问题",
+      "not_solves": "不解决的问题",
+      "inputs": "输入与数据结构",
+      "steps": "原有方法",
+      "outputs": "交付内容",
+      "correctness": "验收规则",
+      "rules": "判断规则",
+      "applies_when": "适用条件",
+      "when_input_present": "仅提供此输入时检查"
+    }
   }
 }

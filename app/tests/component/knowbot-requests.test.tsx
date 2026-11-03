@@ -223,6 +223,35 @@ describe('申请一个创意', () => {
     expect(getMethodVersion).toHaveBeenCalledWith(choice.method_id, choice.version)
   })
 
+  it('方法组合成可编辑创意，保留原创和来源但不自动绑定或提交', async () => {
+    vi.mocked(fetchRuntimes).mockResolvedValue(['knowbench'])
+    vi.mocked(submitRequest).mockResolvedValue(REQUEST)
+    renderWith(<RequestForm csrfToken={CSRF} />)
+    await waitFor(() => expect(screen.getByLabelText('在哪里运行')).toHaveValue('knowbench'))
+    fill()
+    fireEvent.click(screen.getByRole('button', { name: '从方法库选择' }))
+    fireEvent.click(await screen.findByRole('button', { name: '作者已冻结的方法 · 版本 1' }))
+    fireEvent.click(await screen.findByRole('button', { name: '选用第 1 版' }))
+    fireEvent.click(screen.getByRole('button', { name: messages.ideaMethods.generateTemplate }))
+    const editor = await screen.findByRole('textbox', {
+      name: messages.knowbotRequests.form.skillText,
+    })
+    expect((editor as HTMLTextAreaElement).value).toContain('答：它解决什么问题？')
+    expect((editor as HTMLTextAreaElement).value).toContain(method.definition.step.does)
+    expect(submitRequest).not.toHaveBeenCalled()
+    fireEvent.change(editor, { target: { value: '作者改定：结合原想法重新写方法' } })
+    fireEvent.click(screen.getByLabelText(/我同意/))
+    fireEvent.click(screen.getByRole('button', { name: '提交' }))
+    await waitFor(() => expect(submitRequest).toHaveBeenCalled())
+    const idea = vi.mocked(submitRequest).mock.calls[0]![0].idea
+    expect(idea).toEqual({
+      kind: 'skill',
+      skill: '作者改定：结合原想法重新写方法',
+      template_sources: [choice],
+    })
+    expect(method.definition.step.does).not.toContain('作者改定')
+  })
+
   it.each([false, true])('修改创意保留或移除确切引用（移除=%s），不修改旧版本', async (remove) => {
     vi.mocked(reviseRequest).mockResolvedValue(3)
     const previous = version({ idea: { kind: 'skill', skill: '# 方法', method_choices: [choice] } })

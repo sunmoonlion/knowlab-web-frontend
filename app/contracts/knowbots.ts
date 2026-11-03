@@ -45,16 +45,19 @@ export const ideaSchema = z.union([
     kind: z.literal('six_questions'),
     answers: sixAnswersSchema,
     method_choices: z.array(methodChoiceSchema).max(30).optional(),
+    template_sources: z.array(methodChoiceSchema).max(30).optional(),
   }),
   z.object({
     kind: z.literal('skill'),
     skill: z.string(),
     method_choices: z.array(methodChoiceSchema).max(30).optional(),
+    template_sources: z.array(methodChoiceSchema).max(30).optional(),
   }),
   z.object({
     kind: z.literal('question'),
     question: z.string(),
     method_choices: z.array(methodChoiceSchema).max(30).optional(),
+    template_sources: z.array(methodChoiceSchema).max(30).optional(),
   }),
 ])
 
@@ -635,7 +638,7 @@ export type IdeaIn = (
   | { kind: 'six_questions'; answers: SixAnswers }
   | { kind: 'skill'; skill: string }
   | { kind: 'question'; question: string }
-) & { method_choices?: MethodChoice[] }
+) & { method_choices?: MethodChoice[]; template_sources?: MethodChoice[] }
 export type RevisionIn = { idea: IdeaIn; cases: CaseIn[]; consent_test_data: true }
 // mode：孵化自己来还是请平台（SDD 0046 第四节）；请平台的同时设平台发起 AI 一轮的费用上限
 export type KnowbotRequestIn = RevisionIn & {

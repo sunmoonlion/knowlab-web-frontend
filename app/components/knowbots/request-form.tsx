@@ -24,7 +24,9 @@ import {
 } from '@/lib/knowbots/client'
 
 import { KEY } from './shared'
-import { IdeaMethodChooser } from './idea-methods'
+import { IdeaMethodChooser, IdeaMethodChoices } from './idea-methods'
+import { composeIdeaTemplate } from '@/lib/knowbots/idea-template'
+import type { MethodVersion } from '@/contracts/author-methods'
 import type { MethodChoice } from '@/contracts/method-choice'
 
 const QUESTIONS = ['solves', 'not_solves', 'inputs', 'steps', 'outputs', 'correctness'] as const
@@ -172,6 +174,12 @@ export function RequestForm({
   })
   const before = revise?.version.idea
   const [methodChoices, setMethodChoices] = useState<MethodChoice[]>(before?.method_choices ?? [])
+  const [templateBuilding, setTemplateBuilding] = useState(false)
+  const [templateSources, setTemplateSources] = useState<MethodChoice[]>(
+    before?.template_sources ?? [],
+  )
+  const templateText = useTranslations('ideaMethods')
+  const templateChecks = useTranslations('workdraft.templates')
   const [title, setTitle] = useState('')
   const [runtime, setRuntime] = useState('')
   const [kind, setKind] = useState<IdeaIn['kind']>(before?.kind ?? 'six_questions')
@@ -196,6 +204,36 @@ export function RequestForm({
   const [budget, setBudget] = useState('20')
   const budgetOk = /^[0-9]{1,4}(\.[0-9]{1,2})?$/.test(budget) && Number(budget) > 0
 
+  function useTemplate(methods: MethodVersion[]) {
+    const original: IdeaIn =
+      kind === 'skill'
+        ? { kind, skill }
+        : kind === 'question'
+          ? { kind, question }
+          : { kind, answers }
+    const generated = composeIdeaTemplate(
+      original,
+      methods,
+      (key) => templateText(`templateLabels.${key}`),
+      (key) => templateChecks(key),
+    )
+    const sources = [...templateSources]
+    for (const method of methods) {
+      if (!sources.some((s) => s.method_id === method.method_id && s.version === method.version)) {
+        sources.push({
+          method_id: method.method_id,
+          version: method.version,
+          digest: method.digest,
+        })
+      }
+    }
+    if (sources.length > 30) throw new Error('too_many_sources')
+    setSkill(generated)
+    setKind('skill')
+    setTemplateSources(sources)
+    setMethodChoices([])
+  }
+
   const chosenRuntime = runtime || (runtimes.data?.length === 1 ? runtimes.data[0] : '')
   const submit = useMutation({
     mutationFn: async () => {
@@ -206,6 +244,7 @@ export function RequestForm({
             ? { kind, question: question.trim() }
             : { kind, answers }
       if (methodChoices.length) idea.method_choices = methodChoices
+      if (templateSources.length) idea.template_sources = templateSources
       const revision = { idea, cases: toCases(cases), consent_test_data: true as const }
       if (revise) {
         await reviseRequest(revise.requestId, revision, csrfToken)
@@ -242,209 +281,220 @@ export function RequestForm({
       className="mt-6 max-w-3xl space-y-6"
       onSubmit={(event) => {
         event.preventDefault()
+        if (templateBuilding || submit.isPending) return
         setError(null)
         submit.mutate()
       }}
     >
-      {revise ? null : (
-        <>
-          <label className="block text-sm font-medium">
-            {t('form.title')}
-            <input
-              className={FIELD}
-              value={title}
-              maxLength={80}
-              required
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </label>
-
-          <label className="block text-sm font-medium">
-            {t('form.runtime')}
-            <select
-              className={FIELD}
-              value={chosenRuntime}
-              required
-              onChange={(e) => setRuntime(e.target.value)}
-            >
-              <option value="" disabled>
-                {runtimes.isPending ? t('loading') : t('form.chooseRuntime')}
-              </option>
-              {(runtimes.data ?? []).map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </>
-      )}
-
-      <fieldset className="space-y-3">
-        <legend className="text-sm font-medium">{t('form.method')}</legend>
-        <div className="flex gap-4 text-sm">
-          <label>
-            <input
-              type="radio"
-              name="kind"
-              checked={kind === 'six_questions'}
-              onChange={() => setKind('six_questions')}
-            />{' '}
-            {t('form.sixQuestions')}
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="kind"
-              checked={kind === 'skill'}
-              onChange={() => setKind('skill')}
-            />{' '}
-            {t('form.skill')}
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="kind"
-              checked={kind === 'question'}
-              onChange={() => setKind('question')}
-            />{' '}
-            {t('form.oneQuestion')}
-          </label>
-        </div>
-        {kind === 'question' ? (
-          <label className="block text-sm">
-            {t('form.questionText')}
-            <span className="text-muted-foreground block text-xs">{t('form.questionHint')}</span>
-            <input
-              className={FIELD}
-              required
-              maxLength={2000}
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-            />
-          </label>
-        ) : kind === 'six_questions' ? (
-          QUESTIONS.map((q) => (
-            <label key={q} className="block text-sm">
-              {t(`form.q.${q}`)}
-              <textarea
-                className={FIELD}
-                rows={q === 'steps' ? 6 : 2}
-                required
-                value={answers[q]}
-                onChange={(e) => setAnswers({ ...answers, [q]: e.target.value })}
-              />
-            </label>
-          ))
-        ) : (
-          <label className="block text-sm">
-            {t('form.skillText')}
-            <textarea
-              className={FIELD}
-              rows={12}
-              required
-              maxLength={20000}
-              value={skill}
-              onChange={(e) => setSkill(e.target.value)}
-            />
-          </label>
-        )}
-      </fieldset>
-
-      <IdeaMethodChooser
-        choices={methodChoices}
-        onChange={setMethodChoices}
-        disabled={submit.isPending}
-      />
-
-      <fieldset className="space-y-4">
-        <legend className="text-sm font-medium">{t('form.cases')}</legend>
-        <p className="text-muted-foreground text-sm">{t('form.casesHint')}</p>
-        {cases.map((c, i) => (
-          <CaseEditor
-            key={i}
-            index={i}
-            value={c}
-            onChange={(next) => updateCase(i, next)}
-            onRemove={cases.length > 1 ? () => setCases(cases.filter((_, j) => j !== i)) : null}
-          />
-        ))}
-        {cases.length < 50 ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setCases([...cases, emptyCase()])}
-          >
-            {t('form.addCase')}
-          </Button>
-        ) : null}
-      </fieldset>
-
-      {revise ? null : (
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-medium">{t('form.mode.legend')}</legend>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {(['self', 'platform'] as const).map((m) => (
-              <label
-                key={m}
-                className={`cursor-pointer space-y-1 rounded-xl border p-3 text-sm ${
-                  mode === m ? 'border-primary ring-primary ring-1' : ''
-                }`}
-              >
-                <span className="flex items-center gap-2 font-medium">
-                  <input
-                    type="radio"
-                    name="mode"
-                    value={m}
-                    checked={mode === m}
-                    onChange={() => setMode(m)}
-                  />
-                  {t(`form.mode.${m}.title`)}
-                </span>
-                <ul className="text-muted-foreground list-disc space-y-0.5 pl-5">
-                  {(['who', 'key', 'pay'] as const).map((line) => (
-                    <li key={line}>{t(`form.mode.${m}.${line}`)}</li>
-                  ))}
-                </ul>
-              </label>
-            ))}
-          </div>
-          {mode === 'platform' ? (
-            <label className="block text-sm">
-              {t('form.mode.budget')}
+      <fieldset disabled={templateBuilding || submit.isPending} className="space-y-6">
+        {revise ? null : (
+          <>
+            <label className="block text-sm font-medium">
+              {t('form.title')}
               <input
                 className={FIELD}
-                inputMode="decimal"
-                value={budget}
-                onChange={(e) => setBudget(e.target.value)}
-                aria-invalid={!budgetOk}
+                value={title}
+                maxLength={80}
+                required
+                onChange={(e) => setTitle(e.target.value)}
               />
             </label>
+
+            <label className="block text-sm font-medium">
+              {t('form.runtime')}
+              <select
+                className={FIELD}
+                value={chosenRuntime}
+                required
+                onChange={(e) => setRuntime(e.target.value)}
+              >
+                <option value="" disabled>
+                  {runtimes.isPending ? t('loading') : t('form.chooseRuntime')}
+                </option>
+                {(runtimes.data ?? []).map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
+
+        <fieldset className="space-y-3">
+          <legend className="text-sm font-medium">{t('form.method')}</legend>
+          <div className="flex gap-4 text-sm">
+            <label>
+              <input
+                type="radio"
+                name="kind"
+                checked={kind === 'six_questions'}
+                onChange={() => setKind('six_questions')}
+              />{' '}
+              {t('form.sixQuestions')}
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="kind"
+                checked={kind === 'skill'}
+                onChange={() => setKind('skill')}
+              />{' '}
+              {t('form.skill')}
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="kind"
+                checked={kind === 'question'}
+                onChange={() => setKind('question')}
+              />{' '}
+              {t('form.oneQuestion')}
+            </label>
+          </div>
+          {kind === 'question' ? (
+            <label className="block text-sm">
+              {t('form.questionText')}
+              <span className="text-muted-foreground block text-xs">{t('form.questionHint')}</span>
+              <input
+                className={FIELD}
+                required
+                maxLength={2000}
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+              />
+            </label>
+          ) : kind === 'six_questions' ? (
+            QUESTIONS.map((q) => (
+              <label key={q} className="block text-sm">
+                {t(`form.q.${q}`)}
+                <textarea
+                  className={FIELD}
+                  rows={q === 'steps' ? 6 : 2}
+                  required
+                  value={answers[q]}
+                  onChange={(e) => setAnswers({ ...answers, [q]: e.target.value })}
+                />
+              </label>
+            ))
+          ) : (
+            <label className="block text-sm">
+              {t('form.skillText')}
+              <textarea
+                className={FIELD}
+                rows={12}
+                required
+                maxLength={20000}
+                value={skill}
+                onChange={(e) => setSkill(e.target.value)}
+              />
+            </label>
+          )}
+        </fieldset>
+
+        {templateSources.length ? (
+          <section aria-label={templateText('templateSources')}>
+            <p>{templateText('templateEditable')}</p>
+            <IdeaMethodChoices choices={templateSources} />
+          </section>
+        ) : null}
+        <IdeaMethodChooser
+          choices={methodChoices}
+          onChange={setMethodChoices}
+          onTemplate={useTemplate}
+          onBuilding={setTemplateBuilding}
+          disabled={submit.isPending}
+        />
+
+        <fieldset className="space-y-4">
+          <legend className="text-sm font-medium">{t('form.cases')}</legend>
+          <p className="text-muted-foreground text-sm">{t('form.casesHint')}</p>
+          {cases.map((c, i) => (
+            <CaseEditor
+              key={i}
+              index={i}
+              value={c}
+              onChange={(next) => updateCase(i, next)}
+              onRemove={cases.length > 1 ? () => setCases(cases.filter((_, j) => j !== i)) : null}
+            />
+          ))}
+          {cases.length < 50 ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCases([...cases, emptyCase()])}
+            >
+              {t('form.addCase')}
+            </Button>
           ) : null}
         </fieldset>
-      )}
 
-      <label className="flex items-start gap-2 text-sm">
-        <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-        <span>{t('form.consent')}</span>
-      </label>
+        {revise ? null : (
+          <fieldset className="space-y-3">
+            <legend className="text-sm font-medium">{t('form.mode.legend')}</legend>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {(['self', 'platform'] as const).map((m) => (
+                <label
+                  key={m}
+                  className={`cursor-pointer space-y-1 rounded-xl border p-3 text-sm ${
+                    mode === m ? 'border-primary ring-primary ring-1' : ''
+                  }`}
+                >
+                  <span className="flex items-center gap-2 font-medium">
+                    <input
+                      type="radio"
+                      name="mode"
+                      value={m}
+                      checked={mode === m}
+                      onChange={() => setMode(m)}
+                    />
+                    {t(`form.mode.${m}.title`)}
+                  </span>
+                  <ul className="text-muted-foreground list-disc space-y-0.5 pl-5">
+                    {(['who', 'key', 'pay'] as const).map((line) => (
+                      <li key={line}>{t(`form.mode.${m}.${line}`)}</li>
+                    ))}
+                  </ul>
+                </label>
+              ))}
+            </div>
+            {mode === 'platform' ? (
+              <label className="block text-sm">
+                {t('form.mode.budget')}
+                <input
+                  className={FIELD}
+                  inputMode="decimal"
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  aria-invalid={!budgetOk}
+                />
+              </label>
+            ) : null}
+          </fieldset>
+        )}
 
-      {error ? (
-        <p className="text-destructive text-sm" role="alert">
-          {error}
-        </p>
-      ) : null}
-      <Button
-        type="submit"
-        disabled={
-          !consent ||
-          (!revise && (!chosenRuntime || mode === null || (mode === 'platform' && !budgetOk))) ||
-          submit.isPending
-        }
-      >
-        {revise ? t('form.submitRevision') : t('form.submit')}
-      </Button>
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+          <span>{t('form.consent')}</span>
+        </label>
+
+        {error ? (
+          <p className="text-destructive text-sm" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <Button
+          type="submit"
+          disabled={
+            !consent ||
+            (!revise && (!chosenRuntime || mode === null || (mode === 'platform' && !budgetOk))) ||
+            submit.isPending
+          }
+        >
+          {revise ? t('form.submitRevision') : t('form.submit')}
+        </Button>
+      </fieldset>
     </form>
   )
 }
