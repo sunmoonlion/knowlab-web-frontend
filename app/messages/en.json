@@ -447,11 +447,11 @@
       "choose": "Choose one",
       "offline": "{name} (offline)",
       "folder": "Folder for the test project",
-      "budget": "Spending limit (CNY)",
+      "budget": "Total spending limit for this test (CNY)",
       "start": "Test it myself",
       "starting": "Starting…",
       "startFailed": "Could not start; try again.",
-      "keyNote": "Uses the model key you added in knowbench and your money; it stops at the limit.",
+      "keyNote": "Uses your model key from knowbench. The total limit is divided equally among cases; each case has its own limit and cannot borrow from another. Costs are checked when model usage is reported, so a call can take a case over its limit; no later steps of that case run after the overrun.",
       "running": "Test {number} is running",
       "errors": {
         "author_has_no_computer": "You have no computer to test on yet: connect one in knowbench first, then come back.",
@@ -558,7 +558,7 @@
       "lines": {
         "who": "Once the platform takes it, the staff running the test see this candidate, this test set and the results — not earlier drafts, questions or your own tests.",
         "key": "The test still runs on your computer with your model key, as when you test it yourself.",
-        "pay": "You pay; the platform can only start within the limit below; the authorisation ends when the test does."
+        "pay": "You pay. The total limit is divided equally among cases, with no borrowing between cases. Costs are checked when model usage is reported; a call can exceed its case limit, after which that case stops. Authorisation ends with the test."
       },
       "budget": "Cost limit for this test (CNY)",
       "agree": "Agree and hand it to the platform",
