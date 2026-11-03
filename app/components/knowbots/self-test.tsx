@@ -57,7 +57,16 @@ export function SelfTests({ life, csrfToken }: { life: Detail; csrfToken: string
   if (!pending && active.length === 0) return null
   return (
     <Card title={t('title')}>
-      {pending ? <StartSelfTest draftId={pending.draft_id} csrfToken={csrfToken} /> : null}
+      {pending ? (
+        <StartSelfTest
+          key={pending.draft_id}
+          draftId={pending.draft_id}
+          caseCount={
+            life.versions.find((v) => v.version === pending.request_version)?.cases.length ?? 1
+          }
+          csrfToken={csrfToken}
+        />
+      ) : null}
       {pending && pending.mode === 'self' ? (
         <PlatformTest
           draftId={pending.draft_id}
@@ -74,7 +83,15 @@ export function SelfTests({ life, csrfToken }: { life: Detail; csrfToken: string
   )
 }
 
-function StartSelfTest({ draftId, csrfToken }: { draftId: string; csrfToken: string }) {
+function StartSelfTest({
+  draftId,
+  caseCount,
+  csrfToken,
+}: {
+  draftId: string
+  caseCount: number
+  csrfToken: string
+}) {
   const t = useTranslations('knowbots.selfTest')
   const client = useQueryClient()
   const computers = useQuery({
@@ -84,8 +101,9 @@ function StartSelfTest({ draftId, csrfToken }: { draftId: string; csrfToken: str
   const [picked, setPicked] = useState<string | null>(null)
   const [root, setRoot] = useState<string | null>(null)
   const [budget, setBudget] = useState('10')
+  const [minutes, setMinutes] = useState(String(Math.min(1440, Math.max(1, caseCount) * 60)))
   const start = useMutation({
-    mutationFn: (body: { environment_id: string; workspace_root: string; budget_limit: string }) =>
+    mutationFn: (body: Parameters<typeof startSelfTest>[1]) =>
       startSelfTest(draftId, body, csrfToken),
     onSuccess: () => client.invalidateQueries({ queryKey: KEY }),
   })
@@ -106,6 +124,7 @@ function StartSelfTest({ draftId, csrfToken }: { draftId: string; csrfToken: str
       : env?.roots[0]) ??
     ''
   const okBudget = /^[0-9]{1,6}(\.[0-9]{1,2})?$/.test(budget) && Number(budget) > 0
+  const okMinutes = /^\d+$/.test(minutes) && Number(minutes) >= 1 && Number(minutes) <= 1440
   if (computers.data.model_key === false)
     return (
       <p className="text-amber-700" role="alert" data-testid="no-model-key">
@@ -168,15 +187,26 @@ function StartSelfTest({ draftId, csrfToken }: { draftId: string; csrfToken: str
             onChange={(event) => setBudget(event.target.value)}
           />
         </label>
+        <label className="flex items-center gap-1">
+          {t('timeout')}
+          <input
+            aria-label={t('timeout')}
+            className={`${field} w-20`}
+            inputMode="numeric"
+            value={minutes}
+            onChange={(event) => setMinutes(event.target.value)}
+          />
+        </label>
         <Button
           size="sm"
-          disabled={!env || !folder || !okBudget || start.isPending}
+          disabled={!env || !folder || !okBudget || !okMinutes || start.isPending}
           onClick={() =>
             env &&
             start.mutate({
               environment_id: env.environment_id,
               workspace_root: folder,
               budget_limit: budget,
+              timeout_seconds: Number(minutes) * 60,
             })
           }
         >
@@ -184,6 +214,7 @@ function StartSelfTest({ draftId, csrfToken }: { draftId: string; csrfToken: str
         </Button>
       </div>
       <p className="text-muted-foreground text-xs">{t('keyNote')}</p>
+      <p className="text-muted-foreground text-xs">{t('timeoutNote', { count: caseCount })}</p>
       {start.isError ? (
         <p role="alert" className="text-destructive">
           {startFailure(start.error, (key) => t(key as never))}

@@ -438,6 +438,8 @@
       "versions": "Idea versions"
     },
     "selfTest": {
+      "timeout": "Total test time limit (minutes)",
+      "timeoutNote": "All {count} cases share this limit (1–1440 minutes). The default estimates 60 minutes per case for the whole run, not a separate timer per case. Waiting for your answers or data confirmation is counted separately. Budget limits still apply independently.",
       "title": "Testing",
       "lead": "Test this draft on your own computer with your own model key; you set the spending limit.",
       "loading": "Loading your computers…",
