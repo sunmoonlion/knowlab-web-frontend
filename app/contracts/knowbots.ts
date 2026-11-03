@@ -331,6 +331,40 @@ export const platformAskSchema = z.object({
 })
 export type PlatformAsk = z.infer<typeof platformAskSchema>
 
+export const methodDemandSchema = z.object({
+  match_artifact_version: z.number().int().positive(),
+  question_revision: z.number().int().positive(),
+  outcome: z.enum(['none', 'clarify']),
+  requirements: z.array(
+    z.object({
+      id: z.string(),
+      kind: z.enum(['result', 'constraint', 'explicit_method']),
+      statement: z.string(),
+      question_quote: z.string(),
+      required: z.boolean(),
+      origin: z.enum(['user_explicit', 'goal_inferred']),
+      rationale: z.string(),
+    }),
+  ),
+  method_proposals: z.array(
+    z.object({
+      id: z.string(),
+      requirement_ids: z.array(z.string()),
+      approach: z.string(),
+      reason: z.string(),
+      data_requirements: z.array(z.string()),
+    }),
+  ),
+  gaps: z.array(
+    z.object({
+      requirement_id: z.string(),
+      status: z.enum(['uncovered', 'unknown']),
+      reason: z.string(),
+    }),
+  ),
+  clarification: z.string().nullable(),
+})
+
 export const detailSchema = z.object({
   contract_version: z.literal(1),
   ...lifeFields,
@@ -342,6 +376,7 @@ export const detailSchema = z.object({
       app: z.string(),
       project_id: z.string().nullable().optional(),
       task_id: z.string().nullable().optional(),
+      method_demand: methodDemandSchema.optional(),
     })
     .nullable()
     .optional(),

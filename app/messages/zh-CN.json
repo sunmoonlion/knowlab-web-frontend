@@ -805,6 +805,18 @@
       "test": "测试 {number} · 准专家 {label}",
       "digest": "本次修订摘要",
       "newVersion": "本修订已出专家版本；如需测试，请先出新的准专家。"
+    },
+    "methodDemand": {
+      "title": "这次问题带来的方法需求",
+      "hint": "需求分析和方法建议由 AI 提供，供你完善创意。建议尚未经你接受；不会自动成为专家方法或验收规则。",
+      "user_explicit": "用户明确要求",
+      "goal_inferred": "AI 根据目标推导",
+      "uncovered": "尚未找到能满足的专家",
+      "unknown": "能否满足仍不确定",
+      "proposals": "AI 建议的做法",
+      "addresses": "用于回答",
+      "data": "需要的数据",
+      "clarification": "还需澄清"
     }
   },
   "workdraft": {

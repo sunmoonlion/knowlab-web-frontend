@@ -8,6 +8,7 @@ import { Link } from '@/i18n/navigation'
 import { fetchDetail } from '@/lib/knowbots/client'
 
 import { IncubationMode } from './incubation-mode'
+import { MethodDemandReference } from './method-demand-reference'
 import { PlatformView } from './platform-asks'
 import { AmendmentList } from './reference'
 import { ManualReleaseRequest } from './manual-release'
@@ -60,6 +61,7 @@ export function NameView({
         <PlatformView life={life} progress={summaryParts(life.summary, t).join(' · ')} />
       ) : null}
       {/* 孵化栏（专家孵化方案第六节）：点进去是这个专家的工作稿 */}
+      <MethodDemandReference origin={life.origin} />
       <Card title={t('name.incubation')}>
         <p className="text-muted-foreground">{t('name.incubationHint')}</p>
         <Link

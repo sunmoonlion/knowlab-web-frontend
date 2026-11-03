@@ -805,6 +805,18 @@
       "test": "Test {number} · Candidate {label}",
       "digest": "Revision digest",
       "newVersion": "This revision already has an expert version. Create a new candidate to test again."
+    },
+    "methodDemand": {
+      "title": "Method needs from this question",
+      "hint": "AI analysis and method suggestions are references for developing your idea. They have not been accepted by you and do not automatically become expert methods or acceptance rules.",
+      "user_explicit": "Explicit user requirement",
+      "goal_inferred": "Inferred by AI from the goal",
+      "uncovered": "No matching expert found",
+      "unknown": "Coverage remains uncertain",
+      "proposals": "Suggested approaches",
+      "addresses": "Addresses",
+      "data": "Data needed",
+      "clarification": "Needs clarification"
     }
   },
   "workdraft": {

@@ -11,6 +11,7 @@ import { acceptConsent, fetchApplications, fetchDetail } from '@/lib/knowbots/cl
 
 import { AskInKnowbench, listedExpert } from './ask-in-knowbench'
 import { summaryParts } from './name-view'
+import { MethodDemandReference } from './method-demand-reference'
 import { AmendmentList, Cases, Method } from './reference'
 import { Badge, Card, ColumnLayout, KEY, useWhen, type Tone } from './shared'
 import { SidePanel } from './side-panel'
@@ -93,6 +94,7 @@ function ApplicationProcess({ item, csrfToken }: { item: Application; csrfToken:
           </p>
         </header>
         <ConsentNotice item={item} csrfToken={csrfToken} />
+        <MethodDemandReference origin={detail.data?.origin} />
         {usable && detail.data ? (
           <Card title={t('applications.usable', { version: usable.version })}>
             <AskInKnowbench
