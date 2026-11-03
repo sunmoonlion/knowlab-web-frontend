@@ -17,6 +17,8 @@ export function MethodFreezePanel({
   requestId,
   revision,
   step,
+  sources = [],
+  atomicAvailable = false,
   csrfToken,
   onDone,
   onClose,
@@ -24,6 +26,8 @@ export function MethodFreezePanel({
   requestId: string
   revision: number
   step: Step
+  sources?: Step[]
+  atomicAvailable?: boolean
   csrfToken: string
   onDone: (method: MethodVersion) => void
   onClose: () => void
@@ -38,6 +42,10 @@ export function MethodFreezePanel({
   } | null>(null)
   const [page, setPage] = useState(0)
   const [slots, setSlots] = useState<Record<string, string>>({})
+  const [atomic, setAtomic] = useState(!step.selection)
+  const [appliesWhen, setAppliesWhen] = useState(step.selection?.applies_when ?? '')
+  const [fields, setFields] = useState<Record<string, string[]>>({})
+  const [descriptions, setDescriptions] = useState<Record<string, string>>({})
   const [working, setWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const methods = useQuery({
@@ -49,7 +57,11 @@ export function MethodFreezePanel({
   const valid =
     version <= 999999 &&
     step.uses.every((alias) => STEP_ID.test(slots[alias] ?? '') && slots[alias] !== 'method') &&
-    new Set(step.uses.map((alias) => slots[alias])).size === step.uses.length
+    new Set(step.uses.map((alias) => slots[alias])).size === step.uses.length &&
+    (!atomic ||
+      (Boolean(step.why.trim()) &&
+        Boolean(appliesWhen.trim()) &&
+        step.uses.every((alias) => fields[alias]?.length && descriptions[alias]?.trim())))
   const freeze = async () => {
     if (!valid) return
     setWorking(true)
@@ -63,6 +75,18 @@ export function MethodFreezePanel({
           revision,
           step_id: step.id,
           input_slots: Object.fromEntries(step.uses.map((alias) => [alias, slots[alias]])),
+          ...(atomic
+            ? {
+                definition_contract: 'knowlab/method-definition/v3' as const,
+                applies_when: appliesWhen,
+                input_fields: Object.fromEntries(
+                  step.uses.map((alias) => [slots[alias], fields[alias]]),
+                ),
+                input_descriptions: Object.fromEntries(
+                  step.uses.map((alias) => [slots[alias], descriptions[alias]]),
+                ),
+              }
+            : {}),
         },
         csrfToken,
       )
@@ -82,6 +106,30 @@ export function MethodFreezePanel({
     >
       <p>{t('hint')}</p>
       <fieldset disabled={working} className="space-y-3">
+        {atomicAvailable ? (
+          <label className="block">
+            <input
+              type="checkbox"
+              checked={atomic}
+              disabled={!step.selection}
+              onChange={(e) => setAtomic(e.target.checked)}
+            />{' '}
+            {t('atomic')}
+          </label>
+        ) : null}
+        {atomic ? <p className="text-muted-foreground text-sm">{t('atomicHint')}</p> : null}
+        {atomic ? (
+          <label className="block">
+            {t('appliesWhen')}
+            <input
+              className={INPUT}
+              value={appliesWhen}
+              maxLength={4000}
+              onChange={(e) => setAppliesWhen(e.target.value)}
+            />
+          </label>
+        ) : null}
+        {atomic && !step.why.trim() ? <p role="alert">{t('purposeRequired')}</p> : null}
         <label className="block">
           {t('target')}
           <select
@@ -138,6 +186,47 @@ export function MethodFreezePanel({
           </label>
         ))}
         {step.uses.length ? <p className="text-muted-foreground text-xs">{t('slotHint')}</p> : null}
+        {atomic
+          ? step.uses.map((alias) => {
+              const source = sources.find((s) => s.id === alias)
+              const names = source?.advanced.output_schema
+                ? Object.keys(source.advanced.output_schema)
+                : (source?.outputs.map((out) => out.name) ?? [])
+              return (
+                <fieldset key={alias} className="space-y-2 rounded border p-3">
+                  <legend>{t('inputFields', { alias })}</legend>
+                  {names.map((name) => (
+                    <label key={name} className="block">
+                      <input
+                        type="checkbox"
+                        checked={fields[alias]?.includes(name) ?? false}
+                        onChange={(e) =>
+                          setFields({
+                            ...fields,
+                            [alias]: e.target.checked
+                              ? [...(fields[alias] ?? []), name]
+                              : (fields[alias] ?? []).filter((n) => n !== name),
+                          })
+                        }
+                      />{' '}
+                      {name}
+                    </label>
+                  ))}
+                  <label className="block">
+                    {t('inputMeaning', { alias })}
+                    <input
+                      className={INPUT}
+                      value={descriptions[alias] ?? ''}
+                      maxLength={2000}
+                      onChange={(e) =>
+                        setDescriptions({ ...descriptions, [alias]: e.target.value })
+                      }
+                    />
+                  </label>
+                </fieldset>
+              )
+            })
+          : null}
         {error ? (
           <p role="alert" className="text-destructive">
             {t(

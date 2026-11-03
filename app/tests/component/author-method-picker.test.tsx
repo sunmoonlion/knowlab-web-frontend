@@ -18,7 +18,10 @@ import { CSRF, detail, version, renderWith } from './knowbot-fixtures'
 vi.mock('@/i18n/navigation', async () => (await import('./knowbot-fixtures')).linkMock())
 
 const doc = workdraftSchema.parse(fixture.workdraft)
-const method = methodVersionSchema.parse(fixture.method)
+const parsedMethod = methodVersionSchema.parse(fixture.method)
+if (parsedMethod.definition.schema === 'knowlab/method-definition/v3')
+  throw new Error('legacy fixture expected')
+const method = { ...parsedMethod, definition: parsedMethod.definition }
 const step = doc.body.steps.find((s) => s.id === 'report')!
 const sources = doc.body.steps.filter((s) => s.id !== 'report')
 const command = {

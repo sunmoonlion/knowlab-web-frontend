@@ -22,7 +22,10 @@ import messages from '@/messages/zh-CN.json'
 import { CSRF, REQUEST, application, detail, renderWith, version } from './knowbot-fixtures'
 
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }))
-const method = methodVersionSchema.parse(methodFixture.method)
+const parsedMethod = methodVersionSchema.parse(methodFixture.method)
+if (parsedMethod.definition.schema === 'knowlab/method-definition/v3')
+  throw new Error('legacy fixture expected')
+const method = { ...parsedMethod, definition: parsedMethod.definition }
 const choice = { method_id: method.method_id, version: method.version, digest: method.digest }
 
 vi.mock('@/lib/knowbots/methods', () => ({ getMethodVersion: vi.fn(), listMethods: vi.fn() }))

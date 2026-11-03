@@ -1,6 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import { methodView } from '@/contracts/author-methods'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -94,16 +95,18 @@ function BindingForm({
     currentRef?.method_id === method.method_id ? { ...currentRef.inputs } : {},
   )
   const [required, setRequired] = useState(step.selection?.required ?? false)
-  const [maxCalls, setMaxCalls] = useState(
-    Math.min(step.selection?.max_calls ?? 1, method.definition.step.selection.max_calls),
-  )
+  const callLimit =
+    method.definition.schema === 'knowlab/method-definition/v3'
+      ? 100
+      : method.definition.step.selection.max_calls
+  const [maxCalls, setMaxCalls] = useState(Math.min(step.selection?.max_calls ?? 1, callLimit))
   const [preview, setPreview] = useState<{
     command: BindMethodCommand
     value: BindingPreview
   } | null>(null)
   const [working, setWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const slots = Object.keys(method.definition.input_schemas)
+  const slots = Object.keys(methodView(method.definition).input_schemas)
   const selectedInputs = Object.fromEntries(
     slots.filter((s) => inputs[s]).map((s) => [s, inputs[s]]),
   )
@@ -115,6 +118,15 @@ function BindingForm({
     inputs: selectedInputs,
     required,
     max_calls: maxCalls,
+    ...(method.definition.schema === 'knowlab/method-definition/v3'
+      ? {
+          execution: {
+            ask_before: step.ask_before,
+            on_fail: step.on_fail,
+            advanced: { ...step.advanced, output_schema: null },
+          },
+        }
+      : {}),
   }
   const valid =
     slots.every((s) => sources.some((e) => e.id === inputs[s])) &&
@@ -149,11 +161,11 @@ function BindingForm({
   return (
     <div className="space-y-3 border-t pt-3">
       <h3 className="font-medium">
-        {method.definition.step.title} · {t('version', { version: method.version })}
+        {methodView(method.definition).step.title} · {t('version', { version: method.version })}
       </h3>
-      <p className="whitespace-pre-wrap">{method.definition.step.does}</p>
+      <p className="whitespace-pre-wrap">{methodView(method.definition).step.does}</p>
       <p className="text-muted-foreground text-xs">
-        {t('applies')}: {method.definition.step.selection.applies_when}
+        {t('applies')}: {methodView(method.definition).step.selection.applies_when}
       </p>
       <details>
         <summary>{t('identity')}</summary>
@@ -163,14 +175,19 @@ function BindingForm({
           {method.digest}
         </p>
       </details>
+      {method.definition.schema === 'knowlab/method-definition/v3' ? (
+        <p className="text-muted-foreground text-sm">{t('executionSeparate')}</p>
+      ) : null}
       <fieldset disabled={working} className="space-y-3">
         {slots.map((slot) => (
           <label key={slot} className="block">
             {t('input', { slot })}
             <span className="text-muted-foreground ml-2 text-xs">
               {t(
-                method.definition.schema === 'knowlab/method-definition/v2' &&
-                  !method.definition.input_required[slot]
+                (method.definition.schema === 'knowlab/method-definition/v2' &&
+                  !method.definition.input_required[slot]) ||
+                  (method.definition.schema === 'knowlab/method-definition/v3' &&
+                    !method.definition.inputs[slot].required)
                   ? 'slotOptional'
                   : 'slotRequired',
               )}
@@ -205,16 +222,11 @@ function BindingForm({
             className={INPUT}
             type="number"
             min={1}
-            max={method.definition.step.selection.max_calls}
+            max={callLimit}
             value={maxCalls}
             onChange={(e) => {
               const value = Number(e.target.value)
-              if (
-                Number.isInteger(value) &&
-                value >= 1 &&
-                value <= method.definition.step.selection.max_calls
-              )
-                setMaxCalls(value)
+              if (Number.isInteger(value) && value >= 1 && value <= callLimit) setMaxCalls(value)
             }}
           />
         </label>

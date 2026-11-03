@@ -1,0 +1,306 @@
+{
+  "method": {
+    "method_id": "12345678-1234-4234-8234-123456789abc",
+    "version": 1,
+    "digest": "sha256:d81d23cc044769300ae5d814cbb5a1bbf22514d613b5dd8aa928b7723a0beb2d",
+    "definition": {
+      "schema": "knowlab/method-definition/v3",
+      "title": "条目标识覆盖核对",
+      "purpose": "逐条保留核对结果，避免漏项",
+      "procedure": "逐项核对条目标识是否覆盖输入集合，缺项和重复项不得省略。",
+      "applies_when": "交回最终结果时",
+      "inputs": {
+        "records": {
+          "schema": {
+            "rows": [
+              {
+                "id": "string"
+              }
+            ]
+          },
+          "required": true,
+          "description": "待汇总的核对条目"
+        },
+        "verification": {
+          "schema": {
+            "notes": "string"
+          },
+          "required": false,
+          "description": "可选复核结论"
+        }
+      },
+      "rules": [],
+      "outputs": [
+        {
+          "name": "rows",
+          "type": "list",
+          "items": [
+            {
+              "name": "id",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "name": "review_summary",
+          "type": "text",
+          "items": null
+        }
+      ],
+      "output_schema": {
+        "rows": [
+          {
+            "id": "string"
+          }
+        ],
+        "review_summary": "string"
+      },
+      "checks": [
+        {
+          "template": "covers",
+          "params": {
+            "path": "rows",
+            "field": "id",
+            "source_step": "records",
+            "source_path": "rows",
+            "source_field": "id"
+          }
+        },
+        {
+          "template": "non_empty",
+          "params": {
+            "path": "review_summary"
+          },
+          "when_input_present": "verification"
+        }
+      ]
+    },
+    "provenance": {
+      "synthetic": true
+    },
+    "created_at": "2026-11-03T00:00:00Z"
+  },
+  "body": {
+    "name": "文档核对",
+    "tagline": "",
+    "scope": {
+      "does": "按作者标准核对给定文档",
+      "does_not": "",
+      "elsewhere": ""
+    },
+    "data_picks": [],
+    "steps": [
+      {
+        "id": "report",
+        "title": "条目标识覆盖核对",
+        "does": "逐项核对条目标识是否覆盖输入集合，缺项和重复项不得省略。",
+        "why": "逐条保留核对结果，避免漏项",
+        "uses": [
+          "inspect",
+          "review"
+        ],
+        "rules": [],
+        "ask_before": [],
+        "outputs": [
+          {
+            "name": "rows",
+            "type": "list",
+            "items": [
+              {
+                "name": "id",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "name": "review_summary",
+            "type": "text",
+            "items": null
+          }
+        ],
+        "checks": [
+          {
+            "template": "covers",
+            "params": {
+              "path": "rows",
+              "field": "id",
+              "source_step": "inspect",
+              "source_path": "rows",
+              "source_field": "id"
+            }
+          },
+          {
+            "template": "non_empty",
+            "params": {
+              "path": "review_summary"
+            },
+            "when_input_present": "review"
+          }
+        ],
+        "on_fail": {
+          "kind": "back",
+          "back_to": "inspect"
+        },
+        "advanced": {
+          "tools": [],
+          "reserve": null,
+          "input_max_chars": null,
+          "output_schema": null,
+          "output_file": null
+        },
+        "selection": {
+          "applies_when": "交回最终结果时",
+          "required": true,
+          "max_calls": 1
+        },
+        "input_required": {
+          "inspect": true,
+          "review": false
+        }
+      },
+      {
+        "id": "inspect",
+        "title": "核对",
+        "does": "只依据给定文档核对，不补充未提供的文字。",
+        "why": "",
+        "uses": [],
+        "rules": [],
+        "ask_before": [],
+        "outputs": [
+          {
+            "name": "rows",
+            "type": "list",
+            "items": [
+              {
+                "name": "id",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "name": "unrelated",
+            "type": "text",
+            "items": null
+          }
+        ],
+        "checks": [
+          {
+            "template": "list_min",
+            "params": {
+              "path": "rows"
+            }
+          }
+        ],
+        "on_fail": {
+          "kind": "rework",
+          "back_to": null
+        },
+        "advanced": {
+          "tools": [
+            "read_input"
+          ],
+          "reserve": null,
+          "input_max_chars": null,
+          "output_schema": null,
+          "output_file": null
+        },
+        "selection": {
+          "applies_when": "需要核对文档时",
+          "required": true,
+          "max_calls": 3
+        }
+      },
+      {
+        "id": "review",
+        "title": "复核",
+        "does": "再按同一原文逐项复核。",
+        "why": "",
+        "uses": [
+          "inspect"
+        ],
+        "rules": [],
+        "ask_before": [],
+        "outputs": [
+          {
+            "name": "notes",
+            "type": "text",
+            "items": null
+          }
+        ],
+        "checks": [],
+        "on_fail": {
+          "kind": "rework",
+          "back_to": null
+        },
+        "advanced": {
+          "tools": [
+            "read_input"
+          ],
+          "reserve": null,
+          "input_max_chars": null,
+          "output_schema": null,
+          "output_file": null
+        },
+        "selection": {
+          "applies_when": "用户要求复核时",
+          "required": false,
+          "max_calls": 2
+        }
+      }
+    ],
+    "planning": {
+      "method_text": "按问题选择核对方法。逐项核对后汇总，要求复核时再复核。",
+      "final_units": [
+        "report"
+      ],
+      "max_steps": 8,
+      "max_replans": 2,
+      "reserve": "0.05",
+      "input_max_chars": 8000,
+      "capability_bindings": {
+        "check": {
+          "required_units": [
+            "inspect"
+          ],
+          "evidence_outputs": [
+            {
+              "method": "inspect",
+              "field": "rows"
+            }
+          ]
+        },
+        "double_check": {
+          "required_units": [
+            "review"
+          ],
+          "evidence_outputs": [
+            {
+              "method": "review",
+              "field": "notes"
+            }
+          ]
+        }
+      }
+    },
+    "public_capabilities": [
+      {
+        "id": "check",
+        "statement": "check",
+        "conditions": [],
+        "exclusions": [],
+        "delivers": [
+          "核对结果"
+        ]
+      },
+      {
+        "id": "double_check",
+        "statement": "double_check",
+        "conditions": [],
+        "exclusions": [],
+        "delivers": [
+          "核对结果"
+        ]
+      }
+    ]
+  }
+}

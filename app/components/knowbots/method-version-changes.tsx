@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 
-import type { MethodVersion } from '@/contracts/author-methods'
+import { methodView, type MethodVersion } from '@/contracts/author-methods'
 import { same } from '@/lib/knowbots/workdraft'
 
 /** Compare the immutable definitions, not the expert's local aliases or bounds. */
@@ -30,13 +30,13 @@ export function MethodVersionChanges({
   const changes = [
     {
       name: 'input_schemas' as const,
-      before: before.definition.input_schemas,
-      after: after.definition.input_schemas,
+      before: methodView(before.definition).input_schemas,
+      after: methodView(after.definition).input_schemas,
     },
     ...fields.map((name) => ({
       name,
-      before: before.definition.step[name],
-      after: after.definition.step[name],
+      before: methodView(before.definition).step[name],
+      after: methodView(after.definition).step[name],
     })),
   ].filter((change) => !same(change.before, change.after))
   const display = (value: unknown) =>

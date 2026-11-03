@@ -56,15 +56,15 @@ export const TEMPLATES = {
 export type Template = keyof typeof TEMPLATES
 export const TEMPLATE_NAMES = Object.keys(TEMPLATES) as Template[]
 
-const ruleSchema = z.object({ id: z.string(), text: z.string() })
+export const ruleSchema = z.object({ id: z.string(), text: z.string() })
 const askSchema = z.object({ id: z.string(), question: z.string(), options: z.array(z.string()) })
 const fieldSchema = z.object({ name: z.string(), type: z.enum(FIELD_TYPES) })
-const outputSchema = z.object({
+export const outputSchema = z.object({
   name: z.string(),
   type: z.enum(OUTPUT_TYPES),
   items: z.array(fieldSchema).nullable().default(null),
 })
-const checkSchema = z.object({
+export const checkSchema = z.object({
   template: z.enum(TEMPLATE_NAMES as [Template, ...Template[]]),
   params: z.record(z.string(), z.unknown()),
   when_input_present: z.string().regex(STEP_ID).optional(),
@@ -84,6 +84,11 @@ export const selectionSchema = z.object({
   applies_when: z.string().min(1).max(4000),
   required: z.boolean(),
   max_calls: z.number().int().min(1).max(100),
+})
+export const methodExecutionSchema = z.object({
+  ask_before: z.array(askSchema),
+  on_fail: onFailSchema,
+  advanced: advancedSchema,
 })
 export const stepSchema = z.object({
   id: z.string(),
@@ -131,6 +136,7 @@ export const methodReferenceSchema = z.object({
   version: z.number().int().min(1).max(999999),
   digest: z.string().regex(/^sha256:[0-9a-f]{64}$/),
   inputs: z.record(z.string(), z.string()).default({}),
+  execution: methodExecutionSchema.optional(),
 })
 
 export type Planning = z.infer<typeof planningSchema>

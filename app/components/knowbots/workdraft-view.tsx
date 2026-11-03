@@ -603,6 +603,8 @@ function Editor({
         requestId={requestId}
         revision={doc.revision}
         step={freezing}
+        sources={body.steps}
+        atomicAvailable
         csrfToken={csrfToken}
         onClose={() => setFreezeTarget(null)}
         onDone={(method) => {
@@ -893,17 +895,19 @@ function Editor({
             <div className="space-y-4">
               {body.steps.map((step, index) => (
                 <div key={step.id} className="space-y-2">
-                  {body.planning ? (
+                  {body.planning || !body.method_refs?.[step.id] ? (
                     <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={busy || running || deciding}
-                        onClick={() => void openMethod(step.id)}
-                      >
-                        {t(body.method_refs?.[step.id] ? 'methods.change' : 'methods.choose')}
-                      </Button>
-                      {!body.method_refs?.[step.id] && step.selection ? (
+                      {body.planning ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={busy || running || deciding}
+                          onClick={() => void openMethod(step.id)}
+                        >
+                          {t(body.method_refs?.[step.id] ? 'methods.change' : 'methods.choose')}
+                        </Button>
+                      ) : null}
+                      {!body.method_refs?.[step.id] ? (
                         <Button
                           size="sm"
                           variant="outline"

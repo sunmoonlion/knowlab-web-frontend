@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import type { MethodVersion } from '@/contracts/author-methods'
+import { methodView, type MethodVersion } from '@/contracts/author-methods'
 import type { MethodChoice } from '@/contracts/method-choice'
 import type { WorkdraftBody } from '@/contracts/workdraft'
 import { fetchDetail } from '@/lib/knowbots/client'
@@ -31,12 +31,12 @@ function ChoiceRow({
   return (
     <li className="space-y-2 rounded-lg border p-3">
       <p className="font-medium">
-        {method?.definition.step.title || t('chosenMethod')} ·{' '}
+        {(method ? methodView(method.definition).step.title : null) || t('chosenMethod')} ·{' '}
         {t('version', { version: choice.version })}
       </p>
       {exact.isError || (exact.data && !method) ? <p role="alert">{t('unavailable')}</p> : null}
       {method ? (
-        <p className="text-muted-foreground text-sm">{method.definition.step.does}</p>
+        <p className="text-muted-foreground text-sm">{methodView(method.definition).step.does}</p>
       ) : null}
       {children?.(method)}
     </li>
@@ -98,16 +98,20 @@ export function IdeaMethodChooser({
           <MethodVersionBrowser disabled={disabled}>
             {(method) => (
               <div className="space-y-2">
-                <h3>{method.definition.step.title}</h3>
-                <p className="whitespace-pre-wrap">{method.definition.step.does}</p>
+                <h3>{methodView(method.definition).step.title}</h3>
+                <p className="whitespace-pre-wrap">{methodView(method.definition).step.does}</p>
                 <p>
                   {t('inputs', {
-                    names: Object.keys(method.definition.input_schemas).join('、') || t('none'),
+                    names:
+                      Object.keys(methodView(method.definition).input_schemas).join('、') ||
+                      t('none'),
                   })}
                 </p>
                 <p>
                   {t('outputs', {
-                    names: method.definition.step.outputs.map((o) => o.name).join('、'),
+                    names: methodView(method.definition)
+                      .step.outputs.map((o) => o.name)
+                      .join('、'),
                   })}
                 </p>
                 <Button

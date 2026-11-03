@@ -37,6 +37,8 @@ export async function freezeMethod(
     await requestJson(methodPath(id, version), { method: 'PUT', body: command, csrfToken }),
   )
   if (got.method_id !== id || got.version !== version) throw new KnowbotContractError()
+  if (command.definition_contract && got.definition.schema !== command.definition_contract)
+    throw new KnowbotContractError()
   return got
 }
 

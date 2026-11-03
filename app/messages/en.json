@@ -1212,7 +1212,8 @@
         "heading": "Review method changes: version {from} → version {to}"
       },
       "slotRequired": "Required input",
-      "slotOptional": "Optional at runtime (bind when composing)"
+      "slotOptional": "Optional at runtime (bind when composing)",
+      "executionSeparate": "This version defines method meaning only. Binding uses the current workdraft questions, failure handling, tools, budget and deliverable file settings. Preview before confirming."
     },
     "freeze": {
       "open": "Freeze as an independent method",
@@ -1231,7 +1232,13 @@
       "conflict": "The source workdraft or method version changed. Close and refresh before checking again.",
       "failed": "Method version was not saved: {code}",
       "confirm": "Confirm freezing this version",
-      "saved": "Independent method version {version} saved. It is available for explicit expert references."
+      "saved": "Independent method version {version} saved. It is available for explicit expert references.",
+      "atomic": "Save method meaning independently of expert execution",
+      "atomicHint": "Save the procedure, applicability, inputs, outputs and checks. Retries, budgets, tools and deliverable files belong to the expert composition. Select only needed input fields. A frozen version is not proof of production validation.",
+      "purposeRequired": "First fill in the method purpose in the workdraft.",
+      "inputFields": "Required fields from {alias}",
+      "inputMeaning": "Meaning of input {alias}",
+      "appliesWhen": "When this method applies"
     },
     "planning": {
       "title": "Method execution",

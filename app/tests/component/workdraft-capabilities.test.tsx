@@ -65,6 +65,8 @@ it('可选覆盖输入必须同时明确条件，不能直接关闭验收', () =
 
 it('新独立方法版本和条件字段不会被网页契约剥掉', () => {
   const source = methodVersionSchema.parse(fixture.method)
+  if (source.definition.schema === 'knowlab/method-definition/v3')
+    throw new Error('legacy fixture expected')
   const next = methodVersionSchema.parse({
     ...source,
     definition: {
@@ -80,6 +82,7 @@ it('新独立方法版本和条件字段不会被网页契约剥掉', () => {
     },
   })
   expect(next.definition).toHaveProperty('input_required.records', false)
+  if (next.definition.schema !== 'knowlab/method-definition/v2') throw new Error('v2 expected')
   expect(next.definition.step.checks[0].when_input_present).toBe('records')
   expect(methodVersionSchema.parse(fixture.method)).toEqual(source)
 })
