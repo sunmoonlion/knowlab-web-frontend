@@ -243,7 +243,12 @@ export async function fetchComputers(draftId: string): Promise<Computers> {
 
 export async function startSelfTest(
   draftId: string,
-  body: { environment_id: string; workspace_root: string; budget_limit: string },
+  body: {
+    environment_id: string
+    workspace_root: string
+    budget_limit: string
+    timeout_seconds: number
+  },
   csrfToken: string,
 ): Promise<string> {
   return parse(

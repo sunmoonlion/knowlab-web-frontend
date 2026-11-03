@@ -16,7 +16,7 @@ import {
 } from '@/lib/knowbots/client'
 import messages from '@/messages/zh-CN.json'
 
-import { CSRF, DRAFT, TEST, detail, draft, testRecord } from './knowbot-fixtures'
+import { CSRF, DRAFT, TEST, detail, draft, testRecord, version } from './knowbot-fixtures'
 
 vi.mock('@/lib/knowbots/client', () => ({
   fetchComputers: vi.fn(),
@@ -131,6 +131,39 @@ describe('自助测试（SDD 0046 第三节）', () => {
     expect(startSelfTest).not.toHaveBeenCalled()
   })
 
+  it('三题显示整轮180分钟，作者可改时限，费用不随时限改变', async () => {
+    const cases = ['c1', 'c2', 'c3'].map((case_id) => ({ case_id }))
+    page(
+      detail({
+        versions: [version({ cases })],
+        drafts: [draft({ status: 'pending_test', request_version: 1 })],
+        tests: [],
+      }),
+    )
+    const start = within(await screen.findByTestId('self-test-start'))
+    const timeout = start.getByLabelText(messages.knowbots.selfTest.timeout)
+    expect(timeout).toHaveValue('180')
+    expect(start.getByText(/共 3 题，共用上述时限/)).toBeInTheDocument()
+    for (const value of ['0', '1441', '1.5', 'NaN', '']) {
+      fireEvent.change(timeout, { target: { value } })
+      expect(start.getByRole('button', { name: '自己测一次' })).toBeDisabled()
+    }
+    fireEvent.change(timeout, { target: { value: '120' } })
+    fireEvent.click(start.getByRole('button', { name: '自己测一次' }))
+    await waitFor(() =>
+      expect(startSelfTest).toHaveBeenCalledWith(
+        DRAFT,
+        {
+          environment_id: ENV,
+          workspace_root: '/home/me/work',
+          budget_limit: '10',
+          timeout_seconds: 7200,
+        },
+        CSRF,
+      ),
+    )
+  })
+
   it.each(['platform', 'rerun'] as const)(
     '平台模式 %s 使用本次记录的身份，不按电脑推断',
     async (mode) => {
@@ -160,7 +193,12 @@ describe('自助测试（SDD 0046 第三节）', () => {
     await waitFor(() =>
       expect(startSelfTest).toHaveBeenCalledWith(
         DRAFT,
-        { environment_id: ENV, workspace_root: '/home/me/work', budget_limit: '5' },
+        {
+          environment_id: ENV,
+          workspace_root: '/home/me/work',
+          budget_limit: '5',
+          timeout_seconds: 3600,
+        },
         CSRF,
       ),
     )
