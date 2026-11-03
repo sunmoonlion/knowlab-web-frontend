@@ -241,7 +241,7 @@ describe('测试里专家提出的数据（decisions ⑭）', () => {
     expect(panel.getByText('贵州茅台2025年年度报告.pdf')).toBeInTheDocument()
     expect(panel.getByText('缺，要去取')).toBeInTheDocument()
     fireEvent.click(panel.getAllByRole('button', { name: '不要这一样' })[1])
-    fireEvent.click(panel.getByRole('button', { name: '确认，去取' }))
+    fireEvent.click(panel.getByRole('button', { name: '确认使用这些数据' }))
     await waitFor(() =>
       expect(confirmTestData).toHaveBeenCalledWith(Q, { dropped: ['req1_2:b'] }, CSRF),
     )

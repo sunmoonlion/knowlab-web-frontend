@@ -478,11 +478,11 @@
         "text": "Extracted text",
         "table": "Structured data (calculations)"
       },
-      "lead": "Case {caseId}: the expert asks for this data. Switch to another copy, change the company or years, drop an item or add one; nothing is signed or fetched until you confirm, and the test waits here.",
+      "lead": "Case {caseId}: the expert asks for this data. Switch to another copy, change the company or years, drop an item or add one; after you confirm, available materials are used for this test and items that need fetching are handled as listed. The test waits here for your confirmation.",
       "supplying": "Fetching the data you confirmed; the test goes on once it is all here.",
       "missing": "These did not arrive: {items}.",
       "goOn": "Go on testing with what there is",
-      "confirm": "Confirm and fetch",
+      "confirm": "Confirm data use",
       "confirming": "Confirming…",
       "decline": "None of it, test with what there is",
       "failed": "That did not work; try again.",
