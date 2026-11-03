@@ -125,6 +125,7 @@ const draftSchema = z.object({
     })
     .nullable(),
   // 我的话用在了哪：每条规则出自我写的哪句话
+  manifest_sha256: z.string().optional(),
   rule_sources: z.array(z.object({ rule: z.string(), ref: z.string() })),
 })
 
@@ -186,6 +187,7 @@ export const BINDING_PROBLEMS = [
 ] as const
 const findingSchema = z.object({
   kind: z.enum([
+    'manual_unretested',
     'test_not_passed',
     'not_accepted',
     'cases_mismatch',
@@ -200,7 +202,7 @@ export const deliverySchema = z.object({
   delivery_id: z.string().uuid(),
   listing: z.enum(['self', 'public']),
   conversion: z.boolean(),
-  test_mode: z.enum(['self', 'platform']),
+  test_mode: z.enum(['self', 'platform', 'unrun']),
   needs_rerun: z.boolean(),
   budget_limit: z.string().nullable(),
   status: z.enum(DELIVERY_STATUSES),
@@ -237,6 +239,14 @@ export const deliverySchema = z.object({
 
 const expertSchema = z.object({
   expert_id: z.string().uuid(),
+  manual_release: z
+    .object({
+      release_id: z.string().uuid(),
+      retested: z.literal(false),
+      manifest_sha256: z.string(),
+    })
+    .nullable()
+    .optional(),
   version: z.number().int().min(1),
   name: z.string().nullable(),
   stage: z.enum(EXPERT_STAGES),

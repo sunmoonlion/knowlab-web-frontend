@@ -37,6 +37,7 @@ export function deliveryMode(expert: Expert): Mode {
 }
 
 export function DeliveryPanel({ expert, csrfToken }: { expert: Expert; csrfToken: string }) {
+  const tm = useTranslations('knowbots.manualRelease')
   const td = useTranslations('knowbots.delivery')
   const mode = deliveryMode(expert)
   const open = expert.deliveries.some(
@@ -44,6 +45,11 @@ export function DeliveryPanel({ expert, csrfToken }: { expert: Expert; csrfToken
   )
   return (
     <>
+      {expert.manual_release ? (
+        <p role="status" className="text-sm">
+          {tm('notice')}
+        </p>
+      ) : null}
       {expert.market_status === 'held' ? (
         <p className="text-destructive text-sm" role="status">
           {td('held', {
@@ -85,7 +91,7 @@ function SubmitForm({
   // 自用转公开：冻结时只许本人用的那几份，作者勾「我有权」往高改（决定 10-30）
   const [raiseFrozen, setRaiseFrozen] = useState(false)
   // 公开、自助测的：平台要在你的电脑上重跑一次，费用上限你设（decisions ⑯）
-  const rerun = listing === 'public' && expert.test_mode !== 'platform'
+  const rerun = !expert.manual_release && listing === 'public' && expert.test_mode !== 'platform'
   const submit = useMutation({
     mutationFn: () =>
       submitDelivery(

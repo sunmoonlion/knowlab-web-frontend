@@ -10,6 +10,7 @@ import { fetchDetail } from '@/lib/knowbots/client'
 import { IncubationMode } from './incubation-mode'
 import { PlatformView } from './platform-asks'
 import { AmendmentList } from './reference'
+import { ManualReleaseRequest } from './manual-release'
 import { SelfTests } from './self-test'
 import { Card, KEY, useWhen, type Translate } from './shared'
 
@@ -68,6 +69,7 @@ export function NameView({
           {t('name.openWorkdraft')}
         </Link>
       </Card>
+      {csrfToken ? <ManualReleaseRequest life={life} csrfToken={csrfToken} /> : null}
       {csrfToken ? <SelfTests life={life} csrfToken={csrfToken} /> : null}
       <Card title={t('name.timeline')}>
         <Timeline life={life} />
@@ -170,6 +172,8 @@ export function eventLine(event: Event, t: Translate): string {
         number: v('number'),
         status: t(`testStatus.${v('status')}` as never),
       })
+    case 'expert_manual_release':
+      return t('event.manualRelease', { version: v('version') })
     case 'expert':
       return t('event.expert', { number: v('test_number') || '—', version: v('version') })
     case 'returned':

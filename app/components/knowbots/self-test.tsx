@@ -54,7 +54,12 @@ export function SelfTests({ life, csrfToken }: { life: Detail; csrfToken: string
   const t = useTranslations('knowbots.selfTest')
   const active = life.tests.filter((x) => ACTIVE.has(x.status))
   const latest = life.drafts.at(-1)
-  const pending = active.length === 0 && latest?.status === 'pending_test' ? latest : undefined
+  const pending =
+    active.length === 0 &&
+    latest?.status === 'pending_test' &&
+    !life.experts.some((e) => e.draft_id === latest.draft_id)
+      ? latest
+      : undefined
   if (!pending && active.length === 0) return null
   return (
     <Card title={t('title')}>

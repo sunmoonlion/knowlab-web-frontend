@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SelfTests, choiceOf } from '@/components/knowbots/self-test'
-import type { TestDataRequest } from '@/contracts/knowbots'
+import type { Detail, TestDataRequest } from '@/contracts/knowbots'
 import { ApiClientError } from '@/lib/common/api-client'
 import {
   confirmTestData,
@@ -16,7 +16,20 @@ import {
 } from '@/lib/knowbots/client'
 import messages from '@/messages/zh-CN.json'
 
-import { CSRF, DRAFT, TEST, detail, draft, testRecord, version } from './knowbot-fixtures'
+import {
+  CSRF,
+  DRAFT,
+  TEST,
+  detail as fixtureDetail,
+  draft,
+  expert,
+  testRecord,
+  version,
+} from './knowbot-fixtures'
+
+function detail(overrides: Partial<Detail> = {}) {
+  return fixtureDetail({ experts: [], ...overrides })
+}
 
 vi.mock('@/lib/knowbots/client', () => ({
   fetchComputers: vi.fn(),
@@ -313,4 +326,19 @@ describe('测试里专家提出的数据（decisions ⑭）', () => {
       ],
     })
   })
+})
+
+it('does not offer a paid test for a revision already released by exception', () => {
+  page(
+    detail({
+      drafts: [draft({ status: 'pending_test' })],
+      tests: [],
+      experts: [
+        expert({
+          manual_release: { release_id: DRAFT, retested: false, manifest_sha256: 'a'.repeat(64) },
+        }),
+      ],
+    }),
+  )
+  expect(screen.queryByTestId('self-test-start')).not.toBeInTheDocument()
 })

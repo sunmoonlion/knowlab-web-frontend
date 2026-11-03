@@ -412,7 +412,8 @@
       "approved": "We reviewed version {version}",
       "reviewRejected": "Version {version} did not pass our review",
       "listed": "Version {version} is listed and usable",
-      "stopped": "Version {version} stopped"
+      "stopped": "Version {version} stopped",
+      "manualRelease": "Expert version {version} created by manual exception (not retested)"
     },
     "home": {
       "title": "Home",
@@ -710,7 +711,8 @@
         "not_accepted": "the idea version was not accepted",
         "cases_mismatch": "the tested cases do not match the idea's cases",
         "outputs_missing": "no write-up for case {case}, cannot check automatically",
-        "flagged_word": "the write-up of case {case} contains “{word}”"
+        "flagged_word": "the write-up of case {case} contains “{word}”",
+        "manual_unretested": "Released by manual exception. This revision has not been retested. Earlier test results do not establish acceptance of this revision."
       },
       "bindings": "{count} pieces of bound data, frozen with this version",
       "rerun": "Platform rerun no. {number}: {status}",
@@ -774,6 +776,35 @@
         "cancelled": "Stopped",
         "not_reached": "Not reached"
       }
+    },
+    "manualRelease": {
+      "title": "Manual release exception",
+      "notice": "Released by manual exception. This revision has not been retested. Earlier test results do not establish acceptance of this revision.",
+      "lead": "Request release without another model test. Release review and normal delivery checks still apply. This does not run a model or incur test fees.",
+      "baseline": "Earlier test for reference",
+      "reason": "Reason for exception",
+      "change_summary": "Changes in this revision",
+      "verification": "Offline verification evidence",
+      "limitations": "Unverified behavior and limitations",
+      "consent": "I acknowledge that this revision has not been retested and authorize release personnel to inspect this package and these notes.",
+      "submit": "Request exception",
+      "pending": "Awaiting release review",
+      "approved": "Exception approved; submit delivery next",
+      "rejected": "Exception rejected",
+      "failed": "Operation failed. Reload and try again.",
+      "queue": "Release exception requests and history",
+      "empty": "No release exceptions",
+      "inspect": "Inspect package and evidence",
+      "package": "Exact requested package",
+      "decision": "Review reason",
+      "agree": "Approve exception",
+      "reject": "Reject",
+      "reviewAck": "I reviewed this package and its evidence and acknowledge it has not been retested. Normal delivery review still applies.",
+      "history": "Exception history",
+      "draft": "Candidate {label}",
+      "test": "Test {number} · Candidate {label}",
+      "digest": "Revision digest",
+      "newVersion": "This revision already has an expert version. Create a new candidate to test again."
     }
   },
   "workdraft": {
