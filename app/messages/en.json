@@ -469,7 +469,7 @@
         "waiting": "Test {number} is waiting"
       },
       "draft": "Candidate {label}",
-      "executionLocation": "Manage testing and acceptance in knowlab. The matching knowbench conversation is the execution record of this same test.",
+      "executionLocation": "View test execution, outputs and checks here in knowlab, using your selected computer and model.",
       "failedCases": "Completed cases {cases} did not pass. See Test history below for reasons and outputs.",
       "dataRefreshFailed": "Could not refresh the test data status. Please try again."
     },
@@ -736,6 +736,44 @@
       },
       "budgetRange": "The cost limit must be above 0 and at most CNY 1000 (all reruns together stay within it).",
       "raiseFrozen": "Some data was frozen with this version as for my use only: I have the right to change it to may serve others through an expert (logged; raise the data's licence in knowbase first)."
+    },
+    "execution": {
+      "title": "Test execution",
+      "failed": "Unable to read test execution.",
+      "retry": "Reload",
+      "loading": "Loading…",
+      "allCases": "All cases",
+      "case": "Case {id}",
+      "spent": "Spent CNY {amount}",
+      "lastActivity": "Last activity: {at}",
+      "planning": "Selecting methods for this question",
+      "plan": "Task plan version {version}",
+      "details": "View activity and outputs",
+      "attempts": "{n} attempts",
+      "tools": "Tool activity:",
+      "state": {
+        "PENDING": "Not started",
+        "RECEIVED": "Received",
+        "ACCEPTED": "Accepted",
+        "RUNNING": "Running",
+        "WAITING": "Waiting",
+        "SUCCEEDED": "Completed",
+        "FAILED": "Failed",
+        "CANCELLED": "Stopped",
+        "REJECTED": "Rejected"
+      },
+      "step": {
+        "pending": "Not started",
+        "running": "Running",
+        "accepted": "Accepted",
+        "reworking": "Reworking",
+        "went_back": "Returned",
+        "redo": "Redo needed",
+        "waiting": "Waiting",
+        "failed": "Failed",
+        "cancelled": "Stopped",
+        "not_reached": "Not reached"
+      }
     }
   },
   "workdraft": {

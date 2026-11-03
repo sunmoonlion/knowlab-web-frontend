@@ -28,6 +28,7 @@ import {
 } from '@/lib/knowbots/client'
 
 import { Card, KEY, useWhen } from './shared'
+import { TestExecution } from './test-execution'
 
 const ACTIVE = new Set(['queued', 'running', 'waiting'])
 const field = 'h-8 rounded-lg border bg-transparent px-2 text-sm'
@@ -348,6 +349,7 @@ function ActiveTest({ test, csrfToken }: { test: Test; csrfToken: string }) {
           .join(' · ')}
       </p>
       <p className="text-muted-foreground text-sm">{t('executionLocation')}</p>
+      <TestExecution testId={testId} />
       {failedCases?.length ? (
         <p role="status" className="text-amber-700">
           {t('failedCases', { cases: failedCases.join('、') })}

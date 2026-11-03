@@ -469,7 +469,7 @@
         "waiting": "第 {number} 次测试在等待处理"
       },
       "draft": "准专家 {label}",
-      "executionLocation": "在 knowlab 管理测试和验收；knowbench 中的对应会话是同一次测试的执行记录。",
+      "executionLocation": "在 knowlab 查看这次测试的过程、交回物和验收；使用你选定的执行电脑与模型。",
       "failedCases": "已完成的用例中，{cases} 未通过。原因和交回物请查看下方“历次测试”。",
       "dataRefreshFailed": "没有更新到测试数据状态，请稍后再试。"
     },
@@ -736,6 +736,44 @@
       },
       "budgetRange": "费用上限要大于 0、不超过 1000 元（几次重跑加起来不超过它）。",
       "raiseFrozen": "这一版冻结时有「只许本人用」的数据：我有权把它们改成「可以经专家给别人用」（会留痕；要先在 knowbase 把这些数据的许可改上去）。"
+    },
+    "execution": {
+      "title": "测试过程",
+      "failed": "暂时无法读取测试过程。",
+      "retry": "重新读取",
+      "loading": "正在读取…",
+      "allCases": "全部用例",
+      "case": "用例 {id}",
+      "spent": "已用 {amount} 元",
+      "lastActivity": "最近活动：{at}",
+      "planning": "正在按问题选择方法",
+      "plan": "任务计划第 {version} 版",
+      "details": "查看过程与交回物",
+      "attempts": "尝试 {n} 次",
+      "tools": "工具活动：",
+      "state": {
+        "PENDING": "尚未开始",
+        "RECEIVED": "已受理",
+        "ACCEPTED": "已受理",
+        "RUNNING": "在执行",
+        "WAITING": "等待处理",
+        "SUCCEEDED": "已完成",
+        "FAILED": "失败",
+        "CANCELLED": "已停止",
+        "REJECTED": "未受理"
+      },
+      "step": {
+        "pending": "未开始",
+        "running": "在做",
+        "accepted": "验收通过",
+        "reworking": "返工中",
+        "went_back": "已退回",
+        "redo": "需重做",
+        "waiting": "等待处理",
+        "failed": "失败",
+        "cancelled": "已停止",
+        "not_reached": "未执行"
+      }
     }
   },
   "workdraft": {

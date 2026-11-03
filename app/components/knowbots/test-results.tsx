@@ -182,7 +182,7 @@ function stepName(t: ReturnType<typeof useTranslations<'knowbots'>>, n: number, 
   return title ? t('outputs.step', { n, title }) : t('outputs.stepN', { n })
 }
 
-function Deliverable({
+export function Deliverable({
   outputs,
   state,
 }: {
@@ -266,7 +266,7 @@ function Deliverable({
   )
 }
 
-function StepBlock({ step, n }: { step: StepOutput; n: number }) {
+export function StepBlock({ step, n }: { step: StepOutput; n: number }) {
   const t = useTranslations('knowbots')
   const checks = step.checks ?? []
   return (
