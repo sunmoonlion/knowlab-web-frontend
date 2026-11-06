@@ -11,6 +11,8 @@ import {
   declineTestData,
   fetchComputers,
   fetchTestData,
+  fetchTestQuestions,
+  stopMyTest,
   refreshMyTest,
   startSelfTest,
 } from '@/lib/knowbots/client'
@@ -36,9 +38,13 @@ vi.mock('@/lib/knowbots/client', () => ({
   startSelfTest: vi.fn(),
   refreshMyTest: vi.fn(),
   fetchTestData: vi.fn(),
+  fetchTestQuestions: vi.fn(),
+  stopMyTest: vi.fn(),
   confirmTestData: vi.fn(),
   declineTestData: vi.fn(),
 }))
+
+vi.mock('@/i18n/navigation', async () => (await import('./knowbot-fixtures')).linkMock())
 
 const ENV = '9b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10'
 const Q = '8b8a6c3e-1f2d-4c5b-9a7e-6d5c4b3a2f10'
@@ -98,6 +104,8 @@ function page(life = detail()) {
 }
 
 beforeEach(() => {
+  vi.mocked(fetchTestQuestions).mockReset().mockResolvedValue([])
+  vi.mocked(stopMyTest).mockReset().mockResolvedValue()
   vi.mocked(fetchComputers)
     .mockReset()
     .mockResolvedValue({
@@ -341,4 +349,23 @@ it('does not offer a paid test for a revision already released by exception', ()
     }),
   )
   expect(screen.queryByTestId('self-test-start')).not.toBeInTheDocument()
+})
+
+
+describe('测试在 knowlab 处理', () => {
+  it('本人确认才停止；运行方失败保留错误，不自动重新提交', async () => {
+    vi.mocked(stopMyTest).mockRejectedValueOnce(new Error('unavailable'))
+    page(detail({ tests: [testRecord({ status: 'running', mode: 'self' })] }))
+    await waitFor(() => expect(fetchTestQuestions).toHaveBeenCalledWith(TEST))
+    fireEvent.click(screen.getByRole('button', { name: '停止这次测试' }))
+    expect(stopMyTest).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '继续测试' }))
+    expect(stopMyTest).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '停止这次测试' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认停止' }))
+    await waitFor(() => expect(stopMyTest).toHaveBeenCalledWith(TEST, CSRF))
+    expect(await screen.findByText(messages.knowbots.selfTest.stopFailed)).toBeInTheDocument()
+    expect(stopMyTest).toHaveBeenCalledTimes(1)
+    expect(startSelfTest).not.toHaveBeenCalled()
+  })
 })

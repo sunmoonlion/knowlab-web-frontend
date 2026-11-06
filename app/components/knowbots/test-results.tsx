@@ -182,6 +182,28 @@ function stepName(t: ReturnType<typeof useTranslations<'knowbots'>>, n: number, 
   return title ? t('outputs.step', { n, title }) : t('outputs.stepN', { n })
 }
 
+function DownloadReport({ report }: { report: NonNullable<CaseOutputs['deliverable']> }) {
+  const t = useTranslations('knowbots.outputs')
+  const filename = report.path.split(/[\\/]/).at(-1) || 'report.md'
+  function download() {
+    const url = URL.createObjectURL(
+      new Blob([report.text], { type: 'text/markdown;charset=utf-8' }),
+    )
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = report.truncated ? `excerpt-${filename}` : filename
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+  return (
+    <button type="button" className="mb-2 underline" onClick={download}>
+      {t(report.truncated ? 'downloadExcerpt' : 'download')}
+    </button>
+  )
+}
+
 export function Deliverable({
   outputs,
   state,
@@ -218,6 +240,7 @@ export function Deliverable({
                 ) : null}
                 {final.deliverable ? (
                   <div className="max-h-[70vh] overflow-y-auto">
+                    <DownloadReport report={final.deliverable} />
                     {final.deliverable.truncated ? <p>{t('outputs.truncated')}</p> : null}
                     <Markdown>{final.deliverable.text}</Markdown>
                   </div>
@@ -250,6 +273,7 @@ export function Deliverable({
   else
     body = (
       <div className="bg-background max-h-[70vh] overflow-y-auto rounded-md border p-3">
+        <DownloadReport report={outputs.deliverable} />
         {outputs.deliverable.truncated ? (
           <p className="mb-2 text-xs text-amber-700 dark:text-amber-400">
             {t('outputs.truncated')}

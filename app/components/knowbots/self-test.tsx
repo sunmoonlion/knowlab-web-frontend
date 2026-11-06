@@ -22,6 +22,8 @@ import {
   fetchTestData,
   askPlatformTest,
   refreshMyTest,
+  stopMyTest,
+  fetchTestQuestions,
   startSelfTest,
   type TestDataChoice,
   withdrawPlatformTest,
@@ -29,6 +31,7 @@ import {
 
 import { Card, KEY, useWhen } from './shared'
 import { TestExecution } from './test-execution'
+import { QuestionsHere } from './my-questions'
 
 const ACTIVE = new Set(['queued', 'running', 'waiting'])
 const field = 'h-8 rounded-lg border bg-transparent px-2 text-sm'
@@ -327,6 +330,17 @@ function ActiveTest({ test, csrfToken }: { test: Test; csrfToken: string }) {
   const when = useWhen()
   const client = useQueryClient()
   const testId = test.test_id
+  const [confirmStop, setConfirmStop] = useState(false)
+  const stop = useMutation({
+    mutationFn: () => stopMyTest(testId, csrfToken),
+    onSuccess: () => client.invalidateQueries({ queryKey: KEY }),
+  })
+  const questions = useQuery({
+    queryKey: [...KEY, 'test-questions', testId],
+    queryFn: () => fetchTestQuestions(testId),
+    refetchInterval: 5000,
+  })
+
   const failedCases = test.report?.cases
     .filter((c) => c.status === 'failed' || c.status === 'error')
     .map((c) => c.case_id)
@@ -355,6 +369,31 @@ function ActiveTest({ test, csrfToken }: { test: Test; csrfToken: string }) {
       </p>
       <p className="text-muted-foreground text-sm">{t('executionLocation')}</p>
       <TestExecution testId={testId} />
+      <QuestionsHere questions={questions.data ?? []} csrfToken={csrfToken} />
+      {questions.isError ? (
+        <p role="alert">
+          {t('questionsFailed')}{' '}
+          <button type="button" className="underline" onClick={() => void questions.refetch()}>
+            {t('retryQuestions')}
+          </button>
+        </p>
+      ) : null}
+      {confirmStop ? (
+        <div className="space-y-2 rounded border p-3">
+          <p>{t('stopNote')}</p>
+          <Button variant="destructive" disabled={stop.isPending} onClick={() => stop.mutate()}>
+            {t('confirmStop')}
+          </Button>
+          <Button variant="outline" disabled={stop.isPending} onClick={() => setConfirmStop(false)}>
+            {t('keepRunning')}
+          </Button>
+        </div>
+      ) : (
+        <Button variant="outline" onClick={() => setConfirmStop(true)}>
+          {t('stop')}
+        </Button>
+      )}
+      {stop.isError ? <p role="alert">{t('stopFailed')}</p> : null}
       {failedCases?.length ? (
         <p role="status" className="text-amber-700">
           {t('failedCases', { cases: failedCases.join('、') })}

@@ -208,6 +208,8 @@
       "noReason": "What this step returned did not meet the requirements."
     },
     "outputs": {
+      "download": "Download saved report",
+      "downloadExcerpt": "Download saved report excerpt",
       "deliverable": "Write-up",
       "truncated": "The write-up is long; only the beginning is shown.",
       "noDeliverable": "This case has no write-up.",
@@ -439,6 +441,14 @@
       "versions": "Idea versions"
     },
     "selfTest": {
+      "stop": "Stop this test",
+      "confirmStop": "Confirm stop",
+      "keepRunning": "Keep running",
+      "stopNote": "Stop the remaining cases in this run. Incurred costs, test records and saved results remain. Previously confirmed data supply is not automatically cancelled.",
+      "stopFailed": "Stopping has not been confirmed. Refresh the status and try again.",
+      "questionsFailed": "Could not read pending questions for this test.",
+      "retryQuestions": "Read again",
+      "stopped": "Stopped",
       "timeout": "Total test time limit (minutes)",
       "timeoutNote": "All {count} cases share this limit (1–1440 minutes). The default estimates 60 minutes per case for the whole run, not a separate timer per case. Waiting for your answers or data confirmation is counted separately. Budget limits still apply independently.",
       "title": "Testing",

@@ -301,6 +301,19 @@ export async function declineTestData(questionId: string, csrfToken: string): Pr
   ).status
 }
 
+export async function stopMyTest(testId: string, csrfToken: string): Promise<void> {
+  await requestJson(`${BASE}/knowbot-tests/${enc(testId)}/stop`, {
+    method: 'POST',
+    csrfToken,
+    body: {},
+  })
+}
+
+export async function fetchTestQuestions(testId: string): Promise<MyQuestion[]> {
+  return parse(questionsSchema, await requestJson(`${BASE}/knowbot-tests/${enc(testId)}/questions`))
+    .questions
+}
+
 // ---------- 工作稿（专家孵化方案第五至十一节） ----------
 const workdraftOf = (requestId: string) => `${BASE}/knowbot-requests/${enc(requestId)}/workdraft`
 

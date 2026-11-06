@@ -283,7 +283,11 @@ function TestHistory({ life, cases }: { life: Detail; cases?: Record<string, unk
           <details className="rounded-lg border">
             <summary className="flex cursor-pointer flex-wrap items-baseline gap-x-2 px-3 py-2">
               <span className="font-medium">{t('testNumber', { number: x.number })}</span>
-              <Badge tone={TEST_TONE[x.status]}>{t(`testStatus.${x.status}`)}</Badge>
+              <Badge tone={TEST_TONE[x.status]}>
+                {x.report?.status === 'cancelled'
+                  ? t('selfTest.stopped')
+                  : t(`testStatus.${x.status}`)}
+              </Badge>
               <span className="text-muted-foreground text-xs">
                 {[
                   tc(`mode.${x.mode}`),
