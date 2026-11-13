@@ -16,6 +16,7 @@ import {
 import { freshId, nameProblem, outputsValid } from '@/lib/knowbots/workdraft'
 
 import { Checks } from './workdraft-checks'
+import { ManagedCapabilitiesEditor } from './workdraft-managed-capabilities'
 import { SelectionEditor } from './workdraft-planning'
 import { InputRequirements } from './workdraft-inputs'
 import { AcceptStep, SuggestionsAt } from './workdraft-suggestions'
@@ -38,6 +39,7 @@ const DEFAULT_RESERVE = '0.05'
 const DEFAULT_INPUT_MAX = 8000
 
 export function StepEditor({
+  requestId,
   step,
   number,
   count,
@@ -48,6 +50,7 @@ export function StepEditor({
   onMove,
   onRemove,
 }: {
+  requestId?: string
   step: Step
   number: number
   count: number
@@ -194,7 +197,12 @@ export function StepEditor({
         onChange={(checks) => set('checks', checks)}
       />
       <OnFailCell step={step} earlier={earlier} base={base} onChange={(v) => set('on_fail', v)} />
-      <AdvancedCell step={step} base={base} onChange={(v) => set('advanced', v)} />
+      <AdvancedCell
+        requestId={requestId}
+        step={step}
+        base={base}
+        onChange={(v) => set('advanced', v)}
+      />
     </section>
   )
 }
@@ -641,10 +649,12 @@ function OnFailCell({
 }
 
 function AdvancedCell({
+  requestId,
   step,
   base,
   onChange,
 }: {
+  requestId?: string
   step: Step
   base: string
   onChange: (value: Step['advanced']) => void
@@ -663,6 +673,11 @@ function AdvancedCell({
       <summary className="cursor-pointer text-sm font-medium">{t('step.advanced')}</summary>
       <div className="mt-2 space-y-3">
         <p className="text-muted-foreground text-xs">{t('step.advancedHint')}</p>
+        <ManagedCapabilitiesEditor
+          requestId={requestId}
+          value={advanced.managed_capabilities}
+          onChange={(value) => onChange({ ...advanced, managed_capabilities: value })}
+        />
         <Field
           label={t('step.outputFile')}
           hint={t('step.outputFileHint')}

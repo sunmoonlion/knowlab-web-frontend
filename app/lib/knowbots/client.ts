@@ -1,6 +1,7 @@
 'use client'
 
 import type { z } from 'zod'
+import { authorCapabilityCatalogSchema } from '@/contracts/workdraft'
 
 import {
   applicationsSchema,
@@ -405,6 +406,13 @@ const roundsOf = (requestId: string) => `${workdraftOf(requestId)}/incubations`
 // 选电脑：我接入过的电脑与上次用的那台与目录
 export async function fetchRoundComputers(requestId: string): Promise<Computers> {
   return parse(computersSchema, await requestJson(`${workdraftOf(requestId)}/computers`))
+}
+
+export async function fetchMethodCapabilities(requestId: string) {
+  return parse(
+    authorCapabilityCatalogSchema,
+    await requestJson(`${workdraftOf(requestId)}/capabilities`),
+  )
 }
 
 // 这个名称的各轮（第几轮、状态、花费），第一轮在前

@@ -1,0 +1,25 @@
+{
+  "contract_version": 1,
+  "tools": [
+    {
+      "url": "https://tools.example.test/mcp",
+      "name": "send",
+      "service_name": "通知服务",
+      "description": "发送已确认的通知"
+    }
+  ],
+  "skills": [
+    {
+      "name": "notice",
+      "version": "1",
+      "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "required_tools": [
+        {
+          "url": "https://tools.example.test/mcp",
+          "name": "send"
+        }
+      ],
+      "description": "准备通知并等待发送审批"
+    }
+  ]
+}
