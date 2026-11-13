@@ -927,6 +927,7 @@ function Editor({
                   ) : null}
                   <fieldset disabled={busy || Boolean(body.method_refs?.[step.id])}>
                     <StepEditor
+                      requestId={requestId}
                       step={step}
                       number={index + 1}
                       count={body.steps.length}

@@ -73,12 +73,63 @@ const onFailSchema = z.object({
   kind: z.enum(['rework', 'back', 'ask']),
   back_to: z.string().nullable().default(null),
 })
+export const authorCapabilityCatalogSchema = z
+  .object({
+    contract_version: z.literal(1),
+    tools: z.array(
+      z
+        .object({
+          url: z.string(),
+          name: z.string(),
+          service_name: z.string(),
+          description: z.string(),
+        })
+        .strict(),
+    ),
+    skills: z.array(
+      z
+        .object({
+          name: z.string(),
+          version: z.string(),
+          digest: z.string(),
+          description: z.string(),
+          required_tools: z
+            .array(z.object({ url: z.string(), name: z.string() }).strict())
+            .optional(),
+          unresolved_dependencies: z.boolean().optional(),
+        })
+        .strict(),
+    ),
+  })
+  .strict()
 const advancedSchema = z.object({
   tools: z.array(z.string()).nullable().default(null),
   reserve: z.string().nullable().default(null),
   input_max_chars: z.number().int().nullable().default(null),
   output_schema: z.record(z.string(), z.unknown()).nullable().default(null),
   output_file: z.string().nullable().default(null),
+  managed_capabilities: z
+    .object({
+      tools: z.array(z.object({ url: z.string(), name: z.string() }).strict()).max(30),
+      skills: z
+        .array(
+          z
+            .object({
+              name: z.string(),
+              version: z.string(),
+              digest: z.string(),
+              required_tools: z
+                .array(z.object({ url: z.string(), name: z.string() }).strict())
+                .max(30)
+                .optional(),
+            })
+            .strict(),
+        )
+        .max(10),
+    })
+    .strict()
+    .nullable()
+    .optional(),
 })
 export const selectionSchema = z.object({
   applies_when: z.string().min(1).max(4000),

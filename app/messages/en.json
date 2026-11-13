@@ -1309,6 +1309,20 @@
       "invalid": "Optional inputs cannot be back targets. Coverage checks must use their own optional source as guard; required outputs are always checked.",
       "save": "Confirm and save",
       "cancel": "Cancel"
+    },
+    "managed": {
+      "title": "MCP and Skills for this step",
+      "hint": "Choose connected tools and installed Skills for this step. Versions are recorded automatically; users bind their own accounts when running the method.",
+      "remove": "Remove",
+      "choose": "Choose tools and Skills",
+      "manage": "Manage connections and Skills",
+      "reload": "Refresh",
+      "loading": "Loading tools and Skills…",
+      "unavailable": "Could not load capabilities. Refresh to retry.",
+      "empty": "No capabilities yet. Connect a service or install a Skill in settings first.",
+      "requiredBySkill": "Required by a skill. Remove that skill first.",
+      "declaresTools": "Also declares required tools: {tools}. Account binding and authorization are still required at runtime.",
+      "unresolvedDependencies": "This skill has unresolved connection dependencies. Repair them in settings first."
     }
   },
   "ideaMethods": {
