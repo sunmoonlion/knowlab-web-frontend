@@ -1311,6 +1311,8 @@
       "cancel": "Cancel"
     },
     "managed": {
+      "authoringPaused": "MCP / Skill bindings in methods are temporarily unavailable. You can continue editing other step content; installed capabilities remain available in chat and work. Remove existing bindings before saving or publishing.",
+      "clearBindings": "Remove these bindings",
       "title": "MCP and Skills for this step",
       "hint": "Choose connected tools and installed Skills for this step. Versions are recorded automatically; users bind their own accounts when running the method.",
       "remove": "Remove",
