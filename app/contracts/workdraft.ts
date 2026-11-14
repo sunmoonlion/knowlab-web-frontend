@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { formalDraftSchema } from './formal-methods'
 
 // 工作稿（专家孵化方案第五至十一节，decisions ⑮）：后端 app/domain/knowbots/workdraft.py 的
 // WorkdraftBody 与 knowbot_routes.py 的工作稿接口。作者只写方法层的格子；清单由后端按格子编。
@@ -194,6 +195,7 @@ export type Planning = z.infer<typeof planningSchema>
 export type MethodReference = z.infer<typeof methodReferenceSchema>
 
 export const bodySchema = z.object({
+  formal_method: formalDraftSchema.nullable().optional(),
   name: z.string(),
   tagline: z.string(),
   scope: z.object({ does: z.string(), does_not: z.string(), elsewhere: z.string() }),

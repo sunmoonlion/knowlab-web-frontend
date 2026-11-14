@@ -112,6 +112,12 @@ export function WorkdraftView({
       </p>
     )
   if (!loaded.data) return <p className="text-muted-foreground mt-6 text-sm">{t('loading')}</p>
+  if (loaded.data.body.formal_method)
+    return (
+      <Link className="mt-6 block underline" href={`/names/${requestId}/formal-method`}>
+        {t('formalMethod')}
+      </Link>
+    )
   return (
     <Editor
       key={generation}
@@ -657,6 +663,12 @@ function Editor({
             </Link>
           </header>
           <div role="toolbar" aria-label={t('toolbar.label')} className="flex flex-wrap gap-2">
+            <Link
+              className="self-center text-sm underline"
+              href={`/names/${requestId}/formal-method`}
+            >
+              {t('formalMethod')}
+            </Link>
             <Button
               size="sm"
               variant="outline"
