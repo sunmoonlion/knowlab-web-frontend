@@ -435,7 +435,14 @@ function FormalForm({
                 <p className="text-muted-foreground text-sm">{t('sourceHint')}</p>
                 {source ? (
                   <p className="text-sm break-all">
-                    {t('license')}: {source.license_basis}
+                    {t('license')}:{' '}
+                    {source.license_basis === 'pending'
+                      ? t('licensePending')
+                      : !sources.isError &&
+                          !sources.isFetching &&
+                          sources.data?.some((item) => same(item, source))
+                        ? t('licenseVerified')
+                        : t('licenseRecheck')}
                   </p>
                 ) : null}
               </>
