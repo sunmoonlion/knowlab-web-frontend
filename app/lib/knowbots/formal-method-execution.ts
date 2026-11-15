@@ -1,6 +1,6 @@
 import {
   formalExecutionResultSchema,
-  formalExecutionSpecSchema,
+  formalExecutionCommandSchema,
   formalFrozenSuiteSchema,
   type FormalExecutionSpec,
   type FormalExecutionResult,
@@ -44,7 +44,15 @@ function checked(
     (r.admission.receipt && r.admission.receipt.revision !== command.revision) ||
     (prior &&
       (r.request_digest !== prior.request_digest ||
-        JSON.stringify(r.suite) !== JSON.stringify(prior.suite)))
+        JSON.stringify(r.suite) !== JSON.stringify(prior.suite) ||
+        r.cases.some((c) =>
+          prior.cases.some(
+            (p) =>
+              p.case_id === c.case_id &&
+              p.repetition === c.repetition &&
+              (p.caller ?? 'host') !== (c.caller ?? 'host'),
+          ),
+        )))
   )
     throw new KnowbotContractError()
   return r
@@ -55,13 +63,26 @@ export async function startFormalExecution(
   command: FormalExecutionCommand,
   csrfToken: string,
 ) {
-  const execution = formalExecutionSpecSchema.parse(command.execution)
+  const payload = formalExecutionCommandSchema.parse(command)
+  const execution = payload.execution
   const r = checked(
-    await requestJson(path(method), { method: 'POST', csrfToken, body: { ...command, execution } }),
+    await requestJson(path(method), { method: 'POST', csrfToken, body: payload }),
     method,
     command,
   )
-  if (r.suite.suite_id !== execution.suite.suite_id || r.suite.version !== execution.suite.version)
+  if (
+    r.suite.suite_id !== execution.suite.suite_id ||
+    r.suite.version !== execution.suite.version ||
+    r.cases.some(
+      (c) =>
+        !execution.suite.cases.some(
+          (expected) =>
+            expected.case_id === c.case_id &&
+            c.repetition <= expected.repetitions &&
+            (expected.caller ?? 'host') === (c.caller ?? 'host'),
+        ),
+    )
+  )
     throw new KnowbotContractError()
   return r
 }

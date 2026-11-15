@@ -1470,12 +1470,15 @@
     "next": "Next",
     "resumedMethod": "Method associated with this validation",
     "viewFrozen": "View latest frozen version",
-    "frozenVersion": "Frozen version {version}"
+    "frozenVersion": "Frozen version {version}",
+    "callerQualificationHint": "Declaring a caller does not grant permission. Each caller must pass its own execution test; legacy host receipts do not establish model eligibility.",
+    "verifiedCallers": "Validated callers",
+    "qualificationUnknown": "No verifiable caller receipt available"
   },
   "formalExecution": {
     "title": "Execute validation",
-    "hint": "Test inputs and expected assertions are saved separately. Assertions evaluate results and are never sent to the tool. Runs use the selected computer and budget and wait here for approval when needed. Only MCP adapters reviewed by the server as having zero incremental call cost are currently supported; other pricing arrangements are not supported yet.",
-    "unsupported": "Execution currently supports direct host MCP methods without model turns.",
+    "hint": "Test inputs and expected assertions are saved separately. Assertions evaluate results and are never sent to the tool or model. Runs use the selected computer and budget and wait here for approval when needed. Only MCP adapters reviewed by the server as having zero incremental call cost are currently supported. Model tests additionally incur model usage.",
+    "unsupported": "Execution currently supports direct MCP methods with zero internal model turns.",
     "suiteVersion": "Test suite version {version}",
     "caseNumber": "Test case {number}",
     "caseId": "Case ID",
@@ -1514,7 +1517,7 @@
     "accept": "Approve this call",
     "decline": "Reject this call",
     "loading": "Loading execution status…",
-    "invalid": "Invalid suite or settings. Check JSON, case IDs, repetitions and assertions, and include at least one successful case.",
+    "invalid": "Invalid suite or settings. Check JSON, caller coverage, model prompts, repetitions and assertions.",
     "failed": "Request did not complete ({code}). Refresh its status; execution is never retried automatically.",
     "status": {
       "pending": "Pending",
@@ -1531,6 +1534,21 @@
       "failed": "Failed",
       "unknown": "Unknown outcome",
       "cancelled": "Cancelled"
-    }
+    },
+    "caller": "Test caller",
+    "callers": {
+      "host": "Host invocation",
+      "model": "Model invocation"
+    },
+    "modelPrompt": "Model test prompt",
+    "modelPromptHint": "Describe the task and inputs for the model. Keep expected answers in the separate assertions field.",
+    "callerCoverage": "Each declared caller needs its own successful test case. Model rejection cases support explicit approval denial only.",
+    "modelProbe": "Model tests allow one outer runtime turn and at most one method call per repetition. The method itself still uses zero internal model turns. A runtime turn may contain several inference requests; model usage counts toward the run budget. Model access and computer readiness are checked by the server.",
+    "modelTrace": "Runtime source references",
+    "thread": "Runtime thread",
+    "turn": "Runtime turn",
+    "toolCall": "Model tool call",
+    "methodCall": "Formal method call",
+    "tracePending": "No confirmed model call references yet."
   }
 }

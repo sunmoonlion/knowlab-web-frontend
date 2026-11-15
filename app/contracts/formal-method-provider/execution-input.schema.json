@@ -1,0 +1,384 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.sunmoonai.com/knowlab/formal-method/v1/execution-input.schema.json",
+  "$defs": {
+    "ApproxAssertion": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "approx",
+          "title": "Kind",
+          "type": "string"
+        },
+        "pointer": {
+          "maxLength": 512,
+          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+          "title": "Pointer",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "absolute_tolerance": {
+          "minimum": 0,
+          "title": "Absolute Tolerance",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "pointer",
+        "value",
+        "absolute_tolerance"
+      ],
+      "title": "ApproxAssertion",
+      "type": "object"
+    },
+    "Budget": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "pattern": "^[0-9]{1,6}(\\.[0-9]{1,2})?$",
+          "title": "Limit",
+          "type": "string"
+        },
+        "currency": {
+          "const": "CNY",
+          "default": "CNY",
+          "title": "Currency",
+          "type": "string"
+        }
+      },
+      "required": [
+        "limit"
+      ],
+      "title": "Budget",
+      "type": "object"
+    },
+    "ContainsAssertion": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "contains",
+          "title": "Kind",
+          "type": "string"
+        },
+        "pointer": {
+          "maxLength": 512,
+          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+          "title": "Pointer",
+          "type": "string"
+        },
+        "value": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "pointer",
+        "value"
+      ],
+      "title": "ContainsAssertion",
+      "type": "object"
+    },
+    "EqualsAssertion": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "equals",
+          "title": "Kind",
+          "type": "string"
+        },
+        "pointer": {
+          "maxLength": 512,
+          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+          "title": "Pointer",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue"
+        }
+      },
+      "required": [
+        "kind",
+        "pointer",
+        "value"
+      ],
+      "title": "EqualsAssertion",
+      "type": "object"
+    },
+    "FormalCaseExpectation": {
+      "additionalProperties": false,
+      "properties": {
+        "outcome": {
+          "enum": [
+            "succeeded",
+            "rejected"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "rejection_code": {
+          "anyOf": [
+            {
+              "enum": [
+                "authorization_denied",
+                "approval_denied",
+                "input_invalid"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rejection Code"
+        },
+        "assertions": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "approx": "#/$defs/ApproxAssertion",
+                "contains": "#/$defs/ContainsAssertion",
+                "equals": "#/$defs/EqualsAssertion"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/EqualsAssertion"
+              },
+              {
+                "$ref": "#/$defs/ApproxAssertion"
+              },
+              {
+                "$ref": "#/$defs/ContainsAssertion"
+              }
+            ]
+          },
+          "maxItems": 64,
+          "title": "Assertions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "outcome",
+        "assertions"
+      ],
+      "title": "FormalCaseExpectation",
+      "type": "object"
+    },
+    "FormalCaseInput": {
+      "additionalProperties": false,
+      "properties": {
+        "values": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "maxProperties": 100,
+          "title": "Values",
+          "type": "object"
+        },
+        "model_prompt": {
+          "anyOf": [
+            {
+              "maxLength": 4000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Prompt"
+        }
+      },
+      "required": [
+        "values"
+      ],
+      "title": "FormalCaseInput",
+      "type": "object"
+    },
+    "FormalExecutionCase": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "pattern": "^[A-Za-z0-9_-]{1,48}$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "caller": {
+          "default": "host",
+          "enum": [
+            "host",
+            "model"
+          ],
+          "title": "Caller",
+          "type": "string"
+        },
+        "input": {
+          "$ref": "#/$defs/FormalCaseInput"
+        },
+        "repetitions": {
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Repetitions",
+          "type": "integer"
+        },
+        "minimum_passes": {
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Minimum Passes",
+          "type": "integer"
+        },
+        "expected": {
+          "$ref": "#/$defs/FormalCaseExpectation"
+        }
+      },
+      "required": [
+        "case_id",
+        "input",
+        "repetitions",
+        "minimum_passes",
+        "expected"
+      ],
+      "title": "FormalExecutionCase",
+      "type": "object"
+    },
+    "FormalTestSuiteDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "suite_id": {
+          "format": "uuid",
+          "title": "Suite Id",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "cases": {
+          "items": {
+            "$ref": "#/$defs/FormalExecutionCase"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Cases",
+          "type": "array"
+        }
+      },
+      "required": [
+        "suite_id",
+        "version",
+        "cases"
+      ],
+      "title": "FormalTestSuiteDraft",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "ModelProbeLimits": {
+      "additionalProperties": false,
+      "description": "Outer caller limits, independent of the method's zero internal model turns.\n\nA Codex turn can contain several inference requests; every usage report counts.",
+      "properties": {
+        "max_turns": {
+          "maximum": 1,
+          "minimum": 1,
+          "title": "Max Turns",
+          "type": "integer"
+        },
+        "max_method_calls": {
+          "maximum": 1,
+          "minimum": 1,
+          "title": "Max Method Calls",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_turns",
+        "max_method_calls"
+      ],
+      "title": "ModelProbeLimits",
+      "type": "object"
+    },
+    "Runner": {
+      "additionalProperties": false,
+      "description": "谁跑这次测试（SDD 0046 第三节，decisions ⑯）：只有用户本人——跑在他接入的电脑、\n他选的工作区根目录、他的模型 key，他出钱。平台测试也在作者的账号下跑，平台的测试\n账号与测试电脑不再用于测试（10-28 起必填，原为可选、缺省是平台的测试账号）。",
+      "properties": {
+        "kind": {
+          "const": "user",
+          "title": "Kind",
+          "type": "string"
+        },
+        "environment_id": {
+          "pattern": "^[0-9a-f-]{36}$",
+          "title": "Environment Id",
+          "type": "string"
+        },
+        "workspace_root": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Workspace Root",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "environment_id",
+        "workspace_root"
+      ],
+      "title": "Runner",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "suite": {
+      "$ref": "#/$defs/FormalTestSuiteDraft"
+    },
+    "runner": {
+      "$ref": "#/$defs/Runner"
+    },
+    "budget": {
+      "$ref": "#/$defs/Budget"
+    },
+    "timeout_seconds": {
+      "maximum": 86400,
+      "minimum": 60,
+      "title": "Timeout Seconds",
+      "type": "integer"
+    },
+    "max_wait_seconds": {
+      "maximum": 604800,
+      "minimum": 60,
+      "title": "Max Wait Seconds",
+      "type": "integer"
+    },
+    "model_probe": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ModelProbeLimits"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "suite",
+    "runner",
+    "budget",
+    "timeout_seconds",
+    "max_wait_seconds"
+  ],
+  "title": "FormalExecutionInput",
+  "type": "object"
+}

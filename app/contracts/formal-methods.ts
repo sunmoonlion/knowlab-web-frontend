@@ -170,12 +170,19 @@ export const formalDraftSchema = z
     allowed_callers: z
       .array(z.enum(['host', 'model']))
       .min(1)
-      .max(2),
+      .max(2)
+      .refine((v) => new Set(v).size === v.length),
   })
   .strict()
 export type FormalDefinition = z.infer<typeof formalDefinitionSchema>
 export type FormalSource = z.infer<typeof formalSourceSchema>
 export type FormalDraft = z.infer<typeof formalDraftSchema>
+
+export const formalCallersSchema = z
+  .array(z.enum(['host', 'model']))
+  .min(1)
+  .max(2)
+  .refine((v) => new Set(v).size === v.length)
 
 const check = z.enum([
   'definition',
@@ -210,6 +217,7 @@ export const formalReceiptSchema = z
         suite_version: z.number().int().min(1),
         suite_digest: digest,
         evidence_digest: digest,
+        validated_callers: formalCallersSchema.nullable().optional(),
       })
       .strict()
       .nullable()
@@ -249,6 +257,8 @@ export const formalVersionSchema = z.object({
   provenance: z
     .object({
       method_kind: z.enum(['tool', 'expert', 'expert_team']),
+      allowed_callers: formalCallersSchema.optional(),
+      validation: formalReceiptSchema.optional(),
       dispatch: z.enum(['direct', 'orchestration']),
       interfaces: z
         .object({
@@ -289,3 +299,18 @@ export const formalMethodsSchema = z
   .strict()
 export type FormalValidation = z.infer<typeof formalValidationSchema>
 export type FormalVersion = z.infer<typeof formalVersionSchema>
+
+// Legacy receipts establish host eligibility only, never model eligibility.
+export function validatedCallers(receipt: z.infer<typeof formalReceiptSchema>) {
+  return receipt.execution?.validated_callers ?? (['host'] as const)
+}
+export function receiptCoversCallers(
+  receipt: z.infer<typeof formalReceiptSchema>,
+  callers: FormalDraft['allowed_callers'],
+) {
+  const verified = validatedCallers(receipt)
+  return (
+    verified.length === callers.length &&
+    callers.every((caller) => new Set<string>(verified).has(caller))
+  )
+}

@@ -1,0 +1,21 @@
+{
+  "provider": "knowlab",
+  "contract": "knowlab/formal-method/v1",
+  "source_sha256": {
+    "formal_method.py": "f99536f27fb699de5ec6861c60a212b0c1fe368462b63f03802e8192f3c7fee4",
+    "formal_method_compiler.py": "65d48964a395161892a47c0dfb186b976cfff0e6c7b3f0afcf83d397d182b544",
+    "formal_method_admission.py": "da9892c5e21ea5cc3c1046de322a1c2256d79743b6a8b816205b2d8b16e1fac1",
+    "formal_method_execution.py": "f650da061a0068a5ff09ff11383845cd6c2608dd61854cb1c057e0720a7d1976"
+  },
+  "files_sha256": {
+    "draft.schema.json": "9af4420a27748d05d40a7ad047005ec9c5c691cc424a6f2f4124af6d7b774680",
+    "execution-command.schema.json": "d5cb9f244be3d1310a501e835a22b02f9b6ff850f949d6a2e38fc5b225676825",
+    "execution-input.schema.json": "c507bc28f99a0acef7a93b639f17201bcd4c8c617ead390fde6958f632b39df7",
+    "execution-request.schema.json": "7867f979a1961bb26142f499374cbd2672422d5be9d68dee81c78956fe6a26c7",
+    "execution-result.schema.json": "bc84d23c0dae867a19e133958ce4798c53ea7bbff1daf8c9095af0e26635b668",
+    "registration-request.schema.json": "9e8100fdc423a882705d96fe50d5b81869f2c0fa0719cc16bf6b3f5c73e30480",
+    "samples.json": "689479567ade3914f1f7cdd67295acc4c3627a4739784232e7000c3ae4b3a4c9",
+    "suite.schema.json": "72c066eb0158abd6886e5c12e4274aa3676bc85b762df770eec84978c727a49c",
+    "validation-result.schema.json": "1f402ed69e4729dc02087e137e47bd602854035fd634b5da2e0f79471e41332d"
+  }
+}

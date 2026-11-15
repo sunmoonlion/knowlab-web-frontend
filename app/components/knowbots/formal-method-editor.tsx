@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import {
   formalDefinitionSchema,
   formalDraftSchema,
+  receiptCoversCallers,
+  validatedCallers,
   type FormalDefinition,
   type FormalDraft,
   type FormalSource,
@@ -147,7 +149,8 @@ function FormalForm({
     receipt.run_id === run.run_id &&
     receipt.request_id === initial.request_id &&
     receipt.method_id === methodId &&
-    receipt.revision === document.revision
+    receipt.revision === document.revision &&
+    receiptCoversCallers(receipt, callers)
   const publicReady = validated && receipt.checks.includes('business') && !receipt.uncovered.length
   const problem = (exc: unknown) =>
     exc instanceof ApiClientError ? exc.problem.code : 'contract_or_network_error'
@@ -550,6 +553,7 @@ function FormalForm({
             </div>
             <fieldset className="space-x-4 text-sm">
               <legend>{t('callers')}</legend>
+              <p className="text-muted-foreground text-sm">{t('callerQualificationHint')}</p>
               {(['host', 'model'] as const).map((caller) => (
                 <label key={caller}>
                   <input
@@ -683,6 +687,14 @@ function FormalForm({
           <p>
             {shownVersion.definition.capability_declaration.title} ·{' '}
             {t(`kind.${shownVersion.provenance.method_kind}`)}
+          </p>
+          <p>
+            {t('verifiedCallers')}:{' '}
+            {shownVersion.provenance.validation
+              ? validatedCallers(shownVersion.provenance.validation)
+                  .map((caller) => t(caller))
+                  .join(' · ')
+              : t('qualificationUnknown')}
           </p>
           <h3 className="font-medium">{t('generatedInterfaces')}</h3>
           <p className="text-muted-foreground">{t('generatedHint')}</p>

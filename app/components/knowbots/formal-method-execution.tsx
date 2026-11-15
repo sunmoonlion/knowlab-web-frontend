@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   formalExecutionSpecSchema,
+  suiteCoversCallers,
   type FormalExecutionResult,
 } from '@/contracts/formal-method-execution'
 import type { FormalDraft } from '@/contracts/formal-methods'
@@ -26,6 +27,8 @@ const terminal = (r?: FormalExecutionResult) =>
   !!r && ['passed', 'failed', 'cancelled'].includes(r.status)
 type CaseEditor = {
   case_id: string
+  caller: 'host' | 'model'
+  model_prompt: string
   values: string
   assertions: string
   outcome: 'succeeded' | 'rejected'
@@ -33,12 +36,14 @@ type CaseEditor = {
   repetitions: number
   minimum_passes: number
 }
-const blank = (n: number): CaseEditor => ({
+const blank = (n: number, caller: CaseEditor['caller'] = 'host'): CaseEditor => ({
+  caller,
+  model_prompt: '',
   case_id: `case_${n}`,
   values: '{}',
   assertions: '[]',
   outcome: 'succeeded',
-  rejection_code: 'authorization_denied',
+  rejection_code: caller === 'model' ? 'approval_denied' : 'authorization_denied',
   repetitions: 1,
   minimum_passes: 1,
 })
@@ -71,13 +76,13 @@ export function FormalMethodExecution({
   const supported =
     draft?.definition.procedure.kind === 'direct' &&
     draft.definition.procedure.implementation.kind === 'mcp' &&
-    draft.definition.procedure.max_model_turns === 0 &&
-    draft.allowed_callers.length === 1 &&
-    draft.allowed_callers[0] === 'host'
+    draft.definition.procedure.max_model_turns === 0
   const [command, setCommand] = useState<ValidationCommand | null>(resume ?? null)
   const [submitted, setSubmitted] = useState<FormalExecutionCommand | null>(null)
   const [suite, setSuite] = useState(() => ({ suite_id: crypto.randomUUID(), version: 1 }))
-  const [cases, setCases] = useState<CaseEditor[]>([blank(1)])
+  const [cases, setCases] = useState<CaseEditor[]>(() =>
+    (draft?.allowed_callers ?? ['host']).map((caller, i) => blank(i + 1, caller)),
+  )
   const [environment, setEnvironment] = useState('')
   const [root, setRoot] = useState('')
   const [budget, setBudget] = useState('1.00')
@@ -132,7 +137,11 @@ export function FormalMethodExecution({
           ...suite,
           cases: cases.map((c) => ({
             case_id: c.case_id,
-            input: { values: JSON.parse(c.values) },
+            ...(c.caller === 'model' ? { caller: 'model' } : {}),
+            input: {
+              values: JSON.parse(c.values),
+              ...(c.caller === 'model' ? { model_prompt: c.model_prompt } : {}),
+            },
             repetitions: c.repetitions,
             minimum_passes: c.minimum_passes,
             expected: {
@@ -146,7 +155,14 @@ export function FormalMethodExecution({
         budget: { limit: budget, currency: 'CNY' },
         timeout_seconds: timeout,
         max_wait_seconds: wait,
+        ...(cases.some((c) => c.caller === 'model')
+          ? { model_probe: { max_turns: 1, max_method_calls: 1 } }
+          : {}),
       })
+      if (!draft || !suiteCoversCallers(execution.suite, draft.allowed_callers)) {
+        setError('caller_coverage')
+        return
+      }
       const identity = { request_id: requestId, revision, run_id: crypto.randomUUID() }
       const next = { ...identity, execution }
       setSubmitted(next)
@@ -169,6 +185,8 @@ export function FormalMethodExecution({
       setCases(
         saved.cases.map((c) => ({
           case_id: c.case_id,
+          caller: c.caller ?? 'host',
+          model_prompt: c.input.model_prompt ?? '',
           values: JSON.stringify(c.input.values, null, 2),
           assertions: JSON.stringify(c.expected.assertions, null, 2),
           outcome: c.expected.outcome,
@@ -189,6 +207,7 @@ export function FormalMethodExecution({
     <section className="space-y-3 rounded border p-4">
       <h2 className="font-medium">{t('title')}</h2>
       <p className="text-muted-foreground text-sm">{t('hint')}</p>
+      <p className="text-muted-foreground text-sm">{t('callerCoverage')}</p>
       {!supported ? <p>{t('unsupported')}</p> : null}
       {supported && !command ? (
         <fieldset disabled={disabled || busy} className="space-y-3">
@@ -204,6 +223,38 @@ export function FormalMethodExecution({
                   onChange={(e) => update(i, { case_id: e.target.value })}
                 />
               </label>
+              <label className="block">
+                {t('caller')}
+                <select
+                  className={input}
+                  value={c.caller}
+                  onChange={(e) =>
+                    update(i, {
+                      caller: e.target.value as CaseEditor['caller'],
+                      ...(e.target.value === 'model' ? { rejection_code: 'approval_denied' } : {}),
+                    })
+                  }
+                >
+                  {draft?.allowed_callers.map((caller) => (
+                    <option key={caller} value={caller}>
+                      {t(`callers.${caller}`)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {c.caller === 'model' ? (
+                <label className="block">
+                  {t('modelPrompt')}
+                  <textarea
+                    className={input}
+                    rows={4}
+                    maxLength={4000}
+                    value={c.model_prompt}
+                    onChange={(e) => update(i, { model_prompt: e.target.value })}
+                  />
+                  <span className="text-muted-foreground text-sm">{t('modelPromptHint')}</span>
+                </label>
+              ) : null}
               <label className="block">
                 {t('values')}
                 <textarea
@@ -245,13 +296,13 @@ export function FormalMethodExecution({
                       update(i, { rejection_code: e.target.value as CaseEditor['rejection_code'] })
                     }
                   >
-                    {(['authorization_denied', 'approval_denied', 'input_invalid'] as const).map(
-                      (code) => (
+                    {(['authorization_denied', 'approval_denied', 'input_invalid'] as const)
+                      .filter((code) => c.caller !== 'model' || code === 'approval_denied')
+                      .map((code) => (
                         <option key={code} value={code}>
                           {t(code)}
                         </option>
-                      ),
-                    )}
+                      ))}
                   </select>
                 </label>
               )}
@@ -292,11 +343,14 @@ export function FormalMethodExecution({
             onClick={() => {
               let number = 1
               while (cases.some((item) => item.case_id === `case_${number}`)) number++
-              setCases([...cases, blank(number)])
+              setCases([...cases, blank(number, draft?.allowed_callers[0])])
             }}
           >
             {t('add')}
           </Button>
+          {cases.some((c) => c.caller === 'model') ? (
+            <p className="rounded border p-3 text-sm">{t('modelProbe')}</p>
+          ) : null}
           <label className="block">
             {t('computer')}
             <select
@@ -413,9 +467,28 @@ export function FormalMethodExecution({
                 <div key={`${c.case_id}:${c.repetition}`} className="rounded border p-2 text-sm">
                   <p>
                     {c.case_id} · {c.repetition} · {t(`status.${c.status}`)} ·{' '}
-                    {t(`outcomes.${c.outcome}`)}
+                    {t(`outcomes.${c.outcome}`)} · {t(`callers.${c.caller ?? 'host'}`)}
                   </p>
                   <p>{c.detail}</p>
+                  {c.caller === 'model' ? (
+                    c.model_trace ? (
+                      <details>
+                        <summary>{t('modelTrace')}</summary>
+                        <dl className="break-all">
+                          <dt>{t('thread')}</dt>
+                          <dd>{c.model_trace.thread_id}</dd>
+                          <dt>{t('turn')}</dt>
+                          <dd>{c.model_trace.turn_id}</dd>
+                          <dt>{t('toolCall')}</dt>
+                          <dd>{c.model_trace.tool_call_id}</dd>
+                          <dt>{t('methodCall')}</dt>
+                          <dd>{c.model_trace.method_call_id}</dd>
+                        </dl>
+                      </details>
+                    ) : (
+                      <p>{t('tracePending')}</p>
+                    )
+                  ) : null}
                   {c.assertions.map((a) => (
                     <p key={a.index}>
                       {a.index + 1}: {t(a.passed ? 'assertionPassed' : 'assertionFailed')} ·{' '}
@@ -479,9 +552,11 @@ export function FormalMethodExecution({
       ) : null}
       {error || run.isError ? (
         <p role="alert">
-          {error === 'suite_invalid'
-            ? t('invalid')
-            : t('failed', { code: error ?? problem(run.error) })}
+          {error === 'caller_coverage'
+            ? t('callerCoverage')
+            : error === 'suite_invalid'
+              ? t('invalid')
+              : t('failed', { code: error ?? problem(run.error) })}
         </p>
       ) : null}
     </section>

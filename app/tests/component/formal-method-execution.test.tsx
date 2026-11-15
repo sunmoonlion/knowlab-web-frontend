@@ -6,7 +6,11 @@ import {
   formalExecutionResultSchema,
   formalSuiteInputSchema,
 } from '@/contracts/formal-method-execution'
-import { decideFormalExecution, getFormalExecution } from '@/lib/knowbots/formal-method-execution'
+import {
+  decideFormalExecution,
+  getFormalExecution,
+  startFormalExecution,
+} from '@/lib/knowbots/formal-method-execution'
 import messages from '@/messages/zh-CN.json'
 import { CSRF, REQUEST, renderWith } from './knowbot-fixtures'
 const METHOD = '70d89579-f919-4c13-9ba2-78f091ed639f'
@@ -177,7 +181,7 @@ afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
 })
-function page(resume = false) {
+function page(resume = false, callers: ('host' | 'model')[] = ['host']) {
   const onRun = vi.fn(),
     onResult = vi.fn(),
     onActiveChange = vi.fn()
@@ -186,7 +190,7 @@ function page(resume = false) {
       methodId={METHOD}
       requestId={REQUEST}
       revision={2}
-      draft={draft}
+      draft={{ ...draft, allowed_callers: callers }}
       disabled={false}
       csrfToken={CSRF}
       resume={resume ? command : null}
@@ -347,4 +351,130 @@ it('loads the frozen inputs and assertions before editing the next suite version
     JSON.stringify(suite.cases[0].expected.assertions, null, 2),
   )
   expect(posts).toHaveLength(0)
+})
+
+it('submits model prompts and fixed probe limits separately from expectations', async () => {
+  const fallback = fetcher.getMockImplementation()!
+  fetcher.mockImplementation(async (url, init) => {
+    const response = await fallback(url, init)
+    if (url.includes('/executions')) {
+      const body = await response.json()
+      body.cases[0].caller = 'model'
+      return Response.json(body)
+    }
+    return response
+  })
+  page(false, ['model'])
+  await fill()
+  expect(screen.getByText(t.modelProbe)).toBeInTheDocument()
+  fireEvent.change(screen.getByLabelText(t.modelPrompt, { exact: false }), {
+    target: { value: 'Check the supplied message using this method.' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: t.start }))
+  await screen.findByText('Approve fixture check')
+  const execution = posts[0].body.execution as {
+    model_probe: unknown
+    suite: { cases: { caller: string; input: unknown; expected: unknown }[] }
+  }
+  expect(execution.model_probe).toEqual({ max_turns: 1, max_method_calls: 1 })
+  expect(execution.suite.cases[0].caller).toBe('model')
+  expect(execution.suite.cases[0].input).toEqual({
+    values: { message: 'input only' },
+    model_prompt: 'Check the supplied message using this method.',
+  })
+  expect(execution.suite.cases[0].expected).toEqual(suite.cases[0].expected)
+  expect(screen.getByText(t.tracePending)).toBeInTheDocument()
+})
+it('requires positive coverage of both declared callers before starting', async () => {
+  page(false, ['host', 'model'])
+  await screen.findByText('Local test computer')
+  fireEvent.click(screen.getAllByRole('button', { name: t.remove })[1])
+  await fill()
+  fireEvent.click(screen.getByRole('button', { name: t.start }))
+  await screen.findByRole('alert')
+  expect(posts).toHaveLength(0)
+  expect(screen.getByRole('alert')).toHaveTextContent(t.callerCoverage)
+})
+it('shows only real model runtime references and restores the model suite for the next version', async () => {
+  const modelSuite = {
+    ...suite,
+    cases: [
+      {
+        ...suite.cases[0],
+        caller: 'model',
+        input: { ...suite.cases[0].input, model_prompt: 'Check this input' },
+      },
+    ],
+  }
+  value.status = 'cancelled'
+  value.actions = []
+  const fallback = fetcher.getMockImplementation()!
+  fetcher.mockImplementation(async (url, init) => {
+    if (url.includes('/formal-test-suites/'))
+      return Response.json({ ...modelSuite, digest: DIGEST })
+    const response = await fallback(url, init)
+    if (url.includes('/executions/')) {
+      const body = await response.json()
+      body.cases[0].caller = 'model'
+      body.cases[0].model_trace = {
+        thread_id: 'actual-thread',
+        turn_id: 'actual-turn',
+        tool_call_id: 'actual-tool',
+        method_call_id: CALL,
+      }
+      return Response.json(body)
+    }
+    return response
+  })
+  page(true, ['model'])
+  await screen.findByText('actual-thread')
+  expect(screen.getByText('actual-turn')).toBeInTheDocument()
+  expect(screen.getByText('actual-tool')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: t.nextVersion }))
+  await screen.findByText('测试集版本 2')
+  expect(screen.getByLabelText(t.modelPrompt, { exact: false })).toHaveValue('Check this input')
+  expect(screen.getByLabelText(t.caller)).toHaveValue('model')
+  expect(posts).toHaveLength(0)
+})
+
+it('rejects caller changes in refreshed results and a host response to a model submission', async () => {
+  const prior = formalExecutionResultSchema.parse({
+    ...pending(),
+    cases: [{ ...pending().cases[0], caller: 'model' }],
+  })
+  await expect(getFormalExecution(METHOD, command, prior)).rejects.toThrow()
+  await expect(
+    startFormalExecution(
+      METHOD,
+      {
+        ...command,
+        execution: {
+          suite: {
+            suite_id: ENV,
+            version: 1,
+            cases: [
+              {
+                case_id: 'case_1',
+                caller: 'model',
+                input: { values: {}, model_prompt: 'Use the method' },
+                repetitions: 1,
+                minimum_passes: 1,
+                expected: {
+                  outcome: 'succeeded',
+                  rejection_code: null,
+                  assertions: [{ kind: 'equals', pointer: '/ok', value: true }],
+                },
+              },
+            ],
+          },
+          runner: { kind: 'user', environment_id: ENV, workspace_root: '/safe' },
+          budget: { limit: '1', currency: 'CNY' },
+          timeout_seconds: 60,
+          max_wait_seconds: 60,
+          model_probe: { max_turns: 1, max_method_calls: 1 },
+        },
+      },
+      CSRF,
+    ),
+  ).rejects.toThrow()
 })

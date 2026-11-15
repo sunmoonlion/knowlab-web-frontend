@@ -423,3 +423,75 @@ it.each([false, true])(
     expect(window.location.search).toContain('run=' + RUN)
   },
 )
+
+it.each([undefined, ['host'], ['host', 'model']])(
+  'does not expand a model-only declaration from incompatible receipt callers %j',
+  async (verified) => {
+    current = {
+      ...initial,
+      body: { ...initial.body, formal_method: { ...draft, allowed_callers: ['model'] } },
+    }
+    const validation = {
+      ...passed,
+      receipt: {
+        ...receipt,
+        execution: verified
+          ? {
+              contract: 'knowlab/formal-method-execution/v1',
+              request_digest: fingerprint,
+              suite_id: RUN,
+              suite_version: 1,
+              suite_digest: fingerprint,
+              evidence_digest: fingerprint,
+              validated_callers: verified,
+            }
+          : undefined,
+      },
+    }
+    const fallback = fetcher.getMockImplementation()!
+    fetcher.mockImplementation((url, options) =>
+      url.includes('/validations') ? respond(validation) : fallback(url, options),
+    )
+    show()
+    fireEvent.click(await screen.findByRole('button', { name: labels.refresh }))
+    await screen.findByText(labels.status.passed)
+    expect(screen.getByRole('button', { name: labels.confirmFreeze })).toBeDisabled()
+    expect(fetcher.mock.calls.some(([, options]) => options.method === 'PUT')).toBe(false)
+  },
+)
+it('shows the validated caller from the frozen server receipt', async () => {
+  current = {
+    ...initial,
+    body: { ...initial.body, formal_method: { ...draft, allowed_callers: ['model'] } },
+  }
+  const verified = {
+    ...receipt,
+    execution: {
+      contract: 'knowlab/formal-method-execution/v1',
+      request_digest: fingerprint,
+      suite_id: RUN,
+      suite_version: 1,
+      suite_digest: fingerprint,
+      evidence_digest: fingerprint,
+      validated_callers: ['model'],
+    },
+  }
+  const fallback = fetcher.getMockImplementation()!
+  fetcher.mockImplementation((url, options) =>
+    url.includes('/validations')
+      ? respond({ ...passed, receipt: verified })
+      : url.includes('/formal-versions/')
+        ? respond({
+            ...frozen,
+            provenance: { ...frozen.provenance, allowed_callers: ['model'], validation: verified },
+          })
+        : fallback(url, options),
+  )
+  show()
+  fireEvent.click(await screen.findByRole('button', { name: labels.refresh }))
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: labels.confirmFreeze })).not.toBeDisabled(),
+  )
+  fireEvent.click(screen.getByRole('button', { name: labels.confirmFreeze }))
+  await screen.findByText(`${labels.verifiedCallers}: ${labels.model}`)
+})

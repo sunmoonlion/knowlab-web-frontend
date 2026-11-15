@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { formalValidationSchema } from './formal-methods'
+import { formalValidationSchema, receiptCoversCallers, type FormalDraft } from './formal-methods'
 
 const digest = z.string().regex(/^sha256:[a-f0-9]{64}$/)
 const caseId = z.string().regex(/^[A-Za-z0-9_-]{1,48}$/)
@@ -38,11 +38,13 @@ export const formalAssertionSchema = z.discriminatedUnion('kind', [
 export const formalExecutionCaseSchema = z
   .object({
     case_id: caseId,
+    caller: z.enum(['host', 'model']).optional(),
     input: z
       .object({
         values: z
           .record(z.string(), z.json())
           .refine((v) => Object.keys(v).length <= 100 && bounded(v)),
+        model_prompt: z.string().min(1).max(4000).nullable().optional(),
       })
       .strict(),
     repetitions: z.number().int().min(1).max(10),
@@ -62,6 +64,14 @@ export const formalExecutionCaseSchema = z
   })
   .strict()
   .refine((v) => v.minimum_passes <= v.repetitions)
+  .refine((v) => (v.caller === 'model') === (v.input.model_prompt != null))
+  .refine((v) => v.input.model_prompt == null || /\S/.test(v.input.model_prompt))
+  .refine(
+    (v) =>
+      v.caller !== 'model' ||
+      v.expected.outcome !== 'rejected' ||
+      v.expected.rejection_code === 'approval_denied',
+  )
 export const formalSuiteInputSchema = z
   .object({
     suite_id: z.uuid(),
@@ -94,6 +104,20 @@ export const formalExecutionSpecSchema = z
       .strict(),
     timeout_seconds: z.number().int().min(60).max(86400),
     max_wait_seconds: z.number().int().min(60).max(604800),
+    model_probe: z
+      .object({ max_turns: z.literal(1), max_method_calls: z.literal(1) })
+      .strict()
+      .nullable()
+      .optional(),
+  })
+  .strict()
+  .refine((v) => v.suite.cases.some((c) => c.caller === 'model') === (v.model_probe != null))
+export const formalExecutionCommandSchema = z
+  .object({
+    request_id: z.uuid(),
+    revision: z.number().int().min(1),
+    run_id: z.uuid(),
+    execution: formalExecutionSpecSchema,
   })
   .strict()
 export const formalFrozenSuiteSchema = formalSuiteInputSchema.safeExtend({ digest })
@@ -127,6 +151,17 @@ export const formalExecutionResultSchema = z
         z
           .object({
             case_id: caseId,
+            caller: z.enum(['host', 'model']).optional(),
+            model_trace: z
+              .object({
+                thread_id: z.string().min(1).max(200),
+                turn_id: z.string().min(1).max(200),
+                tool_call_id: z.string().min(1).max(200),
+                method_call_id: z.uuid(),
+              })
+              .strict()
+              .nullable()
+              .optional(),
             repetition: z.number().int().min(1).max(10),
             status: state,
             outcome: z.enum(['pending', 'succeeded', 'rejected', 'failed', 'unknown', 'cancelled']),
@@ -147,7 +182,14 @@ export const formalExecutionResultSchema = z
               .max(64),
             detail: z.string().max(2000),
           })
-          .strict(),
+          .strict()
+          .refine((v) => (v.caller ?? 'host') !== 'host' || v.model_trace == null)
+          .refine(
+            (v) =>
+              v.caller !== 'model' ||
+              v.status !== 'passed' ||
+              !!(v.model_trace && v.task_id && v.attempt_id && v.call_id),
+          ),
       )
       .max(50),
     spent: z.string().regex(/^[0-9]+(?:\.[0-9]+)?$/),
@@ -186,9 +228,17 @@ export const formalExecutionResultSchema = z
         r.method_id !== v.method_id)
     )
       return false
+    const callers = [...new Set(v.cases.map((c) => c.caller ?? 'host'))]
+    const positive = new Set(
+      v.cases
+        .filter((c) => c.status === 'passed' && c.outcome === 'succeeded')
+        .map((c) => c.caller ?? 'host'),
+    )
     return (
       v.status !== 'passed' ||
       (!!r &&
+        receiptCoversCallers(r, callers) &&
+        callers.every((caller) => positive.has(caller)) &&
         v.cases.length > 0 &&
         v.cases.every(
           (c) =>
@@ -200,3 +250,17 @@ export const formalExecutionResultSchema = z
 export type FormalExecutionSpec = z.infer<typeof formalExecutionSpecSchema>
 export type FormalExecutionResult = z.infer<typeof formalExecutionResultSchema>
 export type FormalExecutionAction = z.infer<typeof formalExecutionActionSchema>
+
+export function suiteCoversCallers(
+  suite: z.infer<typeof formalSuiteInputSchema>,
+  callers: FormalDraft['allowed_callers'],
+) {
+  return (
+    suite.cases.every((c) => callers.includes(c.caller ?? 'host')) &&
+    callers.every((caller) =>
+      suite.cases.some(
+        (c) => (c.caller ?? 'host') === caller && c.expected.outcome === 'succeeded',
+      ),
+    )
+  )
+}
