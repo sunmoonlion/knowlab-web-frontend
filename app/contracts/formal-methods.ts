@@ -202,6 +202,18 @@ export const formalReceiptSchema = z
     checks: z.array(check).min(1).max(8),
     uncovered: z.array(z.object({ scenario: text, reason: text, scope: text }).strict()),
     completed_at: z.string(),
+    execution: z
+      .object({
+        contract: z.literal('knowlab/formal-method-execution/v1'),
+        request_digest: digest,
+        suite_id: z.uuid(),
+        suite_version: z.number().int().min(1),
+        suite_digest: digest,
+        evidence_digest: digest,
+      })
+      .strict()
+      .nullable()
+      .optional(),
   })
   .strict()
   .refine(

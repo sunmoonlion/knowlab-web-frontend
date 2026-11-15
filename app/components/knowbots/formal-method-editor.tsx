@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
@@ -30,9 +30,17 @@ import {
 } from '@/lib/knowbots/formal-methods'
 import { same } from '@/lib/knowbots/workdraft'
 import { KEY } from './shared'
+import { FormalMethodExecution } from './formal-method-execution'
+import type { FormalExecutionResult } from '@/contracts/formal-method-execution'
 
 const input = 'mt-1 w-full rounded border bg-background p-2 text-sm'
-type Resume = { method?: string; run?: string; revision?: string; version?: string }
+type Resume = {
+  method?: string
+  run?: string
+  revision?: string
+  version?: string
+  execution?: string
+}
 const id = (value?: string) => (z.uuid().safeParse(value).success ? value! : null)
 const sourceKey = (source: FormalSource) => JSON.stringify(source)
 
@@ -103,6 +111,8 @@ function FormalForm({
       ? { request_id: initial.request_id, revision: initial.revision, run_id: resume.run! }
       : null,
   )
+  const [executionRun, setExecutionRun] = useState(resume.execution === '1')
+  const [executionActive, setExecutionActive] = useState(!!run && resume.execution === '1')
   const [validation, setValidation] = useState<FormalValidation | null>(null)
   const [version, setVersion] = useState(() => {
     const value = Number(resume.version)
@@ -130,7 +140,14 @@ function FormalForm({
   const shownVersion = frozen ?? inspected
   const selectedMethod = methods.data?.find((method) => method.method_id === methodId)
   const validated =
-    !dirty && run?.revision === document.revision && validation?.status === 'passed' && !!receipt
+    !dirty &&
+    run?.revision === document.revision &&
+    validation?.status === 'passed' &&
+    !!receipt &&
+    receipt.run_id === run.run_id &&
+    receipt.request_id === initial.request_id &&
+    receipt.method_id === methodId &&
+    receipt.revision === document.revision
   const publicReady = validated && receipt.checks.includes('business') && !receipt.uncovered.length
   const problem = (exc: unknown) =>
     exc instanceof ApiClientError ? exc.problem.code : 'contract_or_network_error'
@@ -143,14 +160,37 @@ function FormalForm({
     setDefinition(next)
     changed()
   }
-  const rememberRun = (command: ValidationCommand) => {
-    const url = new URL(window.location.href)
-    url.searchParams.set('method', methodId)
-    url.searchParams.set('run', command.run_id)
-    url.searchParams.set('revision', String(command.revision))
-    url.searchParams.set('version', String(version))
-    window.history.replaceState(null, '', url.pathname + url.search)
-  }
+  const rememberRun = useCallback(
+    (command: ValidationCommand, execution?: boolean) => {
+      const url = new URL(window.location.href)
+      url.searchParams.set('method', methodId)
+      url.searchParams.set('run', command.run_id)
+      url.searchParams.set('revision', String(command.revision))
+      url.searchParams.set('version', String(version))
+      if (execution !== undefined) {
+        if (execution) url.searchParams.set('execution', '1')
+        else url.searchParams.delete('execution')
+      }
+      window.history.replaceState(null, '', url.pathname + url.search)
+    },
+    [methodId, version],
+  )
+  const executionStarted = useCallback(
+    (command: ValidationCommand) => {
+      setRun(command)
+      setExecutionRun(true)
+      setValidation(null)
+      setFrozen(null)
+      rememberRun(command, true)
+    },
+    [rememberRun],
+  )
+  const executionReceived = useCallback(
+    (result: FormalExecutionResult) => {
+      if (executionRun && result.run_id === run?.run_id) setValidation(result.admission)
+    },
+    [executionRun, run?.run_id],
+  )
   const save = async () => {
     if (!draft || !ready) return
     setWorking(true)
@@ -181,7 +221,7 @@ function FormalForm({
   const validate = async (refresh: boolean) => {
     if (dirty || !ready || document.revision < 1) return
     const command =
-      run?.revision === document.revision
+      !executionRun && run?.revision === document.revision
         ? run
         : {
             request_id: initial.request_id,
@@ -189,7 +229,10 @@ function FormalForm({
             run_id: crypto.randomUUID(),
           }
     setRun(command)
-    rememberRun(command)
+    setValidation(null)
+    setFrozen(null)
+    rememberRun(command, false)
+    setExecutionRun(false)
     setWorking(true)
     setError(null)
     setNotice(null)
@@ -227,7 +270,10 @@ function FormalForm({
         {t('backToName')}
       </Link>
       <p className="text-sm">{t('draftNotice')}</p>
-      <fieldset disabled={working} className="space-y-2 rounded border p-4 text-sm">
+      <fieldset
+        disabled={working || executionActive}
+        className="space-y-2 rounded border p-4 text-sm"
+      >
         <legend className="px-1 font-medium">{t('methodTarget')}</legend>
         <label>
           {t('chooseMethod')}
@@ -301,7 +347,7 @@ function FormalForm({
           </Button>
         </div>
       </fieldset>
-      <fieldset disabled={working} className="space-y-4 rounded border p-4">
+      <fieldset disabled={working || executionActive} className="space-y-4 rounded border p-4">
         <legend className="px-1 font-medium">{t('definition')}</legend>
         <label className="block text-sm">
           {t('import')}
@@ -534,7 +580,7 @@ function FormalForm({
         <div className="flex gap-2">
           <Button
             type="button"
-            disabled={working || dirty || !ready || document.revision < 1}
+            disabled={working || executionActive || dirty || !ready || document.revision < 1}
             onClick={() => void validate(false)}
           >
             {t('validate')}
@@ -542,7 +588,7 @@ function FormalForm({
           <Button
             type="button"
             variant="outline"
-            disabled={working || dirty || !run}
+            disabled={working || executionActive || executionRun || dirty || !run}
             onClick={() => void validate(true)}
           >
             {t('refresh')}
@@ -568,7 +614,23 @@ function FormalForm({
           </div>
         ) : null}
       </section>
-      <fieldset disabled={working || !validated} className="space-y-3 rounded border p-4">
+      <FormalMethodExecution
+        key={`${methodId}:${document.revision}`}
+        methodId={methodId}
+        requestId={initial.request_id}
+        revision={document.revision}
+        draft={draft}
+        disabled={working || dirty || !ready || document.revision < 1}
+        csrfToken={csrfToken}
+        resume={executionRun ? run : null}
+        onRun={executionStarted}
+        onResult={executionReceived}
+        onActiveChange={setExecutionActive}
+      />
+      <fieldset
+        disabled={working || executionActive || !validated}
+        className="space-y-3 rounded border p-4"
+      >
         <legend className="px-1 font-medium">{t('freeze')}</legend>
         <p className="text-muted-foreground text-sm">{t('freezeHint')}</p>
         <label className="block text-sm">

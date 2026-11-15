@@ -345,3 +345,81 @@ it('browses a formal version without adopting it or allowing an unvalidated new 
   expect(screen.getByRole('button', { name: labels.confirmFreeze })).toBeDisabled()
   expect(fetcher.mock.calls.some(([, options]) => options.method !== 'GET')).toBe(false)
 })
+
+it.each([false, true])(
+  'restores execution admission without reusing it after a failed new validation (%s)',
+  async (failNextValidation) => {
+    const fallback = fetcher.getMockImplementation()!
+    const suiteId = '42d89579-f919-4c13-9ba2-78f091ed639f'
+    const execution = {
+      contract: 'knowlab/formal-method-execution/v1',
+      request_digest: fingerprint,
+      suite_id: suiteId,
+      suite_version: 1,
+      suite_digest: fingerprint,
+      evidence_digest: fingerprint,
+    }
+    const result = {
+      contract: execution.contract,
+      run_id: RUN,
+      request_id: REQUEST,
+      method_id: METHOD,
+      request_digest: fingerprint,
+      suite: { suite_id: suiteId, version: 1, digest: fingerprint },
+      status: 'passed',
+      admission: { ...passed, receipt: { ...receipt, execution } },
+      cases: [
+        {
+          case_id: 'check',
+          repetition: 1,
+          status: 'passed',
+          outcome: 'succeeded',
+          rejection_code: null,
+          task_id: null,
+          attempt_id: null,
+          call_id: null,
+          assertions: [{ index: 0, passed: true, detail: 'matched' }],
+          detail: 'Checked',
+        },
+      ],
+      spent: '0',
+      currency: 'CNY',
+      actions: [],
+    }
+    fetcher.mockImplementation((url, options) =>
+      url.includes('/executions/') ? respond(result) : fallback(url, options),
+    )
+    renderWith(
+      <FormalMethodEditor
+        requestId={REQUEST}
+        csrfToken={CSRF}
+        resume={{ method: METHOD, run: RUN, revision: String(initial.revision), execution: '1' }}
+      />,
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: labels.confirmFreeze })).not.toBeDisabled(),
+    )
+    expect(fetcher.mock.calls.some(([, options]) => options.method !== 'GET')).toBe(false)
+    if (failNextValidation) {
+      const prior = fetcher.getMockImplementation()!
+      fetcher.mockImplementation((url, options) =>
+        url.includes('/validations')
+          ? Promise.reject(new TypeError('connection lost'))
+          : prior(url, options),
+      )
+      fireEvent.click(screen.getByRole('button', { name: labels.validate }))
+      await screen.findByRole('alert')
+      expect(screen.getByRole('button', { name: labels.confirmFreeze })).toBeDisabled()
+      const write = fetcher.mock.calls.find(([, options]) => options.method === 'POST')!
+      expect(JSON.parse(write[1].body).run_id).not.toBe(RUN)
+      expect(fetcher.mock.calls.some(([, options]) => options.method === 'PUT')).toBe(false)
+      return
+    }
+    fireEvent.click(screen.getByRole('button', { name: labels.confirmFreeze }))
+    await screen.findByText('第 1 版已冻结。是否可调用以登记结果为准。')
+    const writes = fetcher.mock.calls.filter(([, options]) => options.method !== 'GET')
+    expect(writes).toHaveLength(1)
+    expect(JSON.parse(writes[0][1].body)).toEqual({ ...command, visibility: 'private' })
+    expect(window.location.search).toContain('run=' + RUN)
+  },
+)

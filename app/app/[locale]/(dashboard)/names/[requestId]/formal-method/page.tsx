@@ -17,7 +17,13 @@ export default async function FormalMethodPage({
   searchParams,
 }: {
   params: Promise<{ locale: string; requestId: string }>
-  searchParams: Promise<{ method?: string; run?: string; revision?: string; version?: string }>
+  searchParams: Promise<{
+    method?: string
+    run?: string
+    revision?: string
+    version?: string
+    execution?: string
+  }>
 }) {
   const { locale, requestId } = await params
   const query = await searchParams
