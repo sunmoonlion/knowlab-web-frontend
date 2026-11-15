@@ -1473,12 +1473,26 @@
     "frozenVersion": "已冻结的第 {version} 版",
     "callerQualificationHint": "声明调用方不会授予权限；必须分别实测通过后才能获得对应资格，旧宿主回执不证明模型调用资格。",
     "verifiedCallers": "已验证调用方",
-    "qualificationUnknown": "暂无可核验的调用方回执"
+    "qualificationUnknown": "暂无可核验的调用方回执",
+    "orchestrationScope": "固定流程自用实测：每步必须执行且只有一个精确方法依赖。服务端仍须核验依赖为已通过宿主资格的直接 MCP 工具；这里的结构展示不代表许可或资格。修改步骤与连接请重新导入完整定义。",
+    "orchestrationPrivate": "此阶段的编排仅支持私有冻结与孵化实测，尚未开放普通会话专家入口。",
+    "stepRequirement": "执行要求",
+    "predecessors": "前置步骤",
+    "stepConditions": "选择与必做条件",
+    "exactDependencies": "精确方法依赖",
+    "inputBindings": "输入绑定",
+    "graphExports": "最终输出映射",
+    "bindingSources": {
+      "caller": "调用输入",
+      "step": "前置步骤输出",
+      "literal": "固定值",
+      "resource": "资源绑定（暂不支持实测）"
+    }
   },
   "formalExecution": {
     "title": "实际执行验证",
     "hint": "测试输入与预期断言分别保存；断言仅用于评价结果，不会发送给工具或模型。运行使用所选电脑和预算，必要时在此等待逐次审批。目前仅支持服务端已核验无新增调用费的 MCP 适配器；模型实测另有模型用量费用。",
-    "unsupported": "当前支持方法内部模型轮次为 0 的直接 MCP 方法实测。",
+    "unsupported": "当前实测支持内部模型轮次为 0 的直接 MCP 方法，或满足下述限制的固定宿主流程。",
     "suiteVersion": "测试集版本 {version}",
     "caseNumber": "测试用例 {number}",
     "caseId": "用例标识",
@@ -1549,6 +1563,7 @@
     "turn": "运行轮次",
     "toolCall": "模型工具调用",
     "methodCall": "正式方法调用",
-    "tracePending": "尚无已确认的模型调用来源引用。"
+    "tracePending": "尚无已确认的模型调用来源引用。",
+    "orchestrationHint": "固定流程实测仅支持宿主调用：步骤全部必做、每步一个精确依赖、无环且输入连接完整，步骤失败即结束本次运行；不支持重规划、嵌套、模型步骤或资源自动绑定。每个外部动作仍逐次审批；批准当前步骤不会批准后续步骤。刷新页面后恢复原运行，不重新执行已完成或结果未知的调用。"
   }
 }

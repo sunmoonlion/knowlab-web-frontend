@@ -33,6 +33,7 @@ import {
 import { same } from '@/lib/knowbots/workdraft'
 import { KEY } from './shared'
 import { FormalMethodExecution } from './formal-method-execution'
+import { FormalOrchestrationSummary } from './formal-orchestration-summary'
 import type { FormalExecutionResult } from '@/contracts/formal-method-execution'
 
 const input = 'mt-1 w-full rounded border bg-background p-2 text-sm'
@@ -151,7 +152,11 @@ function FormalForm({
     receipt.method_id === methodId &&
     receipt.revision === document.revision &&
     receiptCoversCallers(receipt, callers)
-  const publicReady = validated && receipt.checks.includes('business') && !receipt.uncovered.length
+  const publicReady =
+    definition?.procedure.kind !== 'orchestration' &&
+    validated &&
+    receipt.checks.includes('business') &&
+    !receipt.uncovered.length
   const problem = (exc: unknown) =>
     exc instanceof ApiClientError ? exc.problem.code : 'contract_or_network_error'
   const changed = () => {
@@ -496,14 +501,7 @@ function FormalForm({
                 ) : null}
               </>
             ) : (
-              <ol className="list-inside list-decimal space-y-1 text-sm">
-                {definition.procedure.steps.map((step) => (
-                  <li key={step.id}>
-                    {step.id} · {step.select_when} ·{' '}
-                    {t('candidateCount', { count: step.candidates.length })}
-                  </li>
-                ))}
-              </ol>
+              <FormalOrchestrationSummary definition={definition} />
             )}
             <div className="space-y-2 text-sm">
               <h3 className="font-medium">{t('permissions')}</h3>
@@ -637,6 +635,7 @@ function FormalForm({
       >
         <legend className="px-1 font-medium">{t('freeze')}</legend>
         <p className="text-muted-foreground text-sm">{t('freezeHint')}</p>
+        {definition?.procedure.kind === 'orchestration' ? <p>{t('orchestrationPrivate')}</p> : null}
         <label className="block text-sm">
           {t('version')}
           <input
@@ -688,6 +687,7 @@ function FormalForm({
             {shownVersion.definition.capability_declaration.title} ·{' '}
             {t(`kind.${shownVersion.provenance.method_kind}`)}
           </p>
+          <FormalOrchestrationSummary definition={shownVersion.definition} />
           <p>
             {t('verifiedCallers')}:{' '}
             {shownVersion.provenance.validation

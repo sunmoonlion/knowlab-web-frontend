@@ -1,3 +1,15 @@
+# 2026-11-15 固定专家流程实测与逐步审批恢复（未发布）
+
+正式方法页继续导入完整定义 JSON，新增编排摘要，清楚显示各步精确方法 ID/版本/摘要、前驱、Caller/Literal/Step 输入绑定及 exports；未新增拖拽编辑器。前端只检查可说明的结构：host-only、无环、每步单依赖且全必做、输入/导出闭合、无 ResourceValue、max_replans=0、执行上限足够、on_failure=fail；真实叶子资格与来源授权仍是服务端真源。
+
+受限编排可以使用已有 suite/run 开始实测。审批继续绑定当前 call_id/token/subject_digest，一步批准不批准后续步骤；3 秒轮询与 URL 中的同一 run 身份支持刷新恢复，不重新提交执行或重放结果未知调用。未新增步骤历史字段。编排的公开冻结选项始终禁用，提交守卫同步拒绝 public，即便收到完整业务通过回执；最终冻结仍由后端校验。
+
+已核实 web 全量 **321 passed / 42 suites，9.10s**（`/tmp/c2-formal-plan-kl-web-full.log`），标准 Next.js Turbopack 生产构建通过（`/tmp/c2-formal-plan-kl-web-build.log`）。专项 **79 passed**，覆盖逐步审批与同 run 恢复、旧动作拒绝、结构限制和完整回执下仍仅私有冻结；TypeScript、全仓 ESLint、i18n **1327 keys**、Prettier、diff 检查通过，日志 `/tmp/kl-expert-dag-web-{targeted,tsc,eslint,i18n,prettier,diffcheck}.log`。契约生成物由后端导出，未手改 schema 或伪造资格。统一证据入口为 `sunmoonun/scripts/results/c2-formal-plan-20261115.json`。
+
+本轮是本地工程候选，未部署，未调用真实供应商或付费模型；合成运行/回执测试不代表真实作者的业务质量验收。普通会话专家调用入口、嵌套专家、专家团队、模型步骤、条件分支、重规划和 ResourceValue 自动绑定均未开放。正式 C2 仍未整体完成。以下旧检查点按时间保留，其中的阶段状态不覆盖本段。
+
+本地约 94 GiB 内存环境可并发独立任务；回到此前约 3.7 GiB 的远程，必须重新核实主机与可用内存，重型测试、类型检查和构建不得并发。Git 操作始终串行。
+
 # 2026-11-15 模型调用正式方法的测试资格（本地候选，未发布）
 
 继续接通直接 MCP 方法的模型调用测试：作者明确声明 host/model 并为各来源提供独立用例，模型提示与预期断言分离。通过既有 Task/Attempt、Runner 和共同 MCP 调用链，最多一个真实模型 turn、一次候选调用，逐次本人批准；独立核对历史调用事件、输入输出、隔离范围、授权和真实用量/预算账，再形成限定调用来源的回执。旧 host 回执不自动获得 model 资格。

@@ -21,6 +21,7 @@ import {
   type FormalExecutionCommand,
 } from '@/lib/knowbots/formal-method-execution'
 import type { ValidationCommand } from '@/lib/knowbots/formal-methods'
+import { supportsOrchestrationExecution } from '@/lib/knowbots/formal-orchestration'
 
 const input = 'mt-1 w-full rounded border bg-background p-2 text-sm'
 const terminal = (r?: FormalExecutionResult) =>
@@ -73,10 +74,12 @@ export function FormalMethodExecution({
 }) {
   const t = useTranslations('formalExecution')
   const cache = useQueryClient()
+  const orchestration = draft?.definition.procedure.kind === 'orchestration'
   const supported =
-    draft?.definition.procedure.kind === 'direct' &&
-    draft.definition.procedure.implementation.kind === 'mcp' &&
-    draft.definition.procedure.max_model_turns === 0
+    supportsOrchestrationExecution(draft) ||
+    (draft?.definition.procedure.kind === 'direct' &&
+      draft.definition.procedure.implementation.kind === 'mcp' &&
+      draft.definition.procedure.max_model_turns === 0)
   const [command, setCommand] = useState<ValidationCommand | null>(resume ?? null)
   const [submitted, setSubmitted] = useState<FormalExecutionCommand | null>(null)
   const [suite, setSuite] = useState(() => ({ suite_id: crypto.randomUUID(), version: 1 }))
@@ -131,6 +134,7 @@ export function FormalMethodExecution({
     }
   }
   const start = async () => {
+    if (!supported || disabled) return
     try {
       const execution = formalExecutionSpecSchema.parse({
         suite: {
@@ -208,6 +212,7 @@ export function FormalMethodExecution({
       <h2 className="font-medium">{t('title')}</h2>
       <p className="text-muted-foreground text-sm">{t('hint')}</p>
       <p className="text-muted-foreground text-sm">{t('callerCoverage')}</p>
+      {orchestration ? <p>{t('orchestrationHint')}</p> : null}
       {!supported ? <p>{t('unsupported')}</p> : null}
       {supported && !command ? (
         <fieldset disabled={disabled || busy} className="space-y-3">

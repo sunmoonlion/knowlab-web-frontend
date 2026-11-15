@@ -1,7 +1,13 @@
 import { fireEvent, screen, waitFor, cleanup } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { FormalMethodExecution } from '@/components/knowbots/formal-method-execution'
-import { formalDraftSchema } from '@/contracts/formal-methods'
+import {
+  formalDraftSchema,
+  type FormalDraft,
+  type FormalDefinition,
+} from '@/contracts/formal-methods'
+import { supportsOrchestrationExecution } from '@/lib/knowbots/formal-orchestration'
+import { orchestrationDraft } from '../fixtures/formal-orchestration'
 import {
   formalExecutionResultSchema,
   formalSuiteInputSchema,
@@ -181,7 +187,12 @@ afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
 })
-function page(resume = false, callers: ('host' | 'model')[] = ['host']) {
+function page(
+  resume = false,
+  callers: ('host' | 'model')[] = ['host'],
+  definition: FormalDraft = draft,
+  restored = command,
+) {
   const onRun = vi.fn(),
     onResult = vi.fn(),
     onActiveChange = vi.fn()
@@ -190,10 +201,10 @@ function page(resume = false, callers: ('host' | 'model')[] = ['host']) {
       methodId={METHOD}
       requestId={REQUEST}
       revision={2}
-      draft={{ ...draft, allowed_callers: callers }}
+      draft={{ ...definition, allowed_callers: callers }}
       disabled={false}
       csrfToken={CSRF}
-      resume={resume ? command : null}
+      resume={resume ? restored : null}
       onRun={onRun}
       onResult={onResult}
       onActiveChange={onActiveChange}
@@ -477,4 +488,172 @@ it('rejects caller changes in refreshed results and a host response to a model s
       CSRF,
     ),
   ).rejects.toThrow()
+})
+
+it('starts a fixed host graph and restores each successive approval without replaying a step', async () => {
+  const graph = orchestrationDraft(draft)
+  const nextCall = '92d89579-f919-4c13-9ba2-78f091ed639f'
+  const firstAction = formalExecutionResultSchema.parse(value).actions[0]
+  const fallback = fetcher.getMockImplementation()!
+  fetcher.mockImplementation(async (url: string, init: RequestInit = {}) => {
+    if (init.method === 'POST' && url.endsWith(`/actions/${CALL}`)) {
+      const response = await fallback(url, init)
+      value.cases[0].call_id = nextCall
+      value.actions = [
+        {
+          ...value.actions[0],
+          call_id: nextCall,
+          token: 'second-token',
+          subject_digest: 'second-subject',
+          title: 'Approve second step',
+        },
+      ]
+      return response.ok ? Response.json(value) : response
+    }
+    return fallback(url, init)
+  })
+  page(false, ['host'], graph)
+  await fill()
+  fireEvent.click(screen.getByRole('button', { name: t.start }))
+  await screen.findByText('Approve fixture check')
+  expect(posts[0].body.execution).not.toHaveProperty('model_probe')
+  fireEvent.click(screen.getByRole('button', { name: t.accept }))
+  await screen.findByText('Approve second step')
+  expect(screen.queryByText('Approve fixture check')).not.toBeInTheDocument()
+  expect(posts[1].body).toMatchObject({ token: 'exact-token', decision: 'accept' })
+  await expect(
+    decideFormalExecution(
+      METHOD,
+      { ...command, run_id: value.run_id },
+      firstAction,
+      'accept',
+      CSRF,
+      formalExecutionResultSchema.parse(value),
+    ),
+  ).rejects.toThrow('knowbot_contract_invalid')
+  cleanup()
+  // A reload reconstructs only the saved run identity, not the submitted inputs.
+  const restoredRun = value.run_id
+  page(true, ['host'], graph, { ...command, run_id: restoredRun })
+  await screen.findByText('Approve second step')
+  expect(posts).toHaveLength(2)
+  fireEvent.click(screen.getByRole('button', { name: t.decline }))
+  await waitFor(() => expect(posts).toHaveLength(3))
+  expect(posts[2].url).toContain(`/executions/${restoredRun}/actions/${nextCall}`)
+  expect(posts[2].body).toMatchObject({
+    token: 'second-token',
+    subject_digest: 'second-subject',
+    decision: 'decline',
+  })
+  expect(posts.filter((post) => post.url.endsWith('/executions'))).toHaveLength(1)
+})
+
+it('does not offer a model or resource-bound graph as an executable fixed host flow', async () => {
+  page(false, ['host', 'model'], orchestrationDraft(draft))
+  expect(screen.getByText(t.unsupported)).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: t.start })).not.toBeInTheDocument()
+  expect(fetcher).not.toHaveBeenCalled()
+})
+
+type Graph = Extract<FormalDefinition['procedure'], { kind: 'orchestration' }>
+it.each<[string, (graph: Graph) => void]>([
+  [
+    'optional step',
+    (g) => {
+      g.steps[0].always_required = false
+    },
+  ],
+  [
+    'multiple candidates',
+    (g) => {
+      g.steps[0].candidates.push(g.steps[0].candidates[0])
+    },
+  ],
+  [
+    'pause failure',
+    (g) => {
+      g.steps[0].on_failure = 'pause'
+    },
+  ],
+  [
+    'replanning',
+    (g) => {
+      g.max_replans = 1
+    },
+  ],
+  [
+    'cycle',
+    (g) => {
+      g.steps[0].depends_on = ['second']
+    },
+  ],
+  [
+    'missing predecessor',
+    (g) => {
+      g.steps[1].depends_on = ['missing']
+    },
+  ],
+  [
+    'duplicate identity',
+    (g) => {
+      g.steps[1].id = 'first'
+    },
+  ],
+  [
+    'missing output',
+    (g) => {
+      g.steps[1].inputs.message.binding = { source: 'step', step: 'first', output: 'missing' }
+    },
+  ],
+  [
+    'undeclared connection',
+    (g) => {
+      g.steps[1].depends_on = []
+    },
+  ],
+  [
+    'resource binding',
+    (g) => {
+      g.steps[0].inputs.message.binding = {
+        source: 'resource',
+        requirement_id: 'account',
+        role: 'input',
+      }
+    },
+  ],
+  [
+    'missing export',
+    (g) => {
+      g.exports.ok.output = 'missing'
+    },
+  ],
+  [
+    'depth bound',
+    (g) => {
+      g.max_depth = 1
+    },
+  ],
+  [
+    'expansion bound',
+    (g) => {
+      g.max_expansions = 2
+    },
+  ],
+  [
+    'step bound',
+    (g) => {
+      g.max_steps = 1
+    },
+  ],
+  [
+    'inconsistent exact reference',
+    (g) => {
+      g.steps[1].candidates = [{ ...g.steps[0].candidates[0], digest: 'sha256:' + 'c'.repeat(64) }]
+    },
+  ],
+])('blocks unsupported fixed-flow structure: %s', (_, mutate) => {
+  const graph = orchestrationDraft(draft)
+  expect(supportsOrchestrationExecution(graph)).toBe(true)
+  mutate(graph.definition.procedure as Graph)
+  expect(supportsOrchestrationExecution(graph)).toBe(false)
 })

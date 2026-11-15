@@ -7,6 +7,7 @@ import { workdraftSchema } from '@/contracts/workdraft'
 import { formalValidation, freezeFormalMethod } from '@/lib/knowbots/formal-methods'
 import messages from '@/messages/zh-CN.json'
 import fixture from '../fixtures/author-method.json'
+import { orchestrationDraft } from '../fixtures/formal-orchestration'
 import { CSRF, REQUEST, renderWith } from './knowbot-fixtures'
 
 vi.mock('@/i18n/navigation', async () => (await import('./knowbot-fixtures')).linkMock())
@@ -494,4 +495,35 @@ it('shows the validated caller from the frozen server receipt', async () => {
   )
   fireEvent.click(screen.getByRole('button', { name: labels.confirmFreeze }))
   await screen.findByText(`${labels.verifiedCallers}: ${labels.model}`)
+})
+
+it('shows exact graph connections and keeps a fully validated graph private', async () => {
+  current.body.formal_method = orchestrationDraft(draft)
+  const fallback = fetcher.getMockImplementation()!
+  fetcher.mockImplementation((url, options) =>
+    url.includes('/validations') ? respond(passed) : fallback(url, options),
+  )
+  show()
+  await screen.findByText(labels.orchestrationScope)
+  expect(
+    screen.getByText(/f45d7d69-1d43-4f13-9207-81de485e18e1.*3.*sha256:bbbbbbbb/),
+  ).toBeInTheDocument()
+  expect(
+    screen.getByText(/a45d7d69-1d43-4f13-9207-81de485e18e1.*4.*sha256:cccccccc/),
+  ).toBeInTheDocument()
+  expect(screen.getByText(/前置步骤: first/)).toBeInTheDocument()
+  expect(screen.getByText(/message ← 调用输入: message/)).toBeInTheDocument()
+  expect(screen.getByText(/fixed ← 固定值: "fixed input"/)).toBeInTheDocument()
+  expect(screen.getByText(/message ← 前置步骤输出: first.summary/)).toBeInTheDocument()
+  expect(screen.getByText(/summary ← second.summary/)).toBeInTheDocument()
+  expect(screen.getByText(labels.orchestrationPrivate)).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: labels.refresh }))
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: labels.confirmFreeze })).toBeEnabled(),
+  )
+  expect(screen.getByRole('option', { name: labels.public })).toBeDisabled()
+  // Even an invalid client-side change must not send a public freeze request.
+  fireEvent.change(screen.getByLabelText(labels.visibility), { target: { value: 'public' } })
+  expect(screen.getByRole('button', { name: labels.confirmFreeze })).toBeDisabled()
+  expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(0)
 })

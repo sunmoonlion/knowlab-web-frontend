@@ -1473,12 +1473,26 @@
     "frozenVersion": "Frozen version {version}",
     "callerQualificationHint": "Declaring a caller does not grant permission. Each caller must pass its own execution test; legacy host receipts do not establish model eligibility.",
     "verifiedCallers": "Validated callers",
-    "qualificationUnknown": "No verifiable caller receipt available"
+    "qualificationUnknown": "No verifiable caller receipt available",
+    "orchestrationScope": "Private fixed-flow tests require every step and one exact method dependency per step. The server still checks that dependencies are direct MCP tools qualified for host use; this structural view proves neither permission nor qualification. Reimport the complete definition to change steps or connections.",
+    "orchestrationPrivate": "Composed methods currently support private freezing and incubation tests only. The ordinary session expert entry is not enabled.",
+    "stepRequirement": "Execution requirement",
+    "predecessors": "Predecessors",
+    "stepConditions": "Selection and requirement conditions",
+    "exactDependencies": "Exact method dependencies",
+    "inputBindings": "Input bindings",
+    "graphExports": "Final output mappings",
+    "bindingSources": {
+      "caller": "Caller input",
+      "step": "Predecessor output",
+      "literal": "Literal value",
+      "resource": "Resource binding (tests not supported yet)"
+    }
   },
   "formalExecution": {
     "title": "Execute validation",
     "hint": "Test inputs and expected assertions are saved separately. Assertions evaluate results and are never sent to the tool or model. Runs use the selected computer and budget and wait here for approval when needed. Only MCP adapters reviewed by the server as having zero incremental call cost are currently supported. Model tests additionally incur model usage.",
-    "unsupported": "Execution currently supports direct MCP methods with zero internal model turns.",
+    "unsupported": "Execution currently supports direct MCP methods with zero internal model turns, or fixed host flows meeting the restrictions below.",
     "suiteVersion": "Test suite version {version}",
     "caseNumber": "Test case {number}",
     "caseId": "Case ID",
@@ -1549,6 +1563,7 @@
     "turn": "Runtime turn",
     "toolCall": "Model tool call",
     "methodCall": "Formal method call",
-    "tracePending": "No confirmed model call references yet."
+    "tracePending": "No confirmed model call references yet.",
+    "orchestrationHint": "Fixed-flow tests support host calls only: every step is required, each has one exact dependency, the graph is acyclic with complete input connections, and each step stops the run on failure. Replanning, nesting, model steps and automatic resource bindings are unsupported. Each external action needs its own approval; approving one step does not approve later steps. Reloading resumes the same run without replaying completed or unknown calls."
   }
 }
