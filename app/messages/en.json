@@ -1474,7 +1474,7 @@
     "callerQualificationHint": "Declaring a caller does not grant permission. Each caller must pass its own execution test; legacy host receipts do not establish model eligibility.",
     "verifiedCallers": "Validated callers",
     "qualificationUnknown": "No verifiable caller receipt available",
-    "orchestrationScope": "Private fixed-flow tests require every step and one exact method dependency per step. The server still checks that dependencies are direct MCP tools qualified for host use; this structural view proves neither permission nor qualification. Reimport the complete definition to change steps or connections.",
+    "orchestrationScope": "Private fixed-flow tests require every step and one exact method version per step. Dependencies may be qualified tool or expert methods. The server verifies the complete dependency tree and current use rights; this view shows only the current level. Reimport the complete definition to change steps or connections.",
     "orchestrationPrivate": "Composed methods currently support private freezing and incubation tests only. The ordinary session expert entry is not enabled.",
     "stepRequirement": "Execution requirement",
     "predecessors": "Predecessors",
@@ -1564,6 +1564,6 @@
     "toolCall": "Model tool call",
     "methodCall": "Formal method call",
     "tracePending": "No confirmed model call references yet.",
-    "orchestrationHint": "Fixed-flow tests support host calls only: every step is required, each has one exact dependency, the graph is acyclic with complete input connections, and each step stops the run on failure. Replanning, nesting, model steps and automatic resource bindings are unsupported. Each external action needs its own approval; approving one step does not approve later steps. Reloading resumes the same run without replaying completed or unknown calls."
+    "orchestrationHint": "Fixed-flow tests support host calls only: every step is required, each has one exact dependency, and failure stops the run. Qualified expert methods can be nested within every level’s declared limits, with at most 100 actual tool calls across the tree. Replanning, model steps and automatic resource bindings remain unsupported. Each external action needs its own approval; approving one step does not approve descendants or later steps. Reloading resumes the same run without replaying completed or unknown calls."
   }
 }
