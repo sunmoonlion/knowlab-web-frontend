@@ -161,6 +161,13 @@ export const formalSourceSchema = implementation
     asset_id: z.uuid().nullable(),
     asset_revision: z.number().int().min(1).nullable(),
     license_basis: text,
+    delivery_terms: z
+      .object({
+        origin: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$/),
+        notices: z.array(z.string().min(1).max(8192).regex(/\S/)).max(16),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
 export const formalDraftSchema = z
