@@ -362,6 +362,8 @@ function FormalForm({
         <legend className="px-1 font-medium">{t('definition')}</legend>
         {!definition ? (
           <ExpertFromTool
+            csrfToken={csrfToken}
+            requestId={initial.request_id}
             targetMethodId={methodId}
             onAdopt={(next) => {
               editDefinition(next)

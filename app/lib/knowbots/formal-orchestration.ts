@@ -67,7 +67,7 @@ export function supportsOrchestrationExecution(draft: FormalDraft | null): boole
 // its own validation and freeze. Only the dependency keeps its frozen identity.
 export function expertFromTool(version: FormalVersion): FormalDefinition | null {
   const definition = version.definition
-  const tool = definition.procedure
+  const { procedure: tool, ...contract } = definition
   if (
     tool.kind !== 'direct' ||
     version.provenance.method_kind !== 'tool' ||
@@ -77,15 +77,28 @@ export function expertFromTool(version: FormalVersion): FormalDefinition | null 
   )
     return null
 
+  return expertFromToolContract(version, {
+    ...contract,
+    inputs: tool.inputs,
+    outputs: tool.outputs,
+  })
+}
+
+export function expertFromToolContract(
+  reference: { method_id: string; version: number; digest: string },
+  tool: Omit<FormalDefinition, 'procedure'> &
+    Pick<Extract<FormalDefinition['procedure'], { kind: 'direct' }>, 'inputs' | 'outputs'>,
+): FormalDefinition {
+  const { inputs: slots, outputs: results, ...definition } = tool
   const id = 'step_1'
   const inputs = Object.fromEntries(
-    Object.entries(tool.inputs).map(([name, slot]) => [
+    Object.entries(slots).map(([name, slot]) => [
       name,
       { slot, binding: { source: 'caller' as const, name } },
     ]),
   )
   const exports = Object.fromEntries(
-    Object.entries(tool.outputs).map(([output, slot]) => [
+    Object.entries(results).map(([output, slot]) => [
       output,
       { step: id, output, always_present: slot.required },
     ]),
@@ -99,7 +112,11 @@ export function expertFromTool(version: FormalVersion): FormalDefinition | null 
         {
           id,
           candidates: [
-            { method_id: version.method_id, version: version.version, digest: version.digest },
+            {
+              method_id: reference.method_id,
+              version: reference.version,
+              digest: reference.digest,
+            },
           ],
           depends_on: [],
           select_when: 'always',

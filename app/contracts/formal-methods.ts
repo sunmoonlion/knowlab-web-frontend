@@ -257,6 +257,13 @@ export const formalValidationSchema = z
   })
   .strict()
   .refine((value) => (value.status === 'passed') === (value.receipt !== null))
+export const sharedToolInterfaceSchema = formalDefinitionSchema
+  .omit({ procedure: true })
+  .extend({
+    inputs: z.record(name, slot),
+    outputs: z.record(name, slot),
+  })
+  .strict()
 export const formalVersionSchema = z.object({
   method_id: z.uuid(),
   version: z.number().int().min(1),

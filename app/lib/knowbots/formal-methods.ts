@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import {
+  sharedToolInterfaceSchema,
   formalSourcesSchema,
   formalMethodsSchema,
   formalValidationSchema,
@@ -15,6 +16,84 @@ export async function listFormalMethods(offset = 0) {
     formalMethodsSchema,
     await requestJson(`/api/web/v1/method-units?formal=true&limit=30&offset=${offset}`),
   ).items
+}
+
+const sharedToolsPage = z.object({
+  items: z.array(
+    z.object({
+      reference: formalMethodRefSchema,
+      title: z.string(),
+      scope: z.enum(['acquired', 'platform']),
+      interface: sharedToolInterfaceSchema.optional(),
+      installations: z
+        .array(
+          z.object({
+            asset_id: z.uuid(),
+            revision: z.number().int().positive(),
+            name: z.string(),
+            account: z.string().nullable(),
+          }),
+        )
+        .default([]),
+      selected: z.uuid().nullable().optional(),
+    }),
+  ),
+  next: z.uuid().nullable(),
+})
+export async function sharedIncubationTools(
+  requestId: string,
+  after: string | null,
+  ref?: z.infer<typeof formalMethodRefSchema>,
+) {
+  const base = `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/incubation-tools`
+  const suffix = ref
+    ? `/${encodeURIComponent(ref.method_id)}/versions/${ref.version}?digest=${encodeURIComponent(ref.digest)}`
+    : after
+      ? `?after=${encodeURIComponent(after)}`
+      : ''
+  const page = parse(sharedToolsPage, await requestJson(base + suffix))
+  if (
+    ref &&
+    page.items.some(
+      (item) =>
+        item.reference.method_id !== ref.method_id ||
+        item.reference.version !== ref.version ||
+        item.reference.digest !== ref.digest,
+    )
+  )
+    throw new KnowbotContractError()
+  return page
+}
+
+export async function chooseToolInstallation(
+  requestId: string,
+  reference: z.infer<typeof formalMethodRefSchema>,
+  installation: { asset_id: string; revision: number },
+  csrfToken: string,
+) {
+  const receipt = parse(
+    z.object({ reference: formalMethodRefSchema, asset_id: z.uuid(), revision: z.number().int() }),
+    await requestJson(
+      `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/incubation-tools/${reference.method_id}/versions/${reference.version}/installation`,
+      {
+        method: 'PUT',
+        csrfToken,
+        body: {
+          digest: reference.digest,
+          asset_id: installation.asset_id,
+          revision: installation.revision,
+        },
+      },
+    ),
+  )
+  if (
+    receipt.asset_id !== installation.asset_id ||
+    receipt.revision !== installation.revision ||
+    receipt.reference.method_id !== reference.method_id ||
+    receipt.reference.version !== reference.version ||
+    receipt.reference.digest !== reference.digest
+  )
+    throw new KnowbotContractError()
 }
 
 export async function getFormalVersion(id: string, version: number) {

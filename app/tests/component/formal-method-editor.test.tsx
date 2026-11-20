@@ -717,3 +717,67 @@ it('submits the exact viewed version for self use only on explicit author action
   expect(JSON.parse(options.body)).toEqual({ digest: fingerprint })
   expect(options.headers['X-CSRF-Token']).toBe(CSRF)
 })
+
+it('adopts a licensed market version from its public interface', async () => {
+  openToolCatalog()
+  const fallback = fetcher.getMockImplementation()!
+  const ref = { method_id: childId, version: 2, digest: fingerprint }
+  const { procedure, ...contract } = draft.definition
+  if (procedure.kind !== 'direct') throw new Error('expected tool')
+  let chosen: string | null = null
+  fetcher.mockImplementation((url, options) => {
+    if (url.endsWith('/installation')) {
+      expect(options.method).toBe('PUT')
+      expect(options.headers['X-CSRF-Token']).toBe(CSRF)
+      expect(JSON.parse(options.body)).toEqual({
+        digest: fingerprint,
+        asset_id: METHOD,
+        revision: 1,
+      })
+      chosen = METHOD
+      return respond({ reference: ref, asset_id: METHOD, revision: 1 })
+    }
+    if (url.includes('/incubation-tools')) {
+      const item = {
+        reference: ref,
+        title: '市场核对',
+        scope: 'acquired',
+        selected: chosen,
+        installations: [
+          { asset_id: METHOD, revision: 1, name: '账户甲', account: null },
+          { asset_id: childId, revision: 2, name: '账户乙', account: null },
+        ],
+      }
+      return respond({
+        items: [
+          url.includes('/versions/')
+            ? {
+                ...item,
+                interface: { ...contract, inputs: procedure.inputs, outputs: procedure.outputs },
+              }
+            : item,
+        ],
+        next: null,
+      })
+    }
+    return fallback(url, options)
+  })
+  fireEvent.change(await screen.findByLabelText(labels.toolDirectory), {
+    target: { value: 'shared' },
+  })
+  const option = await screen.findByRole<HTMLOptionElement>('option', { name: '市场核对 · v2' })
+  fireEvent.change(screen.getByLabelText(labels.registeredTool), {
+    target: { value: option.value },
+  })
+  const adopt = screen.getByRole('button', { name: labels.useToolAsStep })
+  const accounts = await screen.findByLabelText(labels.executionInstallation)
+  expect(adopt).toBeDisabled()
+  fireEvent.change(accounts, { target: { value: METHOD } })
+  await waitFor(() => expect(adopt).toBeEnabled())
+  fireEvent.click(adopt)
+  fireEvent.click(screen.getByRole('button', { name: labels.save }))
+  await screen.findByText(labels.saved)
+  expect(formalDraftSchema.parse(current.body.formal_method).definition.procedure).toMatchObject({
+    steps: [{ candidates: [ref] }],
+  })
+})
