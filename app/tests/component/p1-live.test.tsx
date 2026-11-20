@@ -1,3 +1,4 @@
+import { transferableAbortController } from 'node:util'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
 import { FormalMethodEditor } from '@/components/knowbots/formal-method-editor'
@@ -20,7 +21,21 @@ it.skipIf(!url).each(['bridge', 'replace'] as const)(
         'sunmoonai_knowlab_web_sid=' + (process.env.LUNA_P1_SHARED ? 'other' : 'author'),
       )
       headers.set('Origin', 'http://localhost:3000')
-      return fetchLocal(new URL(path, base), { ...init, headers })
+      // The DOM component supplies a jsdom signal; Node's loopback fetch checks its realm.
+      if (!init.signal) return fetchLocal(new URL(path, base), { ...init, headers })
+      const controller = transferableAbortController()
+      const abort = () => controller.abort()
+      if (init.signal.aborted) abort()
+      init.signal.addEventListener('abort', abort, { once: true })
+      try {
+        return await fetchLocal(new URL(path, base), {
+          ...init,
+          headers,
+          signal: controller.signal,
+        })
+      } finally {
+        init.signal.removeEventListener('abort', abort)
+      }
     })
     try {
       const t = messages.formalMethod,
@@ -55,15 +70,19 @@ it.skipIf(!url).each(['bridge', 'replace'] as const)(
       const adopt = screen.getByRole('button', { name: t.useToolAsStep })
       await waitFor(() => expect(adopt).toBeEnabled())
       fireEvent.click(adopt)
+      const automatic = !!process.env.LUNA_P1_SHARED || mode === 'replace'
+      if (automatic) fireEvent.click(await screen.findByLabelText(t.p1Automatic))
       fireEvent.change(await screen.findByLabelText(t.p1Input), { target: { value: 'to' } })
       if (mode === 'replace') {
-        await screen.findByText(t.noToolsOnPage)
+        fireEvent.click(screen.getByRole('button', { name: t.p1Scan }))
+        await screen.findByText(t.p1ScanStatus.no_progress, { exact: false })
         fireEvent.change(screen.getByLabelText(t.p1SearchBy), { target: { value: 'receipt' } })
       }
       if (process.env.LUNA_P1_SHARED) {
         const section = within(screen.getByRole('group', { name: t.p1Find }))
         fireEvent.change(section.getByLabelText(t.toolDirectory), { target: { value: 'shared' } })
       }
+      if (automatic) fireEvent.click(screen.getByRole('button', { name: t.p1Scan }))
       const providers = await screen.findByLabelText<HTMLSelectElement>(t.p1Provider)
       await waitFor(() =>
         expect([...providers.options].some((o) => o.value.startsWith(predecessor))).toBe(true),

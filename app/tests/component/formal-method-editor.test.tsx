@@ -1038,3 +1038,52 @@ it('stops on a repeated catalog page and lets the author keep the original plan'
   expect(screen.getByRole('button', { name: labels.save })).toBeDisabled()
   expect(current.body.formal_method).toEqual(authored)
 })
+
+it('stops automatic lookup at the author limit and stops paging after cancellation', async () => {
+  const authored = orchestrationDraft(draft)
+  const graph = authored.definition.procedure
+  if (graph.kind !== 'orchestration') throw Error('expected graph')
+  graph.steps = graph.steps.slice(0, 1)
+  graph.exports.summary.step = graph.steps[0].id
+  current = { ...initial, body: { ...initial.body, formal_method: authored } }
+  const fallback = fetcher.getMockImplementation()!
+  const pending = Promise.withResolvers<Response>()
+  const actions: string[] = []
+  let lastSignal: AbortSignal | undefined
+  fetcher.mockImplementation((url, options) => {
+    if (!url.endsWith('/scan-outputs')) return fallback(url, options)
+    const command = JSON.parse(options.body)
+    actions.push(command.action_id)
+    lastSignal = options.signal
+    if (command.page_limit === 3) return pending.promise
+    return respond({
+      items: [],
+      limit: 2,
+      used: actions.length,
+      pages_read: actions.length,
+      has_more: true,
+      reason: actions.length === 1 ? 'continue' : 'budget',
+    })
+  })
+  show()
+  fireEvent.click(await screen.findByLabelText(labels.p1Automatic))
+  fireEvent.change(screen.getByLabelText(labels.p1Input), { target: { value: 'message' } })
+  fireEvent.change(screen.getByLabelText(labels.p1PageBudget), { target: { value: '2' } })
+  const start = screen.getByRole('button', { name: labels.p1Scan })
+  expect(actions).toHaveLength(0)
+  fireEvent.click(start)
+  await screen.findByText(labels.p1ScanStatus.budget, { exact: false })
+  expect(new Set(actions).size).toBe(2)
+  expect(start).toBeDisabled()
+  fireEvent.change(screen.getByLabelText(labels.p1PageBudget), { target: { value: '3' } })
+  fireEvent.click(start)
+  await waitFor(() => expect(actions).toHaveLength(3))
+  fireEvent.click(screen.getByRole('button', { name: labels.p1Stop }))
+  await waitFor(() => expect(lastSignal?.aborted).toBe(true))
+  pending.resolve(
+    respond({ items: [], limit: 3, used: 2, pages_read: 2, has_more: true, reason: 'continue' }),
+  )
+  await pending.promise
+  expect(actions).toHaveLength(3)
+  expect(current.body.formal_method).toEqual(authored)
+})

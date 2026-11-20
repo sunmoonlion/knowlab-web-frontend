@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { formalDefinitionSchema, type FormalDefinition } from '@/contracts/formal-methods'
 import { combinedRequirements, replaceP1Tool } from '@/lib/knowbots/formal-orchestration'
-import { matchingToolOutputs } from '@/lib/knowbots/formal-methods'
+import { matchingToolOutputs, scanToolOutputs } from '@/lib/knowbots/formal-methods'
 import { AdoptTool, ToolInstallationChoice, useToolVersion } from './tool-version-choice'
 import { same } from '@/lib/knowbots/workdraft'
 import { FormalOrchestrationSummary } from './formal-orchestration-summary'
@@ -92,6 +92,9 @@ export function P1Predecessor({
   const [pages, setPages] = useState<(number | string | null)[]>([0])
   const page = pages[pages.length - 1]
   const [delivery, setDelivery] = useState('')
+  const [automatic, setAutomatic] = useState(false)
+  const [limit, setLimit] = useState('6')
+  const [scan, setScan] = useState<{ id: string; scope: string; limit: number } | null>(null)
   const [choice, setChoice] = useState('')
   const [aliases, setAliases] = useState<Record<string, string>>({})
   function selectChoice(next: string) {
@@ -104,16 +107,43 @@ export function P1Predecessor({
   const exported = graph.kind === 'orchestration' ? graph.exports[delivery] : null
   const slot = delivery ? exported && step?.outputs[exported.output] : gap
   function changeSearch(nextDelivery: string) {
+    setScan(null)
     setDelivery(nextDelivery)
     setPages([shared ? null : 0])
     selectChoice('')
   }
-  const matches = useQuery({
+  const manual = useQuery({
     queryKey: ['p1-output-matches', requestId, methodId, slot, page],
-    enabled: !!slot,
+    enabled: !!slot && !automatic,
     retry: false,
     queryFn: () => matchingToolOutputs(requestId, methodId, slot, page, csrfToken),
   })
+  const excluded = delivery ? (step?.candidates ?? []) : []
+  const scope = JSON.stringify([requestId, methodId, shared, slot, input, delivery, excluded])
+  const active = automatic && scan?.scope === scope ? scan : null
+  const search = useQuery({
+    queryKey: ['p1-author-scan', active?.id],
+    enabled: !!slot && !!active,
+    retry: false,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+    queryFn: ({ signal }) => {
+      if (!active) throw new Error('missing_search')
+      return scanToolOutputs(
+        requestId,
+        methodId,
+        slot,
+        shared,
+        active.limit,
+        excluded,
+        csrfToken,
+        signal,
+      )
+    },
+  })
+  const matches = automatic ? search : manual
   const key = (r: NonNullable<typeof matches.data>['items'][number]) =>
     [r.reference.method_id, r.reference.version, r.reference.digest, r.output].join(':')
   const candidates = matches.data?.items.filter(
@@ -140,11 +170,36 @@ export function P1Predecessor({
     <fieldset className="space-y-2 rounded border p-3">
       <legend>{t('p1Find')}</legend>
       <label>
+        <input
+          type="checkbox"
+          checked={automatic}
+          onChange={(e) => {
+            setAutomatic(e.target.checked)
+            setScan(null)
+            selectChoice('')
+          }}
+        />{' '}
+        {t('p1Automatic')}
+      </label>
+      {automatic && (
+        <label>
+          {t('p1PageBudget')}{' '}
+          <input
+            type="number"
+            min="1"
+            max="100"
+            value={limit}
+            onChange={(e) => setLimit(e.target.value)}
+          />
+        </label>
+      )}
+      <label>
         {t('toolDirectory')}{' '}
         <select
           value={shared ? 'shared' : 'owned'}
           onChange={(event) => {
             const next = event.target.value === 'shared'
+            setScan(null)
             setShared(next)
             setPages([next ? null : 0])
             selectChoice('')
@@ -169,7 +224,7 @@ export function P1Predecessor({
           ))}
         </select>
       </label>
-      {gap && graph.kind === 'orchestration' && (delivery || matches.isSuccess) && (
+      {gap && graph.kind === 'orchestration' && (automatic || delivery || matches.isSuccess) && (
         <label>
           {t('p1SearchBy')}{' '}
           <select value={delivery} onChange={(event) => changeSearch(event.target.value)}>
@@ -182,7 +237,43 @@ export function P1Predecessor({
           </select>
         </label>
       )}
-      {slot && matches.isSuccess && (
+      {slot && automatic && (
+        <>
+          <Button
+            type="button"
+            disabled={
+              search.isFetching ||
+              search.data?.reason === 'no_progress' ||
+              (search.data?.reason === 'matches' && !search.data.has_more) ||
+              (search.data &&
+                ['matches', 'budget'].includes(search.data.reason) &&
+                search.data.used >= Number(limit)) ||
+              !Number.isInteger(Number(limit)) ||
+              Number(limit) < 1 ||
+              Number(limit) > 100
+            }
+            onClick={() => {
+              selectChoice('')
+              setScan({ id: crypto.randomUUID(), scope, limit: Number(limit) })
+            }}
+          >
+            {t('p1Scan')}
+          </Button>
+          {search.isFetching && <p role="status">{t('p1Scanning')}</p>}
+          {search.isError && <p role="alert">{t('p1SearchError')}</p>}
+          {search.data && (
+            <p role="status">
+              {t('p1Used', {
+                used: search.data.used,
+                limit: search.data.limit,
+                pages: search.data.pages_read,
+              })}{' '}
+              {t(`p1ScanStatus.${search.data.reason}`)}
+            </p>
+          )}
+        </>
+      )}
+      {slot && matches.isSuccess && (!automatic || !!candidates?.length) && (
         <>
           <label>
             {t('p1Provider')}{' '}
@@ -195,10 +286,10 @@ export function P1Predecessor({
               ))}
             </select>
           </label>
-          {!candidates?.length && (
+          {!automatic && !candidates?.length && (
             <p>{t(delivery && matches.data.next === null ? 'p1NoReplacement' : 'noToolsOnPage')}</p>
           )}
-          {pages.length > 1 && (
+          {!automatic && pages.length > 1 && (
             <Button
               type="button"
               onClick={() => {
@@ -268,7 +359,7 @@ export function P1Predecessor({
         <p role="alert">{t(replacement.issue, { slot: replacement.slot })}</p>
       )}
       {slot &&
-        (matches.isError ||
+        ((!automatic && manual.isError) ||
           version.isError ||
           (selected && proposed && !preview && !replacement)) && (
           <p role="alert">{t('versionUnavailable')}</p>
@@ -340,7 +431,8 @@ export function P1Predecessor({
             }}
             onUnavailable={() => {
               void version.refetch()
-              void matches.refetch()
+              if (automatic) setScan(null)
+              else void manual.refetch()
             }}
           />
         </>

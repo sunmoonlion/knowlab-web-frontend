@@ -243,3 +243,61 @@ export async function matchingToolOutputs(
     ),
   )
 }
+
+const scanReply = z.object({
+  reason: z.enum(['matches', 'continue', 'no_progress', 'budget', 'busy', 'already_read']),
+  has_more: z.boolean(),
+  pages_read: z.number().int().nonnegative(),
+  used: z.number().int().nonnegative(),
+  limit: z.number().int().min(1).max(100),
+  items: z.array(outputMatch),
+})
+
+export async function scanToolOutputs(
+  requestId: string,
+  target: string,
+  slot: unknown,
+  shared: boolean,
+  limit: number,
+  excluded: z.infer<typeof formalMethodRefSchema>[],
+  csrfToken: string,
+  signal: AbortSignal,
+) {
+  for (let count = 0; count < limit; count++) {
+    signal.throwIfAborted()
+    const page = parseFormalReply(
+      scanReply,
+      await requestJson(
+        `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/incubation-tools/scan-outputs`,
+        {
+          method: 'POST',
+          csrfToken,
+          signal,
+          body: {
+            slot,
+            exclude_method_id: target,
+            directory: shared ? 'shared' : 'owned',
+            page_limit: limit,
+            action_id: crypto.randomUUID(),
+          },
+        },
+      ),
+    )
+    const items = page.items.filter(
+      ({ reference }) =>
+        !excluded.some(
+          (ref) =>
+            ref.method_id === reference.method_id &&
+            ref.version === reference.version &&
+            ref.digest === reference.digest,
+        ),
+    )
+    if (page.limit !== limit) throw new KnowbotContractError()
+    if (items.length || (page.reason !== 'matches' && page.reason !== 'continue'))
+      return { ...page, items, next: null }
+    if (page.reason === 'matches' && !page.has_more)
+      return { ...page, items, reason: 'no_progress' as const, next: null }
+    if (page.used >= limit) return { ...page, items, reason: 'budget' as const, next: null }
+  }
+  throw new KnowbotContractError()
+}
