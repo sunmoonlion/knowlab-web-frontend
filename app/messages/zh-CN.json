@@ -1381,7 +1381,7 @@
     "slotRequired": "必填",
     "slotMissing": "缺失处理",
     "adoptSlot": "采用槽位",
-    "p1Find": "从本人已登记工具构造 P1 短链",
+    "p1Find": "按输入查找前置工具",
     "p1Input": "需要补齐的输入",
     "p1Provider": "可供选择的输出",
     "p1Adopt": "采用这份 P1 草图",

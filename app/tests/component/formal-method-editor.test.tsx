@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 import { FormalMethodEditor } from '@/components/knowbots/formal-method-editor'
@@ -769,12 +769,13 @@ it('adopts a licensed market version from its public interface', async () => {
   fireEvent.change(screen.getByLabelText(labels.registeredTool), {
     target: { value: option.value },
   })
-  const adopt = screen.getByRole('button', { name: labels.useToolAsStep })
+  const adopt = () => screen.getByRole('button', { name: labels.useToolAsStep })
   const accounts = await screen.findByLabelText(labels.executionInstallation)
-  expect(adopt).toBeDisabled()
+  expect(adopt()).toBeDisabled()
   fireEvent.change(accounts, { target: { value: METHOD } })
-  await waitFor(() => expect(adopt).toBeEnabled())
-  fireEvent.click(adopt)
+  await waitFor(() => expect(adopt()).toBeEnabled())
+  fireEvent.click(adopt())
+  await waitFor(() => expect(screen.getByRole('button', { name: labels.save })).toBeEnabled())
   fireEvent.click(screen.getByRole('button', { name: labels.save }))
   await screen.findByText(labels.saved)
   expect(formalDraftSchema.parse(current.body.formal_method).definition.procedure).toMatchObject({
@@ -804,5 +805,86 @@ it('saves an adopted tool slot with the selected schema and meaning', async () =
   expect(saved.inputs.receiptCount).toMatchObject({
     schema: { type: 'integer' },
     meaning: { unit: 'receipts' },
+  })
+})
+
+it('continues an empty shared page and switches from a revoked candidate before adopting a P1 bridge', async () => {
+  const authored = orchestrationDraft(draft)
+  const graph = authored.definition.procedure
+  if (graph.kind !== 'orchestration') throw Error('expected graph')
+  graph.steps = graph.steps.slice(0, 1)
+  graph.exports.summary.step = graph.steps[0].id
+  current = { ...initial, body: { ...initial.body, formal_method: authored } }
+  const fallback = fetcher.getMockImplementation()!
+  const reference = { method_id: childId, version: 2, digest: fingerprint }
+  let grantActive = true
+  const revoked = { ...reference, method_id: RUN }
+  const { procedure, ...contract } = draft.definition
+  if (procedure.kind !== 'direct') throw Error('expected tool')
+  fetcher.mockImplementation((url, options) => {
+    if (url.endsWith('/matching-outputs')) {
+      const body = JSON.parse(options.body)
+      expect(body.slot.schema).toEqual({ type: 'string' })
+      expect(body.directory).toBe('shared')
+      return body.after === null
+        ? respond({ items: [], next: RUN })
+        : respond({
+            items: [
+              { reference: revoked, title: '已撤权', output: 'summary' },
+              { reference, title: '可引用', output: 'summary' },
+            ],
+            next: null,
+          })
+    }
+    if (url.includes('/incubation-tools/') && url.includes('/versions/')) {
+      if (url.includes(revoked.method_id) && !grantActive) return respond({ items: [], next: null })
+      return respond({
+        items: [
+          {
+            reference: url.includes(revoked.method_id) ? revoked : reference,
+            scope: 'platform',
+            title: '可引用',
+            interface: { ...contract, inputs: procedure.inputs, outputs: procedure.outputs },
+            installations: [{ asset_id: childId, revision: 1, name: '测试安装', account: null }],
+            selected: childId,
+          },
+        ],
+        next: null,
+      })
+    }
+    return fallback(url, options)
+  })
+  show()
+  fireEvent.change(await screen.findByLabelText(labels.toolDirectory), {
+    target: { value: 'shared' },
+  })
+  fireEvent.change(screen.getByLabelText(labels.p1Input), { target: { value: 'message' } })
+  await screen.findByText(labels.noToolsOnPage)
+  fireEvent.click(
+    within(screen.getByRole('group', { name: labels.p1Find })).getByRole('button', {
+      name: labels.next,
+    }),
+  )
+  const blocked = await screen.findByRole<HTMLOptionElement>('option', { name: /已撤权/ })
+  const select = screen.getByLabelText(labels.p1Provider)
+  fireEvent.change(select, { target: { value: blocked.value } })
+  const firstPreview = await screen.findByRole('button', { name: labels.p1Adopt })
+  grantActive = false
+  fireEvent.click(firstPreview)
+  await screen.findByText(labels.versionUnavailable)
+  expect(screen.queryByRole('button', { name: labels.p1Adopt })).toBeNull()
+  const usable = screen.getByRole<HTMLOptionElement>('option', { name: /可引用 · v2/ })
+  fireEvent.change(select, { target: { value: usable.value } })
+  fireEvent.click(await screen.findByRole('button', { name: labels.p1Adopt }))
+  await waitFor(() => expect(screen.getByRole('button', { name: labels.save })).toBeEnabled())
+  fireEvent.click(screen.getByRole('button', { name: labels.save }))
+  await screen.findByText(labels.saved)
+  expect(current.body.formal_method?.definition.procedure).toMatchObject({
+    steps: [
+      { id: 'prepare', candidates: [reference] },
+      {
+        inputs: { message: { binding: { source: 'step', step: 'prepare', output: 'summary' } } },
+      },
+    ],
   })
 })

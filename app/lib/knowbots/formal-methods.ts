@@ -221,17 +221,24 @@ export async function matchingToolOutputs(
   requestId: string,
   target: string,
   slot: unknown,
-  offset: number,
+  page: number | string | null,
   csrfToken: string,
 ) {
   return parseFormalReply(
-    z.object({ items: z.array(outputMatch), next: z.number().int().nonnegative().nullable() }),
+    z.object({
+      items: z.array(outputMatch),
+      next: (typeof page === 'number' ? z.number().int().nonnegative() : z.uuid()).nullable(),
+    }),
     await requestJson(
       `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/incubation-tools/matching-outputs`,
       {
         method: 'POST',
         csrfToken,
-        body: { slot, exclude_method_id: target, offset },
+        body: {
+          slot,
+          exclude_method_id: target,
+          ...(typeof page === 'number' ? { offset: page } : { directory: 'shared', after: page }),
+        },
       },
     ),
   )

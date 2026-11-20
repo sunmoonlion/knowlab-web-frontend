@@ -1381,7 +1381,7 @@
     "slotRequired": "Required",
     "slotMissing": "When missing",
     "adoptSlot": "Adopt slot",
-    "p1Find": "Build a P1 chain from your registered tools",
+    "p1Find": "Find a preceding tool for this input",
     "p1Input": "Input to supply",
     "p1Provider": "Compatible output",
     "p1Adopt": "Adopt this P1 plan",

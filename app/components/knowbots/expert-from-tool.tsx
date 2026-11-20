@@ -1,17 +1,12 @@
 'use client'
 
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import type { FormalDefinition } from '@/contracts/formal-methods'
-import {
-  getFormalVersion,
-  listFormalMethods,
-  sharedIncubationTools,
-  chooseToolInstallation,
-} from '@/lib/knowbots/formal-methods'
-import { expertFromTool, expertFromToolContract } from '@/lib/knowbots/formal-orchestration'
+import { listFormalMethods, sharedIncubationTools } from '@/lib/knowbots/formal-methods'
+import { AdoptTool, ToolInstallationChoice, useToolVersion } from './tool-version-choice'
 
 export function ExpertFromTool({
   csrfToken,
@@ -53,44 +48,12 @@ export function ExpertFromTool({
   const key = (item: NonNullable<typeof tools>[number]) =>
     [item.method_id, item.latest_version, item.digest].join(':')
   const selected = tools?.find((item) => key(item) === digestKey)
-  const version = useQuery({
-    queryKey: [
-      'expert-source-version',
-      requestId,
-      shared,
-      selected?.method_id,
-      selected?.latest_version,
-      selected?.digest,
-    ],
-    enabled: !!selected,
-    retry: false,
-    queryFn: async () => {
-      if (!selected) throw new Error('missing_version')
-      if (shared) {
-        const ref = {
-          method_id: selected.method_id,
-          version: selected.latest_version,
-          digest: selected.digest,
-        }
-        const item = (await sharedIncubationTools(requestId, null, ref)).items[0]
-        if (!item?.interface) throw new Error('missing_version')
-        return { draft: expertFromToolContract(ref, item.interface), item }
-      }
-      const value = await getFormalVersion(selected.method_id, selected.latest_version)
-      if (value.digest !== selected.digest) throw new Error('method_integrity')
-      return { draft: expertFromTool(value), item: null }
-    },
-  })
-  const item = version.data?.item
-  const binding = useMutation({
-    mutationFn: async (id: string) => {
-      const installation = item?.installations.find((x) => x.asset_id === id)
-      if (!installation || !item) throw new Error('missing_installation')
-      await chooseToolInstallation(requestId, item.reference, installation, csrfToken)
-    },
-    onSuccess: () => version.refetch(),
-  })
-  const proposed = selected && (!item || item.selected) ? version.data?.draft : null
+  const ref = selected && {
+    method_id: selected.method_id,
+    version: selected.latest_version,
+    digest: selected.digest,
+  }
+  const { version, item, binding, proposed } = useToolVersion(requestId, ref, shared, csrfToken)
   const go = (next: number) => {
     setDigestKey('')
     if (shared) {
@@ -157,27 +120,12 @@ export function ExpertFromTool({
           </Button>
         </div>
       )}
-      {item && (item.installations.length > 1 || !item.selected) && (
-        <label className="block text-sm">
-          {t('executionInstallation')}
-          <select
-            value={item.selected ?? ''}
-            disabled={binding.isPending || version.isFetching}
-            onChange={(e) => binding.mutate(e.target.value)}
-          >
-            <option value="" disabled>
-              {t('chooseInstallation')}
-            </option>
-            {item.installations.map((x) => (
-              <option key={x.asset_id} value={x.asset_id}>
-                {x.name}
-                {x.account ? ' · ' + x.account : ''}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      {binding.isError && <p role="alert">{t('versionUnavailable')}</p>}
+      <ToolInstallationChoice
+        item={item}
+        pending={binding.isPending || version.isFetching}
+        failed={binding.isError}
+        onChoose={(id) => binding.mutate(id)}
+      />
       {selected && version.isError && <p role="alert">{t('versionUnavailable')}</p>}
       {selected && version.isSuccess && !version.data?.draft && (
         <p role="alert">{t('hostToolRequired')}</p>
@@ -194,20 +142,23 @@ export function ExpertFromTool({
           <p>{t('reviewToolDraft')}</p>
         </div>
       )}
-      <Button
-        type="button"
+      <AdoptTool
+        key={JSON.stringify([requestId, digestKey, item?.selected, item?.installations])}
+        requestId={requestId}
+        item={item}
         disabled={
           !proposed ||
           binding.isPending ||
-          version.isError ||
           directory.isError ||
-          version.isFetching ||
-          directory.isFetching
+          directory.isFetching ||
+          version.isFetching
         }
-        onClick={() => proposed && onAdopt(proposed)}
-      >
-        {t('useToolAsStep')}
-      </Button>
+        label={t('useToolAsStep')}
+        onAdopt={() => proposed && onAdopt(proposed)}
+        onUnavailable={() => {
+          void version.refetch()
+        }}
+      />
     </fieldset>
   )
 }

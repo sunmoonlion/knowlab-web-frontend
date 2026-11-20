@@ -5,8 +5,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { formalDefinitionSchema, type FormalDefinition } from '@/contracts/formal-methods'
-import { getFormalVersion, matchingToolOutputs } from '@/lib/knowbots/formal-methods'
-import { expertFromTool } from '@/lib/knowbots/formal-orchestration'
+import { matchingToolOutputs } from '@/lib/knowbots/formal-methods'
+import { AdoptTool, ToolInstallationChoice, useToolVersion } from './tool-version-choice'
 import { same } from '@/lib/knowbots/workdraft'
 import { FormalOrchestrationSummary } from './formal-orchestration-summary'
 
@@ -105,44 +105,55 @@ export function P1Predecessor({
 }) {
   const t = useTranslations('formalMethod')
   const [input, setInput] = useState('')
-  const [offset, setOffset] = useState(0)
+  const [shared, setShared] = useState(false)
+  const [pages, setPages] = useState<(number | string | null)[]>([0])
+  const page = pages[pages.length - 1]
   const [choice, setChoice] = useState('')
   const graph = draft.procedure
   const step = graph.kind === 'orchestration' && graph.steps.length === 1 ? graph.steps[0] : null
   const slot = step?.inputs[input]?.slot
   const matches = useQuery({
-    queryKey: ['p1-output-matches', requestId, methodId, slot, offset],
+    queryKey: ['p1-output-matches', requestId, methodId, slot, page],
     enabled: !!slot,
     retry: false,
-    queryFn: () => matchingToolOutputs(requestId, methodId, slot, offset, csrfToken),
+    queryFn: () => matchingToolOutputs(requestId, methodId, slot, page, csrfToken),
   })
   const key = (r: NonNullable<typeof matches.data>['items'][number]) =>
     [r.reference.method_id, r.reference.version, r.reference.digest, r.output].join(':')
   const selected = matches.data?.items.find((r) => key(r) === choice)
-  const version = useQuery({
-    queryKey: ['p1-provider', requestId, selected?.reference],
-    enabled: !!selected,
-    retry: false,
-    queryFn: async () => {
-      if (!selected) throw Error('missing_version')
-      const v = await getFormalVersion(selected.reference.method_id, selected.reference.version)
-      if (v.digest !== selected.reference.digest) throw Error('method_integrity')
-      return expertFromTool(v)
-    },
-  })
+  const { version, binding, item, proposed } = useToolVersion(
+    requestId,
+    selected?.reference,
+    shared,
+    csrfToken,
+  )
   if (!step || !Object.keys(step.inputs).length) return null
-  const preview =
-    selected && version.data ? prepend(draft, input, version.data, selected.output) : null
+  const preview = selected && proposed ? prepend(draft, input, proposed, selected.output) : null
   return (
     <fieldset className="space-y-2 rounded border p-3">
       <legend>{t('p1Find')}</legend>
+      <label>
+        {t('toolDirectory')}{' '}
+        <select
+          value={shared ? 'shared' : 'owned'}
+          onChange={(event) => {
+            const next = event.target.value === 'shared'
+            setShared(next)
+            setPages([next ? null : 0])
+            setChoice('')
+          }}
+        >
+          <option value="owned">{t('ownTools')}</option>
+          <option value="shared">{t('sharedTools')}</option>
+        </select>
+      </label>
       <label>
         {t('p1Input')}{' '}
         <select
           value={slot ? input : ''}
           onChange={(e) => {
             setInput(e.target.value)
-            setOffset(0)
+            setPages([shared ? null : 0])
             setChoice('')
           }}
         >
@@ -166,11 +177,11 @@ export function P1Predecessor({
             </select>
           </label>
           {!matches.data.items.length && <p>{t('noToolsOnPage')}</p>}
-          {offset > 0 && (
+          {pages.length > 1 && (
             <Button
               type="button"
               onClick={() => {
-                setOffset(Math.max(0, offset - 20))
+                setPages(pages.slice(0, -1))
                 setChoice('')
               }}
             >
@@ -181,7 +192,7 @@ export function P1Predecessor({
             <Button
               type="button"
               onClick={() => {
-                setOffset(matches.data.next!)
+                setPages([...pages, matches.data.next!])
                 setChoice('')
               }}
             >
@@ -190,10 +201,15 @@ export function P1Predecessor({
           )}
         </>
       )}
-      {slot &&
-        (matches.isError || version.isError || (selected && version.isSuccess && !preview)) && (
-          <p role="alert">{t('versionUnavailable')}</p>
-        )}
+      <ToolInstallationChoice
+        item={item}
+        pending={binding.isPending || version.isFetching}
+        failed={binding.isError}
+        onChoose={(id) => binding.mutate(id)}
+      />
+      {slot && (matches.isError || version.isError || (selected && proposed && !preview)) && (
+        <p role="alert">{t('versionUnavailable')}</p>
+      )}
       {preview && selected && (
         <>
           <p>
@@ -210,13 +226,27 @@ export function P1Predecessor({
               )}
             </pre>
           </details>
-          <Button
-            type="button"
-            disabled={matches.isFetching || version.isFetching}
-            onClick={() => onAdopt(preview)}
-          >
-            {t('p1Adopt')}
-          </Button>
+          <AdoptTool
+            key={JSON.stringify([
+              requestId,
+              choice,
+              input,
+              draft,
+              item?.selected,
+              item?.installations,
+            ])}
+            requestId={requestId}
+            item={item}
+            disabled={
+              matches.isFetching || matches.isError || binding.isPending || version.isFetching
+            }
+            label={t('p1Adopt')}
+            onAdopt={() => onAdopt(preview)}
+            onUnavailable={() => {
+              void version.refetch()
+              void matches.refetch()
+            }}
+          />
         </>
       )}
     </fieldset>
