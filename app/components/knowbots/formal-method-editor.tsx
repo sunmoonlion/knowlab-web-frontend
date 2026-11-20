@@ -38,6 +38,7 @@ import { KEY } from './shared'
 import { FormalMethodExecution } from './formal-method-execution'
 import { ToolSlotEditor } from './tool-slot-editor'
 import { P1Predecessor } from './p1-predecessor'
+import { ReviewRequirements } from './review-requirements'
 import { FormalOrchestrationSummary } from './formal-orchestration-summary'
 import type { FormalExecutionResult } from '@/contracts/formal-method-execution'
 
@@ -139,7 +140,9 @@ function FormalForm({
     enabled: definition?.procedure.kind === 'direct',
   })
   const draft = definition ? { definition, source, allowed_callers: callers } : null
-  const dirty = !same(draft, document.body.formal_method ?? null)
+  const [collaboration, setCollaboration] = useState(initial.body.collaboration ?? null)
+  const reviewChanged = !same(collaboration, document.body.collaboration ?? null)
+  const dirty = reviewChanged || !same(draft, document.body.formal_method ?? null)
   const ready =
     !!draft &&
     formalDraftSchema.safeParse(draft).success &&
@@ -216,11 +219,18 @@ function FormalForm({
         initial.request_id,
         {
           revision: document.revision,
-          cells: [{ path: 'formal_method', value: draft }],
+          cells: [
+            ...(!same(draft, document.body.formal_method ?? null)
+              ? [{ path: 'formal_method', value: draft }]
+              : []),
+            ...(reviewChanged ? [{ path: 'collaboration', value: collaboration }] : []),
+          ],
         },
         csrfToken,
       )
       if (!same(saved.body.formal_method, draft)) throw new Error('saved_definition_mismatch')
+      if (!same(saved.body.collaboration ?? null, collaboration))
+        throw new Error('saved_collaboration_mismatch')
       setDocument(saved)
       setValidation(null)
       setRun(null)
@@ -381,6 +391,14 @@ function FormalForm({
             }}
           />
         ) : null}
+        <ReviewRequirements
+          definition={definition}
+          collaboration={collaboration}
+          onChange={(value) => {
+            setCollaboration(value)
+            changed()
+          }}
+        />
         <label className="block text-sm">
           {t('import')}
           <input

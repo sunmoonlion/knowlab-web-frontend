@@ -888,3 +888,50 @@ it('continues an empty shared page and switches from a revoked candidate before 
     ],
   })
 })
+
+it('saves the required review model separately from the frozen producer and restores it on reopen', async () => {
+  const graph = orchestrationDraft(draft)
+  current = {
+    ...initial,
+    body: {
+      ...initial.body,
+      formal_method: graph,
+      collaboration: {
+        second: { isolation_group: 'review', handoff_from: ['first'] },
+      },
+    },
+  }
+  const fallback = fetcher.getMockImplementation()!
+  fetcher.mockImplementation((url, options) => {
+    if (!url.endsWith('/cells')) return fallback(url, options)
+    const body = JSON.parse(options.body)
+    expect(body.cells.map((c: { path: string }) => c.path)).toEqual(['collaboration'])
+    current = {
+      ...current,
+      revision: current.revision + 1,
+      body: { ...current.body, collaboration: body.cells[0].value },
+      runtime_gaps: [
+        { step: 'second', primitive: 'isolated_reviewer' },
+        { step: 'second', primitive: 'different_model_family' },
+      ],
+    }
+    return respond(current)
+  })
+  const label = 'second 复核 first 的产物'
+  const view = show()
+  fireEvent.change(await screen.findByLabelText(label), {
+    target: { value: 'different_model_family' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: labels.save }))
+  await screen.findByText(labels.saved)
+  expect(current.body.collaboration?.second).toEqual({
+    isolation_group: 'review',
+    handoff_from: ['first'],
+    review_requirements: { first: 'different_model_family' },
+  })
+  expect(current.body.formal_method).toEqual(graph)
+  view.unmount()
+  show()
+  expect(await screen.findByLabelText(label)).toHaveValue('different_model_family')
+  expect(screen.getByText(/当前运行器尚未支持核验/)).toBeInTheDocument()
+})

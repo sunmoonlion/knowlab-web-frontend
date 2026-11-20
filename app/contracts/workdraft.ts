@@ -201,6 +201,9 @@ export const bodySchema = z.object({
       z.string(),
       z.object({
         isolation_group: z.string().nullable().optional(),
+        review_requirements: z
+          .record(z.string(), z.enum(['isolated_reviewer', 'different_model_family']))
+          .optional(),
         handoff_from: z.array(z.string()).default([]),
       }),
     )
@@ -247,7 +250,17 @@ export const workdraftSchema = z.object({
   revision: z.number().int().min(0),
   body: bodySchema,
   runtime_gaps: z
-    .array(z.object({ step: z.string(), primitive: z.enum(['isolation_group', 'staged_handoff']) }))
+    .array(
+      z.object({
+        step: z.string(),
+        primitive: z.enum([
+          'isolation_group',
+          'staged_handoff',
+          'isolated_reviewer',
+          'different_model_family',
+        ]),
+      }),
+    )
     .optional(),
   sources: z.record(z.string(), z.object({ kind: z.string(), ref: z.string() }).loose()),
   origins: z.record(z.string(), z.string()).default({}),

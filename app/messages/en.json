@@ -1368,6 +1368,12 @@
     }
   },
   "formalMethod": {
+    "reviewEdge": "{reviewer} reviews the output of {producer}",
+    "noReview": "Regular step",
+    "isolatedReview": "Independent reviewer (same model allowed)",
+    "familyReview": "Independent reviewer (different model family required)",
+    "isolated_reviewer": "{step} requires an independent review context and isolated workspace. The runner cannot provide these yet.",
+    "different_model_family": "{step} requires a different model family from the producer. The runner cannot verify this yet.",
     "isolation_group": "{step} requires an isolated thread and workspace before it can run.",
     "staged_handoff": "{step} requires a staged artifact handoff before it can run.",
     "editSlots": "Edit tool slots",

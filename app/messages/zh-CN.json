@@ -1368,6 +1368,12 @@
     }
   },
   "formalMethod": {
+    "reviewEdge": "{reviewer} 复核 {producer} 的产物",
+    "noReview": "普通步骤",
+    "isolatedReview": "独立助手复核（允许同一模型）",
+    "familyReview": "独立助手复核（必须使用不同模型家族）",
+    "isolated_reviewer": "{step} 需要独立复核上下文和隔离工作目录，当前运行器尚未支持。",
+    "different_model_family": "{step} 要求与主笔使用不同模型家族，当前运行器尚未支持核验。",
     "isolation_group": "{step} 需要独立线程与工作目录，当前运行器尚未支持。",
     "staged_handoff": "{step} 需要阶段性交接产物，当前运行器尚未支持。",
     "editSlots": "编辑工具槽位",
