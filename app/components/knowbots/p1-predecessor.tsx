@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { formalDefinitionSchema, type FormalDefinition } from '@/contracts/formal-methods'
+import { combinedRequirements, replaceP1Tool } from '@/lib/knowbots/formal-orchestration'
 import { matchingToolOutputs } from '@/lib/knowbots/formal-methods'
 import { AdoptTool, ToolInstallationChoice, useToolVersion } from './tool-version-choice'
 import { same } from '@/lib/knowbots/workdraft'
@@ -33,23 +34,6 @@ function prepend(
   )
     return null
   const id = target.id === 'prepare' ? 'prepare_1' : 'prepare'
-  const requirements = [...draft.access_requirements]
-  const approvals = [...draft.what_requires_approval]
-  for (const need of upstream.access_requirements) {
-    const existing = requirements.find((r) => same(r, need))
-    let key = need.requirement_id
-    if (!existing) {
-      let n = 0
-      while (requirements.some((r) => r.requirement_id === key)) key = 'prepare_access_' + ++n
-      requirements.push({ ...need, requirement_id: key })
-    }
-    for (const rule of upstream.what_requires_approval.filter(
-      (r) => r.requirement_id === need.requirement_id,
-    )) {
-      const item = { ...rule, requirement_id: key }
-      if (!approvals.some((r) => same(r, item))) approvals.push(item)
-    }
-  }
   const inputs = structuredClone(provider.inputs)
   const aliases = new Map(
     Object.entries(target.inputs)
@@ -68,8 +52,7 @@ function prepend(
   }
   const result = formalDefinitionSchema.safeParse({
     ...draft,
-    access_requirements: requirements,
-    what_requires_approval: approvals,
+    ...combinedRequirements(draft, upstream),
     procedure: {
       ...graph,
       max_steps: Math.max(graph.max_steps, 2),
@@ -108,10 +91,23 @@ export function P1Predecessor({
   const [shared, setShared] = useState(false)
   const [pages, setPages] = useState<(number | string | null)[]>([0])
   const page = pages[pages.length - 1]
+  const [delivery, setDelivery] = useState('')
   const [choice, setChoice] = useState('')
+  const [aliases, setAliases] = useState<Record<string, string>>({})
+  function selectChoice(next: string) {
+    setChoice(next)
+    setAliases({})
+  }
   const graph = draft.procedure
   const step = graph.kind === 'orchestration' && graph.steps.length === 1 ? graph.steps[0] : null
-  const slot = step?.inputs[input]?.slot
+  const gap = step?.inputs[input]?.slot
+  const exported = graph.kind === 'orchestration' ? graph.exports[delivery] : null
+  const slot = delivery ? exported && step?.outputs[exported.output] : gap
+  function changeSearch(nextDelivery: string) {
+    setDelivery(nextDelivery)
+    setPages([shared ? null : 0])
+    selectChoice('')
+  }
   const matches = useQuery({
     queryKey: ['p1-output-matches', requestId, methodId, slot, page],
     enabled: !!slot,
@@ -120,15 +116,26 @@ export function P1Predecessor({
   })
   const key = (r: NonNullable<typeof matches.data>['items'][number]) =>
     [r.reference.method_id, r.reference.version, r.reference.digest, r.output].join(':')
-  const selected = matches.data?.items.find((r) => key(r) === choice)
+  const candidates = matches.data?.items.filter(
+    (r) => !delivery || !step?.candidates.some((ref) => same(ref, r.reference)),
+  )
+  const selected = candidates?.find((r) => key(r) === choice)
   const { version, binding, item, proposed } = useToolVersion(
     requestId,
     selected?.reference,
     shared,
     csrfToken,
   )
+  const nextPage = matches.data?.next
+  const stalled = nextPage != null && pages.includes(nextPage)
   if (!step || !Object.keys(step.inputs).length) return null
-  const preview = selected && proposed ? prepend(draft, input, proposed, selected.output) : null
+  const replacement =
+    selected && proposed && delivery
+      ? replaceP1Tool(draft, input, delivery, proposed, selected.output, aliases)
+      : null
+  const bridge =
+    !delivery && selected && proposed ? prepend(draft, input, proposed, selected.output) : null
+  const preview = replacement && 'plan' in replacement ? replacement.plan : bridge
   return (
     <fieldset className="space-y-2 rounded border p-3">
       <legend>{t('p1Find')}</legend>
@@ -140,7 +147,7 @@ export function P1Predecessor({
             const next = event.target.value === 'shared'
             setShared(next)
             setPages([next ? null : 0])
-            setChoice('')
+            selectChoice('')
           }}
         >
           <option value="owned">{t('ownTools')}</option>
@@ -150,11 +157,10 @@ export function P1Predecessor({
       <label>
         {t('p1Input')}{' '}
         <select
-          value={slot ? input : ''}
+          value={gap ? input : ''}
           onChange={(e) => {
             setInput(e.target.value)
-            setPages([shared ? null : 0])
-            setChoice('')
+            changeSearch('')
           }}
         >
           <option value="">{t('chooseInput')}</option>
@@ -163,37 +169,53 @@ export function P1Predecessor({
           ))}
         </select>
       </label>
+      {gap && graph.kind === 'orchestration' && (delivery || matches.isSuccess) && (
+        <label>
+          {t('p1SearchBy')}{' '}
+          <select value={delivery} onChange={(event) => changeSearch(event.target.value)}>
+            <option value="">{t('p1BridgeMode')}</option>
+            {Object.keys(graph.exports).map((name) => (
+              <option key={name} value={name}>
+                {t('p1ReplaceMode', { slot: name })}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {slot && matches.isSuccess && (
         <>
           <label>
             {t('p1Provider')}{' '}
-            <select value={selected ? choice : ''} onChange={(e) => setChoice(e.target.value)}>
+            <select value={selected ? choice : ''} onChange={(e) => selectChoice(e.target.value)}>
               <option value="">{t('chooseRegisteredTool')}</option>
-              {matches.data.items.map((r) => (
+              {candidates?.map((r) => (
                 <option key={key(r)} value={key(r)}>
                   {r.title} · v{r.reference.version} · {r.output}
                 </option>
               ))}
             </select>
           </label>
-          {!matches.data.items.length && <p>{t('noToolsOnPage')}</p>}
+          {!candidates?.length && (
+            <p>{t(delivery && matches.data.next === null ? 'p1NoReplacement' : 'noToolsOnPage')}</p>
+          )}
           {pages.length > 1 && (
             <Button
               type="button"
               onClick={() => {
                 setPages(pages.slice(0, -1))
-                setChoice('')
+                selectChoice('')
               }}
             >
               {t('previous')}
             </Button>
           )}
-          {matches.data.next !== null && (
+          {stalled && <p role="status">{t('p1CursorStopped')}</p>}
+          {nextPage != null && !stalled && (
             <Button
               type="button"
               onClick={() => {
-                setPages([...pages, matches.data.next!])
-                setChoice('')
+                setPages([...pages, nextPage])
+                selectChoice('')
               }}
             >
               {t('next')}
@@ -201,20 +223,88 @@ export function P1Predecessor({
           )}
         </>
       )}
+      {gap && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setInput('')
+            changeSearch('')
+          }}
+        >
+          {t('p1Stop')}
+        </Button>
+      )}
       <ToolInstallationChoice
         item={item}
         pending={binding.isPending || version.isFetching}
         failed={binding.isError}
         onChoose={(id) => binding.mutate(id)}
       />
-      {slot && (matches.isError || version.isError || (selected && proposed && !preview)) && (
-        <p role="alert">{t('versionUnavailable')}</p>
+      {proposed?.procedure.kind === 'orchestration' &&
+        delivery &&
+        Object.entries(proposed.procedure.steps[0].inputs)
+          .filter(
+            ([name]) =>
+              Object.hasOwn(aliases, name) ||
+              (replacement &&
+                'issue' in replacement &&
+                replacement.issue === 'p1NeedsCaller' &&
+                replacement.slot === name),
+          )
+          .map(([name, { slot }]) => (
+            <label key={name} className="block">
+              {t('p1ReplacementAlias', { slot: name })}
+              <input
+                value={aliases[name] ?? ''}
+                onChange={(event) => setAliases({ ...aliases, [name]: event.target.value })}
+              />
+              <span className="block">
+                {slot.description} · {JSON.stringify(slot.meaning)} · {JSON.stringify(slot.schema)}
+              </span>
+            </label>
+          ))}
+      {replacement && 'issue' in replacement && (
+        <p role="alert">{t(replacement.issue, { slot: replacement.slot })}</p>
       )}
+      {slot &&
+        (matches.isError ||
+          version.isError ||
+          (selected && proposed && !preview && !replacement)) && (
+          <p role="alert">{t('versionUnavailable')}</p>
+        )}
       {preview && selected && (
         <>
           <p>
-            {selected.title} · {selected.reference.digest} · {selected.output} → {step.id}.{input}
+            {selected.title} · {selected.reference.digest} · {selected.output} →{' '}
+            {delivery || step.id + '.' + input}
           </p>
+          {delivery && proposed && (
+            <>
+              <p>{t('p1ReplacePreview', { slot: input })}</p>
+              <details>
+                <summary>{t('p1CandidateScope')}</summary>
+                <p>{proposed.capability_declaration.purpose}</p>
+                <p>
+                  {t('applies')} · {proposed.capability_declaration.applies_when.join(' · ')}
+                </p>
+                <p>
+                  {t('excludes')} ·{' '}
+                  {proposed.capability_declaration.excludes.join(' · ') || t('none')}
+                </p>
+                <p>
+                  {t('validationRules')} ·{' '}
+                  {proposed.how_to_validate.map((r) => r.check).join(' · ')}
+                </p>
+              </details>
+            </>
+          )}
+          {delivery && (
+            <p>
+              {draft.capability_declaration.purpose} ·{' '}
+              {draft.how_to_validate.map((rule) => rule.check).join(' · ')}
+            </p>
+          )}
           <FormalOrchestrationSummary definition={preview} />
           <details>
             <summary>{t('permissions')}</summary>
@@ -230,6 +320,8 @@ export function P1Predecessor({
             key={JSON.stringify([
               requestId,
               choice,
+              delivery,
+              aliases,
               input,
               draft,
               item?.selected,
@@ -240,8 +332,12 @@ export function P1Predecessor({
             disabled={
               matches.isFetching || matches.isError || binding.isPending || version.isFetching
             }
-            label={t('p1Adopt')}
-            onAdopt={() => onAdopt(preview)}
+            label={t(delivery ? 'p1AdoptReplacement' : 'p1Adopt')}
+            onAdopt={() => {
+              onAdopt(preview)
+              setInput('')
+              changeSearch('')
+            }}
             onUnavailable={() => {
               void version.refetch()
               void matches.refetch()

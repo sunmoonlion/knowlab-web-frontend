@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
 import { FormalMethodEditor } from '@/components/knowbots/formal-method-editor'
 import messages from '@/messages/zh-CN.json'
@@ -7,9 +7,9 @@ import { renderWith } from './knowbot-fixtures'
 vi.mock('@/i18n/navigation', () => ({ Link: 'a' }))
 
 const url = process.env.LUNA_P1_URL
-it.skipIf(!url)(
-  'adopts an indexed P1 predecessor and reopens the persisted graph',
-  async () => {
+it.skipIf(!url).each(['bridge', 'replace'] as const)(
+  'adopts, saves and reopens the indexed P1 %s plan',
+  async (mode) => {
     const base = new URL(url!)
     if (base.hostname !== '127.0.0.1') throw Error('Expected loopback integration fixture')
     const fetchLocal = globalThis.fetch
@@ -25,29 +25,65 @@ it.skipIf(!url)(
       const open = () =>
         renderWith(
           <FormalMethodEditor
-            requestId={process.env.LUNA_P1_REQUEST!}
+            requestId={
+              (mode === 'bridge'
+                ? process.env.LUNA_P1_REQUEST
+                : process.env.LUNA_P1_RESELECT_REQUEST)!
+            }
             csrfToken="csrf-token-with-at-least-thirty-two-characters"
-            resume={{ method: process.env.LUNA_P1_METHOD! }}
+            resume={{
+              method:
+                mode === 'bridge'
+                  ? process.env.LUNA_P1_METHOD
+                  : process.env.LUNA_P1_RESELECT_METHOD,
+            }}
           />,
         )
       const view = open()
       const choose = await screen.findByLabelText<HTMLSelectElement>(t.registeredTool)
-      await waitFor(() => expect(choose.options.length).toBe(2))
-      fireEvent.change(choose, { target: { value: choose.options[1].value } })
+      const firstTool = mode === 'bridge' ? leaf : process.env.LUNA_P1_STRICT!
+      await waitFor(() =>
+        expect([...choose.options].some((o) => o.value.startsWith(firstTool))).toBe(true),
+      )
+      fireEvent.change(choose, {
+        target: { value: [...choose.options].find((o) => o.value.startsWith(firstTool))!.value },
+      })
       const adopt = screen.getByRole('button', { name: t.useToolAsStep })
       await waitFor(() => expect(adopt).toBeEnabled())
       fireEvent.click(adopt)
       fireEvent.change(await screen.findByLabelText(t.p1Input), { target: { value: 'to' } })
+      if (mode === 'replace') {
+        await screen.findByText(t.noToolsOnPage)
+        fireEvent.change(screen.getByLabelText(t.p1SearchBy), { target: { value: 'receipt' } })
+      }
       const providers = await screen.findByLabelText<HTMLSelectElement>(t.p1Provider)
-      await waitFor(() => expect(providers.options.length).toBe(2))
-      expect(providers.options[1].value).toContain(leaf)
-      fireEvent.change(providers, { target: { value: providers.options[1].value } })
-      fireEvent.click(await screen.findByRole('button', { name: t.p1Adopt }))
+      await waitFor(() =>
+        expect([...providers.options].some((o) => o.value.startsWith(leaf))).toBe(true),
+      )
+      if (mode === 'replace')
+        expect([...providers.options].some((o) => o.value.startsWith(firstTool))).toBe(false)
+      fireEvent.change(providers, {
+        target: { value: [...providers.options].find((o) => o.value.startsWith(leaf))!.value },
+      })
+      if (mode === 'replace') {
+        const section = within(screen.getByRole('group', { name: t.p1Find }))
+        expect(section.queryByRole('button', { name: t.p1AdoptReplacement })).toBeNull()
+        fireEvent.change(await section.findByRole('textbox'), { target: { value: 'buildSource' } })
+      }
+      fireEvent.click(
+        await screen.findByRole('button', {
+          name: mode === 'bridge' ? t.p1Adopt : t.p1AdoptReplacement,
+        }),
+      )
       fireEvent.click(screen.getByRole('button', { name: t.save }))
       await screen.findByText(t.saved)
       view.unmount()
       open()
-      expect(await screen.findByText(/to ← 前置步骤输出: prepare.receipt/)).toBeInTheDocument()
+      expect(
+        await screen.findByText(
+          mode === 'bridge' ? /to ← 前置步骤输出: prepare.receipt/ : /to ← .*: buildSource/,
+        ),
+      ).toBeInTheDocument()
     } finally {
       vi.unstubAllGlobals()
     }

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { FormalMethodEditor } from '@/components/knowbots/formal-method-editor'
 import { formalDraftSchema } from '@/contracts/formal-methods'
 import { workdraftSchema } from '@/contracts/workdraft'
+import { replaceP1Tool } from '@/lib/knowbots/formal-orchestration'
 import { formalValidation, freezeFormalMethod } from '@/lib/knowbots/formal-methods'
 import messages from '@/messages/zh-CN.json'
 import fixture from '../fixtures/author-method.json'
@@ -956,4 +957,69 @@ it('imports the review requirement from a portable formal graph and rejects unre
   fireEvent.change(input, { target: { files: [file({ second: { ...role, future_rule: true } })] } })
   await screen.findByText(labels.errors.definition_invalid)
   expect(screen.getByLabelText('second 复核 first 的产物')).toHaveValue('different_model_family')
+})
+
+it('keeps every promised output and fixed input when the author replaces a downstream tool', () => {
+  const original = orchestrationDraft(draft).definition
+  const graph = original.procedure
+  if (graph.kind !== 'orchestration') throw Error('expected graph')
+  graph.steps = graph.steps.slice(0, 1)
+  const first = graph.steps[0]
+  graph.exports.summary.step = first.id
+  first.outputs.audit = { ...first.outputs.summary, meaning: { kind: 'audit' } }
+  graph.exports.audit = { step: first.id, output: 'audit', always_present: true }
+  const candidate = structuredClone(original)
+  const other = candidate.procedure
+  if (other.kind !== 'orchestration') throw Error('expected graph')
+  const tool = other.steps[0]
+  tool.candidates[0].method_id = RUN
+  tool.outputs.alternative = tool.outputs.summary
+  delete tool.outputs.summary
+  const replace = () => replaceP1Tool(original, 'message', 'summary', candidate, 'alternative')
+  expect(replace()).toMatchObject({ issue: 'p1BindingGap', slot: 'message' })
+  delete tool.inputs.message
+  tool.outputs.audit = { ...first.outputs.audit, required: false }
+  expect(replace()).toMatchObject({ issue: 'p1OutputGap', slot: 'audit' })
+  tool.outputs.audit = { ...first.outputs.audit, meaning: { kind: 'different' } }
+  expect(replace()).toMatchObject({ issue: 'p1OutputGap', slot: 'audit' })
+  tool.outputs.audit = first.outputs.audit
+  const applied = replace()
+  expect(applied).toMatchObject({
+    plan: {
+      capability_declaration: original.capability_declaration,
+      how_to_validate: original.how_to_validate,
+      procedure: {
+        exports: { summary: { output: 'alternative' }, audit: graph.exports.audit },
+        steps: [{ inputs: { fixed: first.inputs.fixed } }],
+      },
+    },
+  })
+  delete tool.inputs.fixed
+  expect(replace()).toMatchObject({ issue: 'p1BindingGap', slot: 'fixed' })
+})
+
+it('stops on a repeated catalog page and lets the author keep the original plan', async () => {
+  const authored = orchestrationDraft(draft)
+  const graph = authored.definition.procedure
+  if (graph.kind !== 'orchestration') throw Error('expected graph')
+  graph.steps = graph.steps.slice(0, 1)
+  graph.exports.summary.step = graph.steps[0].id
+  current = { ...initial, body: { ...initial.body, formal_method: authored } }
+  const fallback = fetcher.getMockImplementation()!
+  let searches = 0
+  fetcher.mockImplementation((url, options) => {
+    if (!url.endsWith('/matching-outputs')) return fallback(url, options)
+    searches++
+    return respond({ items: [], next: 0 })
+  })
+  show()
+  fireEvent.change(await screen.findByLabelText(labels.p1Input), { target: { value: 'message' } })
+  await screen.findByText(labels.p1CursorStopped)
+  const panel = within(screen.getByRole('group', { name: labels.p1Find }))
+  expect(panel.queryByRole('button', { name: labels.next })).toBeNull()
+  fireEvent.click(panel.getByRole('button', { name: labels.p1Stop }))
+  expect(screen.getByLabelText(labels.p1Input)).toHaveValue('')
+  expect(searches).toBe(1)
+  expect(screen.getByRole('button', { name: labels.save })).toBeDisabled()
+  expect(current.body.formal_method).toEqual(authored)
 })
