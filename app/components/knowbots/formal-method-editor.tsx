@@ -30,6 +30,8 @@ import {
   validateFormalMethod,
   type ValidationCommand,
 } from '@/lib/knowbots/formal-methods'
+import { ExpertInputBinding } from './expert-input-binding'
+import { ExpertFromTool } from './expert-from-tool'
 import { same } from '@/lib/knowbots/workdraft'
 import { KEY } from './shared'
 import { FormalMethodExecution } from './formal-method-execution'
@@ -357,6 +359,21 @@ function FormalForm({
       </fieldset>
       <fieldset disabled={working || executionActive} className="space-y-4 rounded border p-4">
         <legend className="px-1 font-medium">{t('definition')}</legend>
+        {!definition ? (
+          <ExpertFromTool
+            targetMethodId={methodId}
+            onAdopt={(next) => {
+              editDefinition(next)
+              setSource(null)
+              setCallers(['host'])
+              setVisibility('private')
+              setRun(null)
+              setExecutionRun(false)
+              setInspected(null)
+              setError(null)
+            }}
+          />
+        ) : null}
         <label className="block text-sm">
           {t('import')}
           <input
@@ -501,7 +518,13 @@ function FormalForm({
                 ) : null}
               </>
             ) : (
-              <FormalOrchestrationSummary definition={definition} />
+              <>
+                <FormalOrchestrationSummary definition={definition} />
+                <ExpertInputBinding
+                  graph={definition.procedure}
+                  onChange={(procedure) => editDefinition({ ...definition, procedure })}
+                />
+              </>
             )}
             <div className="space-y-2 text-sm">
               <h3 className="font-medium">{t('permissions')}</h3>

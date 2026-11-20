@@ -60,8 +60,9 @@ const permission = z
     on_unavailable: z.literal('pause').default('pause'),
   })
   .strict()
+export const formalCallerBindingSchema = z.object({ source: z.literal('caller'), name }).strict()
 const binding = z.discriminatedUnion('source', [
-  z.object({ source: z.literal('caller'), name }).strict(),
+  formalCallerBindingSchema,
   z.object({ source: z.literal('step'), step: name, output: name }).strict(),
   z.object({ source: z.literal('literal'), value: z.unknown() }).strict(),
   z.object({ source: z.literal('resource'), requirement_id: name, role: name }).strict(),

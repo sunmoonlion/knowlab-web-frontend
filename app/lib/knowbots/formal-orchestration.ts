@@ -1,4 +1,5 @@
-import type { FormalDraft } from '@/contracts/formal-methods'
+import { validatedCallers } from '@/contracts/formal-methods'
+import type { FormalDefinition, FormalDraft, FormalVersion } from '@/contracts/formal-methods'
 
 // This is only a structural UI gate. The server resolves each exact dependency
 // and checks its current host qualification, source, authority and interfaces.
@@ -60,4 +61,60 @@ export function supportsOrchestrationExecution(draft: FormalDraft | null): boole
       Object.hasOwn(steps.get(ref.step)?.outputs ?? {}, ref.output),
     )
   )
+}
+
+// A workdraft constructed from an author's own registered version still needs
+// its own validation and freeze. Only the dependency keeps its frozen identity.
+export function expertFromTool(version: FormalVersion): FormalDefinition | null {
+  const definition = version.definition
+  const tool = definition.procedure
+  if (
+    tool.kind !== 'direct' ||
+    version.provenance.method_kind !== 'tool' ||
+    !(version.provenance.allowed_callers ?? ['host']).includes('host') ||
+    (version.provenance.validation &&
+      !validatedCallers(version.provenance.validation).includes('host'))
+  )
+    return null
+
+  const id = 'step_1'
+  const inputs = Object.fromEntries(
+    Object.entries(tool.inputs).map(([name, slot]) => [
+      name,
+      { slot, binding: { source: 'caller' as const, name } },
+    ]),
+  )
+  const exports = Object.fromEntries(
+    Object.entries(tool.outputs).map(([output, slot]) => [
+      output,
+      { step: id, output, always_present: slot.required },
+    ]),
+  )
+  return {
+    ...definition,
+    procedure: {
+      kind: 'orchestration',
+      instructions: definition.capability_declaration.purpose,
+      steps: [
+        {
+          id,
+          candidates: [
+            { method_id: version.method_id, version: version.version, digest: version.digest },
+          ],
+          depends_on: [],
+          select_when: 'always',
+          required_when: 'always',
+          always_required: true,
+          inputs,
+          outputs: tool.outputs,
+          on_failure: 'fail',
+        },
+      ],
+      exports,
+      max_depth: 2,
+      max_expansions: 2,
+      max_steps: 1,
+      max_replans: 0,
+    },
+  }
 }

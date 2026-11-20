@@ -527,3 +527,166 @@ it('shows exact graph connections and keeps a fully validated graph private', as
   expect(screen.getByRole('button', { name: labels.confirmFreeze })).toBeDisabled()
   expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(0)
 })
+
+const childId = 'a45d7d69-1d43-4f13-9207-81de485e18e1'
+const optionalSlot = { ...slot, required: false, on_missing: 'omit', meaning: { unit: 'text' } }
+function openToolCatalog(detail: { digest?: string; callers?: string[] } = {}) {
+  current = { ...initial, revision: 0, body: { ...initial.body, formal_method: null } }
+  const child = {
+    ...frozen,
+    method_id: childId,
+    version: 3,
+    digest: detail.digest ?? fingerprint,
+    provenance: { ...frozen.provenance, allowed_callers: detail.callers ?? ['host'] },
+    definition: {
+      ...draft.definition,
+      procedure: {
+        ...draft.definition.procedure,
+        inputs: { text: slot, hint: optionalSlot },
+        outputs: { summary: slot, notes: optionalSlot },
+      },
+    },
+  }
+  const listing = {
+    method_id: childId,
+    latest_version: 3,
+    digest: fingerprint,
+    method_kind: 'tool',
+    title: '已登记核对工具',
+    summary: '核对文字',
+    created_at: child.created_at,
+  }
+  const fallback = fetcher.getMockImplementation()!
+  fetcher.mockImplementation((url, options) => {
+    if (url.startsWith('/api/web/v1/method-units?formal=true'))
+      return respond({ items: [listing, { ...listing, method_id: METHOD, title: '当前目标' }] })
+    if (url.endsWith(childId + '/formal-versions/3')) return respond(child)
+    return fallback(url, options)
+  })
+  return show()
+}
+
+async function chooseTool() {
+  const option = await screen.findByRole<HTMLOptionElement>('option', {
+    name: '已登记核对工具 · v3',
+  })
+  fireEvent.change(screen.getByLabelText(labels.registeredTool), {
+    target: { value: option.value },
+  })
+  return screen.getByRole('button', { name: labels.useToolAsStep })
+}
+
+it('saves and reopens an independently authored expert with exact dependency, bindings and exports', async () => {
+  const view = openToolCatalog()
+  const adopt = await chooseTool()
+  expect(screen.queryByRole('option', { name: '当前目标 · v3' })).not.toBeInTheDocument()
+  await waitFor(() => expect(adopt).toBeEnabled())
+  expect(fetcher.mock.calls.filter(([, options]) => options.method !== 'GET')).toHaveLength(0)
+  fireEvent.click(adopt)
+  fireEvent.change(screen.getByLabelText(labels.methodTitle), { target: { value: '我的核对专家' } })
+  fireEvent.click(screen.getByRole('button', { name: labels.save }))
+  await screen.findByText(labels.saved)
+  const saved = formalDraftSchema.parse(current.body.formal_method)
+  expect(saved.source).toBeNull()
+  expect(saved.allowed_callers).toEqual(['host'])
+  expect(saved.definition.capability_declaration.title).toBe('我的核对专家')
+  expect(saved.definition.how_to_validate).toEqual(draft.definition.how_to_validate)
+  expect(saved.definition.procedure).toMatchObject({
+    kind: 'orchestration',
+    max_depth: 2,
+    max_expansions: 2,
+    max_steps: 1,
+    max_replans: 0,
+    steps: [
+      {
+        id: 'step_1',
+        always_required: true,
+        on_failure: 'fail',
+        candidates: [{ method_id: childId, version: 3, digest: fingerprint }],
+        inputs: {
+          text: { slot, binding: { source: 'caller', name: 'text' } },
+          hint: { slot: optionalSlot, binding: { source: 'caller', name: 'hint' } },
+        },
+        outputs: { summary: slot, notes: optionalSlot },
+      },
+    ],
+    exports: {
+      summary: { step: 'step_1', output: 'summary', always_present: true },
+      notes: { step: 'step_1', output: 'notes', always_present: false },
+    },
+  })
+  expect(fetcher.mock.calls.filter(([, options]) => options.method !== 'GET')).toHaveLength(1)
+  view.unmount()
+  show()
+  expect(await screen.findByDisplayValue('我的核对专家')).toBeInTheDocument()
+  expect(screen.getByText(new RegExp(childId))).toHaveTextContent(fingerprint)
+  expect(screen.queryByLabelText(labels.registeredTool)).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: labels.confirmFreeze })).toBeDisabled()
+})
+
+it.each([
+  [{ digest: 'sha256:' + 'b'.repeat(64) }, labels.versionUnavailable],
+  [{ callers: ['model'] }, labels.hostToolRequired],
+])('keeps an unavailable or ineligible dependency out of the draft (%j)', async (detail, error) => {
+  openToolCatalog(detail)
+  const adopt = await chooseTool()
+  expect(await screen.findByText(error)).toBeInTheDocument()
+  expect(adopt).toBeDisabled()
+  expect(current.body.formal_method).toBeNull()
+  expect(fetcher.mock.calls.filter(([, options]) => options.method !== 'GET')).toHaveLength(0)
+})
+
+it('adopts each binding explicitly and preserves pinned versions, other slots, order and exports', async () => {
+  const original = orchestrationDraft(draft)
+  const graph = original.definition.procedure
+  if (graph.kind !== 'orchestration') throw new Error('Expected graph')
+  current = { ...initial, body: { ...initial.body, formal_method: original } }
+  show()
+  const target = await screen.findByLabelText(labels.targetInput)
+  fireEvent.change(target, { target: { value: 'second.message' } })
+  const apply = () => screen.getByRole('button', { name: labels.adoptBinding })
+  expect(apply()).toBeDisabled()
+  fireEvent.change(screen.getByLabelText(labels.bindFrom), { target: { value: 'caller' } })
+  expect(await screen.findByText(labels.aliasConflict)).toBeInTheDocument()
+  expect(apply()).toBeDisabled()
+  const alias = screen.getByLabelText(labels.callerName)
+  fireEvent.change(alias, { target: { value: '2bad' } })
+  expect(screen.getByText(labels.invalidAlias)).toBeInTheDocument()
+  expect(apply()).toBeDisabled()
+  fireEvent.change(alias, { target: { value: 'reviewText' } })
+  expect(apply()).toBeEnabled()
+  expect(screen.getByRole('button', { name: labels.save })).toBeDisabled()
+  fireEvent.click(apply())
+  fireEvent.click(screen.getByRole('button', { name: labels.save }))
+  await screen.findByText(labels.saved)
+  const changedGraph = structuredClone(graph)
+  changedGraph.steps[1].inputs.message.binding = { source: 'caller', name: 'reviewText' }
+  expect(current.body.formal_method?.definition.procedure).toEqual(changedGraph)
+  fireEvent.change(screen.getByLabelText(labels.bindFrom), { target: { value: 'first.summary' } })
+  fireEvent.click(apply())
+  fireEvent.click(screen.getByRole('button', { name: labels.save }))
+  await waitFor(() => expect(current.body.formal_method?.definition.procedure).toEqual(graph))
+})
+
+it('offers only declared compatible predecessor outputs and leaves imported literals untouched', async () => {
+  const original = orchestrationDraft(draft)
+  const graph = original.definition.procedure
+  if (graph.kind !== 'orchestration') throw new Error('Expected graph')
+  const outputs = graph.steps[0].outputs
+  outputs.conditional = { ...outputs.summary, required: false }
+  outputs.otherMeaning = { ...outputs.summary, meaning: { currency: 'USD' } }
+  outputs.otherType = { ...outputs.summary, schema: { type: 'number' } }
+  current = { ...initial, body: { ...initial.body, formal_method: original } }
+  show()
+  const select = await screen.findByLabelText(labels.targetInput)
+  fireEvent.change(select, { target: { value: 'first.fixed' } })
+  expect((screen.getByLabelText(labels.bindFrom) as HTMLSelectElement).options).toHaveLength(2)
+  fireEvent.change(select, { target: { value: 'second.message' } })
+  expect(
+    Array.from((screen.getByLabelText(labels.bindFrom) as HTMLSelectElement).options).map(
+      (o) => o.value,
+    ),
+  ).toEqual(['', 'caller', 'first.summary'])
+  expect(screen.getByRole('button', { name: labels.save })).toBeDisabled()
+  expect(current.body.formal_method?.definition.procedure).toEqual(graph)
+})
