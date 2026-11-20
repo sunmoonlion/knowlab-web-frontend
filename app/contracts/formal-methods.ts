@@ -81,6 +81,23 @@ const step = z
     on_failure: z.enum(['pause', 'fail']),
   })
   .strict()
+const collaborationId = z.string().regex(/^[A-Za-z][A-Za-z0-9_-]{0,47}$/)
+export const collaborationSchema = z
+  .record(
+    collaborationId,
+    z
+      .object({
+        isolation_group: collaborationId.nullable().default(null),
+        review_requirements: z
+          .record(collaborationId, z.enum(['isolated_reviewer', 'different_model_family']))
+          .optional(),
+        handoff_from: z.array(collaborationId).max(100).default([]),
+      })
+      .strict(),
+  )
+  .nullable()
+  .optional()
+
 export const formalDefinitionSchema = z
   .object({
     contract: z.literal('knowlab/formal-method/v1'),
@@ -109,6 +126,7 @@ export const formalDefinitionSchema = z
       z
         .object({
           kind: z.literal('orchestration'),
+          collaboration: collaborationSchema,
           instructions: text,
           steps: z.array(step).min(1).max(100),
           exports: z.record(

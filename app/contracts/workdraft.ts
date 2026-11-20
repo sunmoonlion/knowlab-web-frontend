@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { formalDraftSchema } from './formal-methods'
+import { collaborationSchema, formalDraftSchema } from './formal-methods'
 
 // 工作稿（专家孵化方案第五至十一节，decisions ⑮）：后端 app/domain/knowbots/workdraft.py 的
 // WorkdraftBody 与 knowbot_routes.py 的工作稿接口。作者只写方法层的格子；清单由后端按格子编。
@@ -196,19 +196,7 @@ export type MethodReference = z.infer<typeof methodReferenceSchema>
 
 export const bodySchema = z.object({
   formal_method: formalDraftSchema.nullable().optional(),
-  collaboration: z
-    .record(
-      z.string(),
-      z.object({
-        isolation_group: z.string().nullable().optional(),
-        review_requirements: z
-          .record(z.string(), z.enum(['isolated_reviewer', 'different_model_family']))
-          .optional(),
-        handoff_from: z.array(z.string()).default([]),
-      }),
-    )
-    .nullable()
-    .optional(),
+  collaboration: collaborationSchema,
   name: z.string(),
   tagline: z.string(),
   scope: z.object({ does: z.string(), does_not: z.string(), elsewhere: z.string() }),

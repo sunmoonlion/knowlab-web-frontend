@@ -935,3 +935,25 @@ it('saves the required review model separately from the frozen producer and rest
   expect(await screen.findByLabelText(label)).toHaveValue('different_model_family')
   expect(screen.getByText(/当前运行器尚未支持核验/)).toBeInTheDocument()
 })
+
+it('imports the review requirement from a portable formal graph and rejects unrecognized restrictions', async () => {
+  const graph = orchestrationDraft(draft)
+  const role = { review_requirements: { first: 'different_model_family' } }
+  const file = (collaboration: object) => ({
+    size: 100,
+    text: async () =>
+      JSON.stringify({
+        ...graph.definition,
+        procedure: { ...graph.definition.procedure, collaboration },
+      }),
+  })
+  show()
+  const input = await screen.findByLabelText(labels.import)
+  fireEvent.change(input, { target: { files: [file({ second: role })] } })
+  expect(await screen.findByLabelText('second 复核 first 的产物')).toHaveValue(
+    'different_model_family',
+  )
+  fireEvent.change(input, { target: { files: [file({ second: { ...role, future_rule: true } })] } })
+  await screen.findByText(labels.errors.definition_invalid)
+  expect(screen.getByLabelText('second 复核 first 的产物')).toHaveValue('different_model_family')
+})

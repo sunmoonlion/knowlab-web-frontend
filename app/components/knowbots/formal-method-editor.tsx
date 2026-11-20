@@ -412,7 +412,13 @@ function FormalForm({
               try {
                 if (file.size > 1_000_000) throw new Error('definition_size')
                 const parsed = formalDefinitionSchema.parse(JSON.parse(await file.text()))
-                editDefinition(parsed)
+                if (parsed.procedure.kind === 'orchestration') {
+                  const { collaboration: importedRoles, ...procedure } = parsed.procedure
+                  if (importedRoles) setCollaboration(importedRoles)
+                  editDefinition({ ...parsed, procedure })
+                } else {
+                  editDefinition(parsed)
+                }
                 setSource(null)
               } catch {
                 setError('definition_invalid')
