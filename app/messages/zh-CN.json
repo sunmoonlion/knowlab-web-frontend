@@ -1448,11 +1448,20 @@
     "freeze": "冻结版本",
     "freezeHint": "只冻结当前保存且已验证的定义。未覆盖的业务效果仅可在明确限制的自用范围内保留；冻结不等于公开上架。",
     "version": "版本号",
-    "visibility": "发布范围",
+    "visibility": "本次冻结的验证范围",
     "private": "仅自用",
     "public": "公开范围",
     "confirmFreeze": "确认冻结这个版本",
-    "frozen": "第 {version} 版已冻结。是否可调用以登记结果为准。",
+    "frozen": "第 {version} 版已冻结。",
+    "selfListingSubmit": "提交自用上架",
+    "selfListingHint": "确认提交这一版及其测试产物用于自用审核。上架后仅本人获得正式使用资格。",
+    "selfListingStatus": {
+      "listed": "已自用上架。",
+      "pending": "已提交，等待人工审核。",
+      "withdrawn": "已撤架。",
+      "rejected": "审核未通过。",
+      "error": "未取得上架回执，可重试。"
+    },
     "requestFailed": "请求未完成（{code}），你的编辑仍然保留。",
     "errors": {
       "definition_invalid": "定义文件无效或超过 1 MB，请检查完整结构。",

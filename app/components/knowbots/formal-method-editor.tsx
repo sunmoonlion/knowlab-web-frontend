@@ -23,6 +23,7 @@ import { ApiClientError } from '@/lib/common/api-client'
 import { fetchWorkdraft, saveWorkdraftCells } from '@/lib/knowbots/client'
 import {
   formalSources,
+  submitSelfListing,
   listFormalMethods,
   getFormalVersion,
   formalValidation,
@@ -710,6 +711,11 @@ function FormalForm({
             {shownVersion.definition.capability_declaration.title} ·{' '}
             {t(`kind.${shownVersion.provenance.method_kind}`)}
           </p>
+          <SelfListing
+            key={[shownVersion.method_id, shownVersion.version, shownVersion.digest].join(':')}
+            version={shownVersion}
+            csrfToken={csrfToken}
+          />
           <FormalOrchestrationSummary definition={shownVersion.definition} />
           <p>
             {t('verifiedCallers')}:{' '}
@@ -749,6 +755,41 @@ function FormalForm({
           {t.has(`errors.${error}`) ? t(`errors.${error}`) : t('requestFailed', { code: error })}
         </p>
       ) : null}
+    </div>
+  )
+}
+
+function SelfListing({ version, csrfToken }: { version: FormalVersion; csrfToken: string }) {
+  const t = useTranslations('formalMethod')
+  const [status, setStatus] = useState<
+    Awaited<ReturnType<typeof submitSelfListing>> | 'error' | null
+  >(null)
+  const [busy, setBusy] = useState(false)
+  async function submit() {
+    setBusy(true)
+    try {
+      const { method_id, digest, version: number } = version
+      setStatus(await submitSelfListing({ method_id, version: number, digest }, csrfToken))
+    } catch {
+      setStatus('error')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="space-y-2">
+      <p>{t('selfListingHint')}</p>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={busy || status === 'listed'}
+        onClick={() => void submit()}
+      >
+        {t('selfListingSubmit')}
+      </Button>
+      {status && (
+        <p role={status === 'error' ? 'alert' : 'status'}>{t(`selfListingStatus.${status}`)}</p>
+      )}
     </div>
   )
 }

@@ -1448,11 +1448,20 @@
     "freeze": "Freeze version",
     "freezeHint": "Freeze only the saved and validated definition. Unverified business effects require explicit private-use limitations. Freezing does not publish a listing.",
     "version": "Version number",
-    "visibility": "Publication scope",
+    "visibility": "Validation scope for this version",
     "private": "Private use",
     "public": "Public scope",
     "confirmFreeze": "Confirm and freeze this version",
-    "frozen": "Version {version} is frozen. Calling eligibility depends on its registration result.",
+    "frozen": "Version {version} is frozen.",
+    "selfListingSubmit": "Submit for private listing",
+    "selfListingHint": "Submit this version and its test outputs for private-use review. A listed version grants formal use to its author only.",
+    "selfListingStatus": {
+      "listed": "Listed for your use.",
+      "pending": "Submitted for manual review.",
+      "withdrawn": "Listing withdrawn.",
+      "rejected": "Review rejected.",
+      "error": "Listing receipt unavailable. Try again."
+    },
     "requestFailed": "Request did not complete ({code}). Your edits are preserved.",
     "errors": {
       "definition_invalid": "The definition file is invalid or exceeds 1 MB. Check its complete structure.",

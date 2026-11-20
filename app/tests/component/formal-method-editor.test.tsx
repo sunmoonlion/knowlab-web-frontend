@@ -221,7 +221,7 @@ it('freezes only after fetching a matching trusted receipt and never posts recei
   fireEvent.click(await screen.findByRole('button', { name: labels.refresh }))
   expect(await screen.findByText(labels.status.passed)).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: labels.confirmFreeze }))
-  await screen.findByText('第 1 版已冻结。是否可调用以登记结果为准。')
+  await screen.findByText('第 1 版已冻结。')
   const [url, options] = fetcher.mock.calls.find(([, options]) => options.method === 'PUT')!
   expect(url).toBe(`/api/web/v1/method-units/${METHOD}/formal-versions/1`)
   expect(JSON.parse(options.body)).toEqual({ ...command, visibility: 'private' })
@@ -417,7 +417,7 @@ it.each([false, true])(
       return
     }
     fireEvent.click(screen.getByRole('button', { name: labels.confirmFreeze }))
-    await screen.findByText('第 1 版已冻结。是否可调用以登记结果为准。')
+    await screen.findByText('第 1 版已冻结。')
     const writes = fetcher.mock.calls.filter(([, options]) => options.method !== 'GET')
     expect(writes).toHaveLength(1)
     expect(JSON.parse(writes[0][1].body)).toEqual({ ...command, visibility: 'private' })
@@ -689,4 +689,31 @@ it('offers only declared compatible predecessor outputs and leaves imported lite
   ).toEqual(['', 'caller', 'first.summary'])
   expect(screen.getByRole('button', { name: labels.save })).toBeDisabled()
   expect(current.body.formal_method?.definition.procedure).toEqual(graph)
+})
+
+it('submits the exact viewed version for self use only on explicit author action', async () => {
+  const fallback = fetcher.getMockImplementation()!
+  fetcher.mockImplementation((url, options) => {
+    if (url.includes('/validations')) return respond(passed)
+    if (url.endsWith('/self-listing'))
+      return respond({
+        listing_id: METHOD,
+        reference: { method_id: METHOD, version: 1, digest: fingerprint },
+        scope: 'self',
+        status: 'listed',
+      })
+    return fallback(url, options)
+  })
+  show()
+  fireEvent.click(await screen.findByRole('button', { name: labels.refresh }))
+  await screen.findByText(labels.status.passed)
+  fireEvent.click(screen.getByRole('button', { name: labels.confirmFreeze }))
+  const submit = await screen.findByRole('button', { name: labels.selfListingSubmit })
+  expect(fetcher.mock.calls.some(([u]) => u.endsWith('/self-listing'))).toBe(false)
+  fireEvent.click(submit)
+  await screen.findByText(labels.selfListingStatus.listed)
+  const [url, options] = fetcher.mock.calls.find(([u]) => u.endsWith('/self-listing'))!
+  expect(url).toBe(`/api/web/v1/method-units/${METHOD}/formal-versions/1/self-listing`)
+  expect(JSON.parse(options.body)).toEqual({ digest: fingerprint })
+  expect(options.headers['X-CSRF-Token']).toBe(CSRF)
 })

@@ -1,8 +1,10 @@
+import { z } from 'zod'
 import {
   formalSourcesSchema,
   formalMethodsSchema,
   formalValidationSchema,
   formalVersionSchema,
+  formalMethodRefSchema,
 } from '@/contracts/formal-methods'
 import { requestJson } from '@/lib/common/api-client'
 import { KnowbotContractError, parse } from './client'
@@ -23,6 +25,35 @@ export async function getFormalVersion(id: string, version: number) {
   if (result.method_id !== id || result.version !== version) throw new KnowbotContractError()
   return result
 }
+export async function submitSelfListing(
+  reference: z.infer<typeof formalMethodRefSchema>,
+  csrfToken: string,
+) {
+  const receipt = parse(
+    z.object({
+      listing_id: z.uuid(),
+      reference: formalMethodRefSchema,
+      scope: z.literal('self'),
+      status: z.enum(['pending', 'listed', 'withdrawn', 'rejected']),
+    }),
+    await requestJson(
+      `${methodPath(reference.method_id)}/formal-versions/${reference.version}/self-listing`,
+      {
+        method: 'PUT',
+        body: { digest: reference.digest },
+        csrfToken,
+      },
+    ),
+  )
+  if (
+    receipt.reference.method_id !== reference.method_id ||
+    receipt.reference.version !== reference.version ||
+    receipt.reference.digest !== reference.digest
+  )
+    throw new KnowbotContractError()
+  return receipt.status
+}
+
 export type ValidationCommand = { request_id: string; revision: number; run_id: string }
 
 export async function formalSources(requestId: string) {
