@@ -1584,8 +1584,9 @@
   },
   "formalExecution": {
     "title": "Execute validation",
-    "hint": "Test inputs and expected assertions are saved separately. Assertions evaluate results and are never sent to the tool or model. Runs use the selected computer and budget and wait here for approval when needed. Only MCP adapters reviewed by the server as having zero incremental call cost are currently supported. Model tests additionally incur model usage.",
-    "unsupported": "Execution currently supports direct MCP methods with zero internal model turns, or fixed host flows meeting the restrictions below.",
+    "hint": "Test inputs and expected assertions are saved separately. Assertions are checked after execution. Runs use the selected computer and budget and wait here for approvals. MCP calls require a reviewed zero incremental cost. Metered scripts and model usage are priced separately.",
+    "unsupported": "Execution supports zero-turn direct MCP methods, host-only isolated scripts and eligible fixed host flows.",
+    "instructionValidation": "Save the instruction draft and validate its source. Model trials and freezing from those trials are pending on the author page.",
     "suiteVersion": "Test suite version {version}",
     "caseNumber": "Test case {number}",
     "caseId": "Case ID",

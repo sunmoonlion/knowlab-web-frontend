@@ -251,6 +251,17 @@ it('starts a real suite without a model key and keeps assertions separate from t
   expect(screen.queryByRole('button', { name: t.start })).not.toBeInTheDocument()
   expect(callbacks.onActiveChange).toHaveBeenLastCalledWith(true)
 })
+it('shows instruction source validation without offering a billable trial', () => {
+  const instruction = structuredClone(draft)
+  if (instruction.definition.procedure.kind !== 'direct') throw new Error('expected tool')
+  instruction.definition.procedure.implementation.kind = 'skill_instruction'
+  instruction.definition.procedure.max_model_turns = 1
+  page(false, ['host'], instruction)
+  expect(screen.getByText(t.instructionValidation)).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: t.start })).not.toBeInTheDocument()
+  expect(fetcher).not.toHaveBeenCalled()
+})
+
 it('submits a zero-turn host script from the author page', async () => {
   const script = structuredClone(draft)
   if (script.definition.procedure.kind !== 'direct') throw new Error('expected tool')

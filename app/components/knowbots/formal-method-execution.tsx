@@ -74,7 +74,10 @@ export function FormalMethodExecution({
 }) {
   const t = useTranslations('formalExecution')
   const cache = useQueryClient()
-  const orchestration = draft?.definition.procedure.kind === 'orchestration'
+  const procedure = draft?.definition.procedure
+  const orchestration = procedure?.kind === 'orchestration'
+  const instruction =
+    procedure?.kind === 'direct' && procedure.implementation.kind === 'skill_instruction'
   const supported =
     supportsOrchestrationExecution(draft) ||
     (draft?.definition.procedure.kind === 'direct' &&
@@ -216,7 +219,7 @@ export function FormalMethodExecution({
       <p className="text-muted-foreground text-sm">{t('hint')}</p>
       <p className="text-muted-foreground text-sm">{t('callerCoverage')}</p>
       {orchestration ? <p>{t('orchestrationHint')}</p> : null}
-      {!supported ? <p>{t('unsupported')}</p> : null}
+      {!supported ? <p>{t(instruction ? 'instructionValidation' : 'unsupported')}</p> : null}
       {supported && !command ? (
         <fieldset disabled={disabled || busy} className="space-y-3">
           <p>{t('suiteVersion', { version: suite.version })}</p>
