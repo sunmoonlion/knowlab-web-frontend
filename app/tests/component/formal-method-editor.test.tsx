@@ -681,15 +681,111 @@ it('offers only declared compatible predecessor outputs and leaves imported lite
   show()
   const select = await screen.findByLabelText(labels.targetInput)
   fireEvent.change(select, { target: { value: 'first.fixed' } })
-  expect((screen.getByLabelText(labels.bindFrom) as HTMLSelectElement).options).toHaveLength(2)
+  expect(screen.getByLabelText(labels.bindFrom)).toHaveValue('literal')
+  expect(screen.getByLabelText(labels.fixedText)).toHaveValue('fixed input')
   fireEvent.change(select, { target: { value: 'second.message' } })
   expect(
     Array.from((screen.getByLabelText(labels.bindFrom) as HTMLSelectElement).options).map(
       (o) => o.value,
     ),
-  ).toEqual(['', 'caller', 'first.summary'])
+  ).toEqual(['', 'caller', 'literal', 'first.summary'])
   expect(screen.getByRole('button', { name: labels.save })).toBeDisabled()
   expect(current.body.formal_method?.definition.procedure).toEqual(graph)
+})
+
+it.each([
+  ['integer', '0', 0],
+  ['boolean', 'false', false],
+  ['string', '', ''],
+  [['null', 'number'], 'null', null],
+  ['array', '[false,0,""]', [false, 0, '']],
+  ['number', '12.5', 12.5],
+  ['object', '{"quarter":0}', { quarter: 0 }],
+])('round-trips a fixed %j input through author save and reopen', async (type, text, expected) => {
+  const original = orchestrationDraft(draft)
+  const graph = original.definition.procedure
+  if (graph.kind !== 'orchestration') throw new Error('Expected graph')
+  graph.steps[0].inputs.message.slot.schema = { type }
+  current = { ...initial, body: { ...initial.body, formal_method: original } }
+  const view = show()
+  const selectInput = async () =>
+    fireEvent.change(await screen.findByLabelText(labels.targetInput), {
+      target: { value: 'first.message' },
+    })
+  await selectInput()
+  fireEvent.change(screen.getByLabelText(labels.bindFrom), { target: { value: 'literal' } })
+  const field = screen.getByLabelText(type === 'string' ? labels.fixedText : labels.fixedJson)
+  fireEvent.change(field, { target: { value: text } })
+  expect(screen.getByRole('button', { name: labels.save })).toBeDisabled()
+  fireEvent.click(screen.getByRole('button', { name: labels.adoptBinding }))
+  fireEvent.click(screen.getByRole('button', { name: labels.save }))
+  await screen.findByText(labels.saved)
+  const saved = structuredClone(graph)
+  saved.steps[0].inputs.message.binding = { source: 'literal', value: expected }
+  expect(current.body.formal_method?.definition.procedure).toEqual(saved)
+  view.unmount()
+  show()
+  await selectInput()
+  expect(screen.getByLabelText(labels.bindFrom)).toHaveValue('literal')
+  expect(
+    screen.getByLabelText(type === 'string' ? labels.fixedText : labels.fixedJson),
+  ).toHaveValue(text)
+  expect(screen.getByRole('button', { name: labels.adoptBinding })).toBeDisabled()
+})
+
+it('keeps malformed, wrongly typed and out-of-range fixed values out of the draft', async () => {
+  const original = orchestrationDraft(draft)
+  const graph = original.definition.procedure
+  if (graph.kind !== 'orchestration') throw new Error('Expected graph')
+  graph.steps[0].inputs.message.slot.schema = { type: 'integer' }
+  current = { ...initial, body: { ...initial.body, formal_method: original } }
+  show()
+  fireEvent.change(await screen.findByLabelText(labels.targetInput), {
+    target: { value: 'first.message' },
+  })
+  fireEvent.change(screen.getByLabelText(labels.bindFrom), { target: { value: 'literal' } })
+  for (const raw of [
+    '',
+    '{',
+    'false',
+    '"1"',
+    '0.5',
+    '1e400',
+    '9007199254740993',
+    '1e-400',
+    '0.99999999999999999999',
+  ]) {
+    fireEvent.change(screen.getByLabelText(labels.fixedJson), { target: { value: raw } })
+    expect(screen.getByRole('alert')).toHaveTextContent(labels.invalidFixedValue)
+    expect(screen.getByRole('button', { name: labels.adoptBinding })).toBeDisabled()
+    expect(screen.getByRole('button', { name: labels.save })).toBeDisabled()
+  }
+  expect(current.body.formal_method?.definition.procedure).toEqual(graph)
+})
+
+it('rejects an oversized or deeply nested fixed JSON input before adopting it', async () => {
+  const original = orchestrationDraft(draft)
+  const graph = original.definition.procedure
+  if (graph.kind !== 'orchestration') throw new Error('Expected graph')
+  graph.steps[0].inputs.message.slot.schema = { type: 'array' }
+  current = { ...initial, body: { ...initial.body, formal_method: original } }
+  show()
+  fireEvent.change(await screen.findByLabelText(labels.targetInput), {
+    target: { value: 'first.message' },
+  })
+  fireEvent.change(screen.getByLabelText(labels.bindFrom), { target: { value: 'literal' } })
+  for (const raw of [
+    '['.repeat(40) + ']'.repeat(40),
+    JSON.stringify(['数'.repeat(22000)]),
+    '[0.9999999999999999999]',
+  ]) {
+    fireEvent.change(screen.getByLabelText(labels.fixedJson), { target: { value: raw } })
+    expect(screen.getByRole('button', { name: labels.adoptBinding })).toBeDisabled()
+  }
+  fireEvent.change(screen.getByLabelText(labels.fixedJson), {
+    target: { value: '["1e400", 1.20e1]' },
+  })
+  expect(screen.getByRole('button', { name: labels.adoptBinding })).toBeEnabled()
 })
 
 it('submits the exact viewed version for self use only on explicit author action', async () => {

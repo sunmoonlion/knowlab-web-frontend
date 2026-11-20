@@ -137,9 +137,22 @@ it.skipIf(!url).each(['bridge', 'replace'] as const)(
         fireEvent.click(screen.getByRole('button', { name: t.save }))
         await screen.findByText(t.saved)
         reopened.unmount()
-        open()
+        const threeSteps = open()
         await screen.findByText(t.p1LastAdoption.replace('{base}', '1').replace('{saved}', '2'))
         expect(await screen.findByText(/to ← 前置步骤输出: prepare_1.receipt/)).toBeInTheDocument()
+        fireEvent.change(screen.getByLabelText(t.targetInput), {
+          target: { value: 'prepare_1.to' },
+        })
+        fireEvent.change(screen.getByLabelText(t.bindFrom), { target: { value: 'literal' } })
+        fireEvent.change(screen.getByLabelText(t.fixedText), {
+          target: { value: 'sandbox-provisioner' },
+        })
+        fireEvent.click(screen.getByRole('button', { name: t.adoptBinding }))
+        fireEvent.click(screen.getByRole('button', { name: t.save }))
+        await screen.findByText(t.saved)
+        threeSteps.unmount()
+        open()
+        expect(await screen.findByText(/to ← 固定值: "sandbox-provisioner"/)).toBeInTheDocument()
       }
     } finally {
       vi.unstubAllGlobals()

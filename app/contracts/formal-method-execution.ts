@@ -10,7 +10,7 @@ const pointer = z
 const rejection = z.enum(['authorization_denied', 'approval_denied', 'input_invalid'])
 const state = z.enum(['pending', 'running', 'waiting', 'passed', 'failed', 'cancelled'])
 
-function bounded(value: unknown): boolean {
+export function boundedExecutionJson(value: unknown): boolean {
   try {
     const visit = (item: unknown, depth: number): boolean =>
       depth <= 32 &&
@@ -24,7 +24,9 @@ function bounded(value: unknown): boolean {
 }
 
 export const formalAssertionSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('equals'), pointer, value: z.json().refine(bounded) }).strict(),
+  z
+    .object({ kind: z.literal('equals'), pointer, value: z.json().refine(boundedExecutionJson) })
+    .strict(),
   z
     .object({
       kind: z.literal('approx'),
@@ -43,7 +45,7 @@ export const formalExecutionCaseSchema = z
       .object({
         values: z
           .record(z.string(), z.json())
-          .refine((v) => Object.keys(v).length <= 100 && bounded(v)),
+          .refine((v) => Object.keys(v).length <= 100 && boundedExecutionJson(v)),
         model_prompt: z.string().min(1).max(4000).nullable().optional(),
       })
       .strict(),
