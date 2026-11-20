@@ -15,13 +15,17 @@ it.skipIf(!url).each(['bridge', 'replace'] as const)(
     const fetchLocal = globalThis.fetch
     vi.stubGlobal('fetch', async (path: string, init: RequestInit) => {
       const headers = new Headers(init.headers)
-      headers.set('Cookie', 'sunmoonai_knowlab_web_sid=author')
+      headers.set(
+        'Cookie',
+        'sunmoonai_knowlab_web_sid=' + (process.env.LUNA_P1_SHARED ? 'other' : 'author'),
+      )
       headers.set('Origin', 'http://localhost:3000')
       return fetchLocal(new URL(path, base), { ...init, headers })
     })
     try {
       const t = messages.formalMethod,
         leaf = process.env.LUNA_P1_LEAF!
+      const predecessor = process.env.LUNA_P1_SHARED || leaf
       const open = () =>
         renderWith(
           <FormalMethodEditor
@@ -56,14 +60,20 @@ it.skipIf(!url).each(['bridge', 'replace'] as const)(
         await screen.findByText(t.noToolsOnPage)
         fireEvent.change(screen.getByLabelText(t.p1SearchBy), { target: { value: 'receipt' } })
       }
+      if (process.env.LUNA_P1_SHARED) {
+        const section = within(screen.getByRole('group', { name: t.p1Find }))
+        fireEvent.change(section.getByLabelText(t.toolDirectory), { target: { value: 'shared' } })
+      }
       const providers = await screen.findByLabelText<HTMLSelectElement>(t.p1Provider)
       await waitFor(() =>
-        expect([...providers.options].some((o) => o.value.startsWith(leaf))).toBe(true),
+        expect([...providers.options].some((o) => o.value.startsWith(predecessor))).toBe(true),
       )
       if (mode === 'replace')
         expect([...providers.options].some((o) => o.value.startsWith(firstTool))).toBe(false)
       fireEvent.change(providers, {
-        target: { value: [...providers.options].find((o) => o.value.startsWith(leaf))!.value },
+        target: {
+          value: [...providers.options].find((o) => o.value.startsWith(predecessor))!.value,
+        },
       })
       if (mode === 'replace') {
         const section = within(screen.getByRole('group', { name: t.p1Find }))
@@ -75,6 +85,9 @@ it.skipIf(!url).each(['bridge', 'replace'] as const)(
           name: mode === 'bridge' ? t.p1Adopt : t.p1AdoptReplacement,
         }),
       )
+      if (process.env.LUNA_P1_SHARED) {
+        await waitFor(() => expect(screen.queryByRole('button', { name: t.p1Adopt })).toBeNull())
+      }
       fireEvent.click(screen.getByRole('button', { name: t.save }))
       await screen.findByText(t.saved)
       view.unmount()

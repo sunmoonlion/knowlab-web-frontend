@@ -1,6 +1,6 @@
 'use client'
 
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useIsMutating, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useCallback, useState } from 'react'
 import { z } from 'zod'
@@ -143,7 +143,10 @@ function FormalForm({
   const [collaboration, setCollaboration] = useState(initial.body.collaboration ?? null)
   const reviewChanged = !same(collaboration, document.body.collaboration ?? null)
   const dirty = reviewChanged || !same(draft, document.body.formal_method ?? null)
+  const adoption = { mutationKey: ['adopt-tool', initial.request_id] }
+  const adopting = useIsMutating(adoption) > 0
   const ready =
+    !adopting &&
     !!draft &&
     formalDraftSchema.safeParse(draft).success &&
     (definition?.procedure.kind !== 'direct' || !!source)
@@ -152,6 +155,7 @@ function FormalForm({
   const selectedMethod = methods.data?.find((method) => method.method_id === methodId)
   const runtimeGaps = document.runtime_gaps ?? []
   const validated =
+    !adopting &&
     runtimeGaps.length === 0 &&
     !dirty &&
     run?.revision === document.revision &&
@@ -210,7 +214,7 @@ function FormalForm({
     [executionRun, run?.run_id],
   )
   const save = async () => {
-    if (!draft || !ready) return
+    if (!draft || !ready || client.isMutating(adoption)) return
     setWorking(true)
     setError(null)
     setNotice(null)
@@ -296,7 +300,7 @@ function FormalForm({
       </Link>
       <p className="text-sm">{t('draftNotice')}</p>
       <fieldset
-        disabled={working || executionActive}
+        disabled={working || executionActive || adopting}
         className="space-y-2 rounded border p-4 text-sm"
       >
         <legend className="px-1 font-medium">{t('methodTarget')}</legend>
@@ -372,7 +376,10 @@ function FormalForm({
           </Button>
         </div>
       </fieldset>
-      <fieldset disabled={working || executionActive} className="space-y-4 rounded border p-4">
+      <fieldset
+        disabled={working || executionActive || adopting}
+        className="space-y-4 rounded border p-4"
+      >
         <legend className="px-1 font-medium">{t('definition')}</legend>
         {!definition ? (
           <ExpertFromTool

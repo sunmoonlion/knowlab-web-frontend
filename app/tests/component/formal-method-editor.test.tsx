@@ -819,10 +819,12 @@ it('continues an empty shared page and switches from a revoked candidate before 
   const fallback = fetcher.getMockImplementation()!
   const reference = { method_id: childId, version: 2, digest: fingerprint }
   let grantActive = true
+  const pendingCheck = Promise.withResolvers<void>()
+  let delayCheck = false
   const revoked = { ...reference, method_id: RUN }
   const { procedure, ...contract } = draft.definition
   if (procedure.kind !== 'direct') throw Error('expected tool')
-  fetcher.mockImplementation((url, options) => {
+  fetcher.mockImplementation(async (url, options) => {
     if (url.endsWith('/matching-outputs')) {
       const body = JSON.parse(options.body)
       expect(body.slot.schema).toEqual({ type: 'string' })
@@ -838,6 +840,7 @@ it('continues an empty shared page and switches from a revoked candidate before 
           })
     }
     if (url.includes('/incubation-tools/') && url.includes('/versions/')) {
+      if (delayCheck) await pendingCheck.promise
       if (url.includes(revoked.method_id) && !grantActive) return respond({ items: [], next: null })
       return respond({
         items: [
@@ -856,6 +859,9 @@ it('continues an empty shared page and switches from a revoked candidate before 
     return fallback(url, options)
   })
   show()
+  fireEvent.change(await screen.findByLabelText(labels.purpose), {
+    target: { value: '补查后复核' },
+  })
   fireEvent.change(await screen.findByLabelText(labels.toolDirectory), {
     target: { value: 'shared' },
   })
@@ -876,7 +882,16 @@ it('continues an empty shared page and switches from a revoked candidate before 
   expect(screen.queryByRole('button', { name: labels.p1Adopt })).toBeNull()
   const usable = screen.getByRole<HTMLOptionElement>('option', { name: /可引用 · v2/ })
   fireEvent.change(select, { target: { value: usable.value } })
-  fireEvent.click(await screen.findByRole('button', { name: labels.p1Adopt }))
+  const adopt = await screen.findByRole('button', { name: labels.p1Adopt })
+  const save = screen.getByRole('button', { name: labels.save })
+  expect(save).toBeEnabled()
+  delayCheck = true
+  fireEvent.click(adopt)
+  await waitFor(() => expect(save).toBeDisabled())
+  expect(screen.getByLabelText(labels.purpose)).toBeDisabled()
+  fireEvent.click(save)
+  expect(fetcher.mock.calls.some(([url]) => url.endsWith('/cells'))).toBe(false)
+  pendingCheck.resolve()
   await waitFor(() => expect(screen.getByRole('button', { name: labels.save })).toBeEnabled())
   fireEvent.click(screen.getByRole('button', { name: labels.save }))
   await screen.findByText(labels.saved)

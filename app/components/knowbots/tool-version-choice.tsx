@@ -114,6 +114,7 @@ export function AdoptTool({
 }) {
   const t = useTranslations('formalMethod')
   const confirm = useMutation({
+    mutationKey: ['adopt-tool', requestId],
     mutationFn: async () => {
       if (!item) throw new Error('missing_version')
       const expected = item.installations.find((asset) => asset.asset_id === item.selected)
