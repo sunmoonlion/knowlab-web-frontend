@@ -78,7 +78,10 @@ export function FormalMethodExecution({
   const supported =
     supportsOrchestrationExecution(draft) ||
     (draft?.definition.procedure.kind === 'direct' &&
-      draft.definition.procedure.implementation.kind === 'mcp' &&
+      (draft.definition.procedure.implementation.kind === 'mcp' ||
+        (draft.definition.procedure.implementation.kind === 'skill_script' &&
+          draft.allowed_callers.length === 1 &&
+          draft.allowed_callers[0] === 'host')) &&
       draft.definition.procedure.max_model_turns === 0)
   const [command, setCommand] = useState<ValidationCommand | null>(resume ?? null)
   const [submitted, setSubmitted] = useState<FormalExecutionCommand | null>(null)

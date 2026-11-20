@@ -10,9 +10,18 @@ import {
 import { requestJson } from '@/lib/common/api-client'
 import { KnowbotContractError, parse } from './client'
 
+export function parseFormalReply<T>(schema: z.ZodType<T>, value: unknown): T {
+  if (value && typeof value === 'object' && 'contract_version' in value) {
+    const { contract_version, ...body } = value
+    if (contract_version !== 1) throw new KnowbotContractError()
+    return parse(schema, body)
+  }
+  return parse(schema, value)
+}
+
 const methodPath = (id: string) => `/api/web/v1/method-units/${encodeURIComponent(id)}`
 export async function listFormalMethods(offset = 0) {
-  return parse(
+  return parseFormalReply(
     formalMethodsSchema,
     await requestJson(`/api/web/v1/method-units?formal=true&limit=30&offset=${offset}`),
   ).items
@@ -51,7 +60,7 @@ export async function sharedIncubationTools(
     : after
       ? `?after=${encodeURIComponent(after)}`
       : ''
-  const page = parse(sharedToolsPage, await requestJson(base + suffix))
+  const page = parseFormalReply(sharedToolsPage, await requestJson(base + suffix))
   if (
     ref &&
     page.items.some(
@@ -71,7 +80,7 @@ export async function chooseToolInstallation(
   installation: { asset_id: string; revision: number },
   csrfToken: string,
 ) {
-  const receipt = parse(
+  const receipt = parseFormalReply(
     z.object({ reference: formalMethodRefSchema, asset_id: z.uuid(), revision: z.number().int() }),
     await requestJson(
       `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/incubation-tools/${reference.method_id}/versions/${reference.version}/installation`,
@@ -97,7 +106,7 @@ export async function chooseToolInstallation(
 }
 
 export async function getFormalVersion(id: string, version: number) {
-  const result = parse(
+  const result = parseFormalReply(
     formalVersionSchema,
     await requestJson(`${methodPath(id)}/formal-versions/${version}`),
   )
@@ -108,7 +117,7 @@ export async function submitSelfListing(
   reference: z.infer<typeof formalMethodRefSchema>,
   csrfToken: string,
 ) {
-  const receipt = parse(
+  const receipt = parseFormalReply(
     z.object({
       listing_id: z.uuid(),
       reference: formalMethodRefSchema,
@@ -136,7 +145,7 @@ export async function submitSelfListing(
 export type ValidationCommand = { request_id: string; revision: number; run_id: string }
 
 export async function formalSources(requestId: string) {
-  return parse(
+  return parseFormalReply(
     formalSourcesSchema,
     await requestJson(
       `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/formal-method-sources`,
@@ -145,7 +154,7 @@ export async function formalSources(requestId: string) {
 }
 
 function checkedValidation(value: unknown, methodId: string, command: ValidationCommand) {
-  const result = parse(formalValidationSchema, value)
+  const result = parseFormalReply(formalValidationSchema, value)
   const receipt = result.receipt
   if (
     result.run_id !== command.run_id ||
@@ -191,7 +200,7 @@ export async function freezeFormalMethod(
   command: ValidationCommand & { visibility: 'private' | 'public' },
   csrfToken: string,
 ) {
-  const result = parse(
+  const result = parseFormalReply(
     formalVersionSchema,
     await requestJson(`${methodPath(id)}/formal-versions/${version}`, {
       method: 'PUT',
@@ -201,4 +210,29 @@ export async function freezeFormalMethod(
   )
   if (result.method_id !== id || result.version !== version) throw new KnowbotContractError()
   return result
+}
+
+const outputMatch = z.object({
+  reference: formalMethodRefSchema,
+  output: z.string(),
+  title: z.string(),
+})
+export async function matchingToolOutputs(
+  requestId: string,
+  target: string,
+  slot: unknown,
+  offset: number,
+  csrfToken: string,
+) {
+  return parseFormalReply(
+    z.object({ items: z.array(outputMatch), next: z.number().int().nonnegative().nullable() }),
+    await requestJson(
+      `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/incubation-tools/matching-outputs`,
+      {
+        method: 'POST',
+        csrfToken,
+        body: { slot, exclude_method_id: target, offset },
+      },
+    ),
+  )
 }

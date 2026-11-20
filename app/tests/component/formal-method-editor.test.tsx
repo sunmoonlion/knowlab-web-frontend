@@ -781,3 +781,28 @@ it('adopts a licensed market version from its public interface', async () => {
     steps: [{ candidates: [ref] }],
   })
 })
+
+it('saves an adopted tool slot with the selected schema and meaning', async () => {
+  show()
+  const name = await screen.findByLabelText(labels.slotId)
+  fireEvent.change(name, { target: { value: 'receiptCount' } })
+  fireEvent.change(screen.getByLabelText(labels.slotDescription), {
+    target: { value: '已核对回执数' },
+  })
+  fireEvent.change(screen.getByLabelText(labels.slotPreset), { target: { value: 'integer' } })
+  const adopt = screen.getByRole('button', { name: labels.adoptSlot })
+  fireEvent.change(screen.getByLabelText(labels.slotMeaning), { target: { value: '{' } })
+  expect(adopt).toBeDisabled()
+  fireEvent.change(screen.getByLabelText(labels.slotMeaning), {
+    target: { value: '{"unit":"receipts"}' },
+  })
+  fireEvent.click(adopt)
+  fireEvent.click(screen.getByRole('button', { name: labels.save }))
+  await screen.findByText(labels.saved)
+  const saved = current.body.formal_method?.definition.procedure
+  if (saved?.kind !== 'direct') throw Error('Expected direct tool')
+  expect(saved.inputs.receiptCount).toMatchObject({
+    schema: { type: 'integer' },
+    meaning: { unit: 'receipts' },
+  })
+})

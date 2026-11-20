@@ -36,6 +36,8 @@ import { ExpertFromTool } from './expert-from-tool'
 import { same } from '@/lib/knowbots/workdraft'
 import { KEY } from './shared'
 import { FormalMethodExecution } from './formal-method-execution'
+import { ToolSlotEditor } from './tool-slot-editor'
+import { P1Predecessor } from './p1-predecessor'
 import { FormalOrchestrationSummary } from './formal-orchestration-summary'
 import type { FormalExecutionResult } from '@/contracts/formal-method-execution'
 
@@ -145,7 +147,9 @@ function FormalForm({
   const receipt = validation?.receipt
   const shownVersion = frozen ?? inspected
   const selectedMethod = methods.data?.find((method) => method.method_id === methodId)
+  const runtimeGaps = document.runtime_gaps ?? []
   const validated =
+    runtimeGaps.length === 0 &&
     !dirty &&
     run?.revision === document.revision &&
     validation?.status === 'passed' &&
@@ -463,6 +467,10 @@ function FormalForm({
             </p>
             {definition.procedure.kind === 'direct' ? (
               <>
+                <ToolSlotEditor
+                  tool={definition.procedure}
+                  onChange={(procedure) => editDefinition({ ...definition, procedure })}
+                />
                 <label className="block text-sm">
                   {t('source')}
                   <select
@@ -523,6 +531,18 @@ function FormalForm({
             ) : (
               <>
                 <FormalOrchestrationSummary definition={definition} />
+                {runtimeGaps.map((gap) => (
+                  <p role="status" key={gap.step + gap.primitive}>
+                    {t(gap.primitive, { step: gap.step })}
+                  </p>
+                ))}
+                <P1Predecessor
+                  draft={definition}
+                  methodId={methodId}
+                  requestId={initial.request_id}
+                  csrfToken={csrfToken}
+                  onAdopt={editDefinition}
+                />
                 <ExpertInputBinding
                   graph={definition.procedure}
                   onChange={(procedure) => editDefinition({ ...definition, procedure })}
@@ -608,7 +628,14 @@ function FormalForm({
         <div className="flex gap-2">
           <Button
             type="button"
-            disabled={working || executionActive || dirty || !ready || document.revision < 1}
+            disabled={
+              working ||
+              executionActive ||
+              dirty ||
+              !ready ||
+              runtimeGaps.length > 0 ||
+              document.revision < 1
+            }
             onClick={() => void validate(false)}
           >
             {t('validate')}
@@ -648,7 +675,7 @@ function FormalForm({
         requestId={initial.request_id}
         revision={document.revision}
         draft={draft}
-        disabled={working || dirty || !ready || document.revision < 1}
+        disabled={working || dirty || !ready || runtimeGaps.length > 0 || document.revision < 1}
         csrfToken={csrfToken}
         resume={executionRun ? run : null}
         onRun={executionStarted}

@@ -22,6 +22,7 @@ const slot = z
     on_missing: z.enum(['pause', 'fail', 'omit']),
   })
   .strict()
+export const formalValueSlotSchema = slot
 const implementation = z
   .object({
     kind: z.enum(['platform', 'mcp', 'skill_instruction', 'skill_script']),

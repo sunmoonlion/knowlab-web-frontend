@@ -251,6 +251,16 @@ it('starts a real suite without a model key and keeps assertions separate from t
   expect(screen.queryByRole('button', { name: t.start })).not.toBeInTheDocument()
   expect(callbacks.onActiveChange).toHaveBeenLastCalledWith(true)
 })
+it('submits a zero-turn host script from the author page', async () => {
+  const script = structuredClone(draft)
+  if (script.definition.procedure.kind !== 'direct') throw new Error('expected tool')
+  script.definition.procedure.implementation.kind = 'skill_script'
+  page(false, ['host'], script)
+  await fill()
+  fireEvent.click(screen.getByRole('button', { name: t.start }))
+  await screen.findByText('Approve fixture check')
+  expect(posts[0].url).toContain('/executions')
+})
 it('restores with GET only, answers the exact approval and cancels through the run identity', async () => {
   page(true)
   await screen.findByText('Approve fixture check')

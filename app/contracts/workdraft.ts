@@ -196,6 +196,16 @@ export type MethodReference = z.infer<typeof methodReferenceSchema>
 
 export const bodySchema = z.object({
   formal_method: formalDraftSchema.nullable().optional(),
+  collaboration: z
+    .record(
+      z.string(),
+      z.object({
+        isolation_group: z.string().nullable().optional(),
+        handoff_from: z.array(z.string()).default([]),
+      }),
+    )
+    .nullable()
+    .optional(),
   name: z.string(),
   tagline: z.string(),
   scope: z.object({ does: z.string(), does_not: z.string(), elsewhere: z.string() }),
@@ -236,6 +246,9 @@ export const workdraftSchema = z.object({
   title: z.string(),
   revision: z.number().int().min(0),
   body: bodySchema,
+  runtime_gaps: z
+    .array(z.object({ step: z.string(), primitive: z.enum(['isolation_group', 'staged_handoff']) }))
+    .optional(),
   sources: z.record(z.string(), z.object({ kind: z.string(), ref: z.string() }).loose()),
   origins: z.record(z.string(), z.string()).default({}),
   data_formats: z.record(z.string(), dataFormatSchema).default({}),

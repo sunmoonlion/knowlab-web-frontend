@@ -7,15 +7,15 @@ import {
   type FormalExecutionAction,
 } from '@/contracts/formal-method-execution'
 import { requestJson } from '@/lib/common/api-client'
-import { KnowbotContractError, parse } from './client'
-import type { ValidationCommand } from './formal-methods'
+import { KnowbotContractError } from './client'
+import { parseFormalReply, type ValidationCommand } from './formal-methods'
 
 const path = (method: string) => `/api/web/v1/method-units/${encodeURIComponent(method)}/executions`
 const runPath = (method: string, run: string) => `${path(method)}/${encodeURIComponent(run)}`
 export type FormalExecutionCommand = ValidationCommand & { execution: FormalExecutionSpec }
 
 export async function getFormalSuite(request: string, reference: FormalExecutionResult['suite']) {
-  const suite = parse(
+  const suite = parseFormalReply(
     formalFrozenSuiteSchema,
     await requestJson(
       `/api/web/v1/knowbot-requests/${encodeURIComponent(request)}/formal-test-suites/${encodeURIComponent(reference.suite_id)}/versions/${reference.version}`,
@@ -36,7 +36,7 @@ function checked(
   command: ValidationCommand,
   prior?: FormalExecutionResult,
 ) {
-  const r = parse(formalExecutionResultSchema, value)
+  const r = parseFormalReply(formalExecutionResultSchema, value)
   if (
     r.method_id !== method ||
     r.run_id !== command.run_id ||
