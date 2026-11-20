@@ -110,12 +110,37 @@ it.skipIf(!url).each(['bridge', 'replace'] as const)(
       fireEvent.click(screen.getByRole('button', { name: t.save }))
       await screen.findByText(t.saved)
       view.unmount()
-      open()
+      const reopened = open()
       expect(
         await screen.findByText(
           mode === 'bridge' ? /to ← 前置步骤输出: prepare.receipt/ : /to ← .*: buildSource/,
         ),
       ).toBeInTheDocument()
+      expect(
+        await screen.findByText(t.p1LastAdoption.replace('{base}', '0').replace('{saved}', '1')),
+      ).toBeInTheDocument()
+      if (mode === 'bridge' && !process.env.LUNA_P1_SHARED) {
+        fireEvent.change(await screen.findByLabelText(t.p1Target), { target: { value: 'prepare' } })
+        fireEvent.change(screen.getByLabelText(t.p1Input), { target: { value: 'to' } })
+        const tool = await screen.findByLabelText<HTMLSelectElement>(t.p1Provider)
+        await waitFor(() =>
+          expect([...tool.options].some((o) => o.value.startsWith(leaf))).toBe(true),
+        )
+        fireEvent.change(tool, {
+          target: { value: [...tool.options].find((o) => o.value.startsWith(leaf))!.value },
+        })
+        const preview = await screen.findByRole('button', { name: t.p1Adopt })
+        expect(
+          screen.getByText(t.p1PreviewRevision.replace('{revision}', '1'), { exact: false }),
+        ).toBeInTheDocument()
+        fireEvent.click(preview)
+        fireEvent.click(screen.getByRole('button', { name: t.save }))
+        await screen.findByText(t.saved)
+        reopened.unmount()
+        open()
+        await screen.findByText(t.p1LastAdoption.replace('{base}', '1').replace('{saved}', '2'))
+        expect(await screen.findByText(/to ← 前置步骤输出: prepare_1.receipt/)).toBeInTheDocument()
+      }
     } finally {
       vi.unstubAllGlobals()
     }

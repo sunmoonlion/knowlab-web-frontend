@@ -4,90 +4,39 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { formalDefinitionSchema, type FormalDefinition } from '@/contracts/formal-methods'
-import { combinedRequirements, replaceP1Tool } from '@/lib/knowbots/formal-orchestration'
+import type { FormalDefinition } from '@/contracts/formal-methods'
+import {
+  bindStepInput,
+  prependP1Tool,
+  reachableOutputs,
+  replaceP1Tool,
+} from '@/lib/knowbots/formal-orchestration'
 import { matchingToolOutputs, scanToolOutputs } from '@/lib/knowbots/formal-methods'
 import { AdoptTool, ToolInstallationChoice, useToolVersion } from './tool-version-choice'
 import { same } from '@/lib/knowbots/workdraft'
+import { P1Changes } from './p1-changes'
 import { FormalOrchestrationSummary } from './formal-orchestration-summary'
-
-function prepend(
-  draft: FormalDefinition,
-  input: string,
-  upstream: FormalDefinition,
-  output: string,
-) {
-  const graph = draft.procedure,
-    source = upstream.procedure
-  if (graph.kind !== 'orchestration' || graph.steps.length !== 1 || source.kind !== 'orchestration')
-    return null
-  const target = graph.steps[0],
-    gap = target.inputs[input]?.slot
-  const provider = source.steps[0],
-    provided = provider.outputs[output]
-  if (
-    !provided ||
-    !gap ||
-    !same(provided.schema, gap.schema) ||
-    !same(provided.meaning, gap.meaning) ||
-    (gap.required && !provided.required)
-  )
-    return null
-  const id = target.id === 'prepare' ? 'prepare_1' : 'prepare'
-  const inputs = structuredClone(provider.inputs)
-  const aliases = new Map(
-    Object.entries(target.inputs)
-      .filter(([name, value]) => name !== input && value.binding.source === 'caller')
-      .flatMap(([, value]) =>
-        value.binding.source === 'caller' ? [[value.binding.name, value.slot] as const] : [],
-      ),
-  )
-  for (const entry of Object.values(inputs)) {
-    if (entry.binding.source !== 'caller') return null
-    let key = entry.binding.name,
-      n = 0
-    while (aliases.has(key) && !same(aliases.get(key), entry.slot)) key = 'prepare_input_' + ++n
-    entry.binding.name = key
-    aliases.set(key, entry.slot)
-  }
-  const result = formalDefinitionSchema.safeParse({
-    ...draft,
-    ...combinedRequirements(draft, upstream),
-    procedure: {
-      ...graph,
-      max_steps: Math.max(graph.max_steps, 2),
-      max_expansions: Math.max(graph.max_expansions, 3),
-      steps: [
-        { ...provider, id, inputs },
-        {
-          ...target,
-          depends_on: [id],
-          inputs: {
-            ...target.inputs,
-            [input]: { slot: gap, binding: { source: 'step', step: id, output } },
-          },
-        },
-      ],
-    },
-  })
-  return result.success ? result.data : null
-}
 
 export function P1Predecessor({
   draft,
   requestId,
   methodId,
   csrfToken,
+  revision,
   onAdopt,
 }: {
   draft: FormalDefinition
   requestId: string
   methodId: string
   csrfToken: string
+  revision: number
   onAdopt: (value: FormalDefinition) => void
 }) {
   const t = useTranslations('formalMethod')
   const [input, setInput] = useState('')
+  const [targetId, setTarget] = useState('')
+  const [existing, setExisting] = useState('')
+  const [lookup, setLookup] = useState(false)
   const [shared, setShared] = useState(false)
   const [pages, setPages] = useState<(number | string | null)[]>([0])
   const page = pages[pages.length - 1]
@@ -102,11 +51,40 @@ export function P1Predecessor({
     setAliases({})
   }
   const graph = draft.procedure
-  const step = graph.kind === 'orchestration' && graph.steps.length === 1 ? graph.steps[0] : null
-  const gap = step?.inputs[input]?.slot
-  const exported = graph.kind === 'orchestration' ? graph.exports[delivery] : null
-  const slot = delivery ? exported && step?.outputs[exported.output] : gap
+  const steps = graph.kind === 'orchestration' ? graph.steps : []
+  const eligible = steps.filter(
+    (s) =>
+      s.always_required &&
+      s.candidates.length === 1 &&
+      Object.values(s.inputs).some((i) => i.binding.source === 'caller'),
+  )
+  const step = steps.length === 1 ? eligible[0] : eligible.find((s) => s.id === targetId)
+  const entry = step?.inputs[input]
+  const gap = entry?.binding.source === 'caller' ? entry.slot : undefined
+  const available =
+    graph.kind === 'orchestration' && step && gap ? reachableOutputs(graph, step, gap) : []
+  const edge = available.find((b) => b.step + '.' + b.output === existing)
+  const deliveries: Record<string, string> = Object.create(null)
+  if (graph.kind === 'orchestration' && step) {
+    for (const [name, ref] of Object.entries(graph.exports))
+      if (ref.step === step.id) deliveries[name] = ref.output
+    for (const node of steps)
+      for (const { binding } of Object.values(node.inputs))
+        if (
+          binding.source === 'step' &&
+          binding.step === step.id &&
+          !Object.values(deliveries).includes(binding.output)
+        )
+          deliveries['@' + binding.output] = binding.output
+  }
+  const slot =
+    !gap || (available.length && !lookup)
+      ? null
+      : delivery
+        ? step?.outputs[deliveries[delivery]]
+        : gap
   function changeSearch(nextDelivery: string) {
+    setExisting('')
     setScan(null)
     setDelivery(nextDelivery)
     setPages([shared ? null : 0])
@@ -119,7 +97,16 @@ export function P1Predecessor({
     queryFn: () => matchingToolOutputs(requestId, methodId, slot, page, csrfToken),
   })
   const excluded = delivery ? (step?.candidates ?? []) : []
-  const scope = JSON.stringify([requestId, methodId, shared, slot, input, delivery, excluded])
+  const scope = JSON.stringify([
+    requestId,
+    methodId,
+    shared,
+    step?.id,
+    slot,
+    input,
+    delivery,
+    excluded,
+  ])
   const active = automatic && scan?.scope === scope ? scan : null
   const search = useQuery({
     queryKey: ['p1-author-scan', active?.id],
@@ -158,14 +145,27 @@ export function P1Predecessor({
   )
   const nextPage = matches.data?.next
   const stalled = nextPage != null && pages.includes(nextPage)
-  if (!step || !Object.keys(step.inputs).length) return null
+  if (!eligible.length) return null
   const replacement =
-    selected && proposed && delivery
-      ? replaceP1Tool(draft, input, delivery, proposed, selected.output, aliases)
+    step && selected && proposed && delivery
+      ? replaceP1Tool(draft, input, delivery, proposed, selected.output, aliases, step.id)
       : null
   const bridge =
-    !delivery && selected && proposed ? prepend(draft, input, proposed, selected.output) : null
-  const preview = replacement && 'plan' in replacement ? replacement.plan : bridge
+    !delivery && step && selected && proposed
+      ? prependP1Tool(draft, step.id, input, proposed, selected.output)
+      : null
+  const reuse =
+    edge && step && graph.kind === 'orchestration'
+      ? { ...draft, procedure: bindStepInput(graph, step.id, input, edge) }
+      : null
+  const preview = reuse ?? (replacement && 'plan' in replacement ? replacement.plan : bridge)
+  const finish = () => {
+    if (!preview) return
+    onAdopt(preview)
+    setInput('')
+    setLookup(false)
+    changeSearch('')
+  }
   return (
     <fieldset className="space-y-2 rounded border p-3">
       <legend>{t('p1Find')}</legend>
@@ -209,29 +209,77 @@ export function P1Predecessor({
           <option value="shared">{t('sharedTools')}</option>
         </select>
       </label>
-      <label>
-        {t('p1Input')}{' '}
-        <select
-          value={gap ? input : ''}
-          onChange={(e) => {
-            setInput(e.target.value)
-            changeSearch('')
-          }}
-        >
-          <option value="">{t('chooseInput')}</option>
-          {Object.keys(step.inputs).map((n) => (
-            <option key={n}>{n}</option>
-          ))}
-        </select>
-      </label>
-      {gap && graph.kind === 'orchestration' && (automatic || delivery || matches.isSuccess) && (
+      {steps.length > 1 && (
+        <label>
+          {t('p1Target')}{' '}
+          <select
+            value={step?.id ?? ''}
+            onChange={(e) => {
+              setTarget(e.target.value)
+              setInput('')
+              setLookup(false)
+              changeSearch('')
+            }}
+          >
+            <option value="">{t('p1ChooseTarget')}</option>
+            {eligible.map((s) => (
+              <option key={s.id}>{s.id}</option>
+            ))}
+          </select>
+        </label>
+      )}
+      {step && (
+        <label>
+          {t('p1Input')}{' '}
+          <select
+            value={gap ? input : ''}
+            onChange={(e) => {
+              setLookup(false)
+              setInput(e.target.value)
+              changeSearch('')
+            }}
+          >
+            <option value="">{t('chooseInput')}</option>
+            {Object.keys(step.inputs)
+              .filter((n) => step.inputs[n].binding.source === 'caller')
+              .map((n) => (
+                <option key={n}>{n}</option>
+              ))}
+          </select>
+        </label>
+      )}
+      {!!available.length && !lookup && (
+        <>
+          <label>
+            {t('p1Available')}{' '}
+            <select value={edge ? existing : ''} onChange={(e) => setExisting(e.target.value)}>
+              <option value="">{t('chooseBinding')}</option>
+              {available.map((b) => (
+                <option key={b.step + '.' + b.output}>{b.step + '.' + b.output}</option>
+              ))}
+            </select>
+          </label>
+          <Button
+            type="button"
+            onClick={() => {
+              setExisting('')
+              setLookup(true)
+            }}
+          >
+            {t('p1LookupInstead')}
+          </Button>
+        </>
+      )}
+      {slot && graph.kind === 'orchestration' && (automatic || delivery || matches.isSuccess) && (
         <label>
           {t('p1SearchBy')}{' '}
           <select value={delivery} onChange={(event) => changeSearch(event.target.value)}>
             <option value="">{t('p1BridgeMode')}</option>
-            {Object.keys(graph.exports).map((name) => (
+            {Object.keys(deliveries).map((name) => (
               <option key={name} value={name}>
-                {t('p1ReplaceMode', { slot: name })}
+                {t('p1ReplaceMode', {
+                  slot: name.startsWith('@') ? step?.id + '.' + deliveries[name] : name,
+                })}
               </option>
             ))}
           </select>
@@ -364,11 +412,18 @@ export function P1Predecessor({
           (selected && proposed && !preview && !replacement)) && (
           <p role="alert">{t('versionUnavailable')}</p>
         )}
-      {preview && selected && (
+      {preview && step && (
         <>
           <p>
-            {selected.title} · {selected.reference.digest} · {selected.output} →{' '}
-            {delivery || step.id + '.' + input}
+            {t('p1PreviewRevision', { revision })} ·{' '}
+            {reuse && edge
+              ? edge.step + '.' + edge.output
+              : selected?.title +
+                ' · ' +
+                selected?.reference.digest +
+                ' · ' +
+                selected?.output}{' '}
+            → {delivery || step.id + '.' + input}
           </p>
           {delivery && proposed && (
             <>
@@ -396,6 +451,7 @@ export function P1Predecessor({
               {draft.how_to_validate.map((rule) => rule.check).join(' · ')}
             </p>
           )}
+          <P1Changes before={draft} after={preview} />
           <FormalOrchestrationSummary definition={preview} />
           <details>
             <summary>{t('permissions')}</summary>
@@ -423,12 +479,8 @@ export function P1Predecessor({
             disabled={
               matches.isFetching || matches.isError || binding.isPending || version.isFetching
             }
-            label={t(delivery ? 'p1AdoptReplacement' : 'p1Adopt')}
-            onAdopt={() => {
-              onAdopt(preview)
-              setInput('')
-              changeSearch('')
-            }}
+            label={t(reuse ? 'adoptBinding' : delivery ? 'p1AdoptReplacement' : 'p1Adopt')}
+            onAdopt={finish}
             onUnavailable={() => {
               void version.refetch()
               if (automatic) setScan(null)

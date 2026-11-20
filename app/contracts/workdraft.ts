@@ -237,6 +237,15 @@ export const workdraftSchema = z.object({
   title: z.string(),
   revision: z.number().int().min(0),
   body: bodySchema,
+  p1_adoption: z
+    .object({
+      base_revision: z.number().int().nonnegative(),
+      saved_revision: z.number().int().positive(),
+      record_id: z.uuid(),
+      digest: z.string().regex(/^[a-f0-9]{64}$/),
+      previous_record: z.string().nullable(),
+    })
+    .optional(),
   runtime_gaps: z
     .array(
       z.object({

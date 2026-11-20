@@ -1087,3 +1087,86 @@ it('stops automatic lookup at the author limit and stops paging after cancellati
   expect(actions).toHaveLength(3)
   expect(current.body.formal_method).toEqual(authored)
 })
+
+it('offers an existing transitive output before searching and preserves other dependencies', async () => {
+  const authored = orchestrationDraft(draft)
+  const graph = authored.definition.procedure
+  if (graph.kind !== 'orchestration') throw Error('expected graph')
+  const [first, second] = graph.steps
+  const target = structuredClone(second)
+  target.id = 'last'
+  target.depends_on = ['second']
+  target.inputs.message.binding = { source: 'caller', name: 'missing' }
+  const sibling = { ...first, id: 'independent' }
+  graph.steps = [target, second, sibling, first]
+  current = { ...initial, body: { ...initial.body, formal_method: authored } }
+  show()
+  fireEvent.change(await screen.findByLabelText(labels.p1Target), { target: { value: 'last' } })
+  fireEvent.change(screen.getByLabelText(labels.p1Input), { target: { value: 'message' } })
+  const reachable = screen.getByLabelText<HTMLSelectElement>(labels.p1Available)
+  expect([...reachable.options].map((o) => o.value).sort()).toEqual([
+    '',
+    'first.summary',
+    'second.summary',
+  ])
+  fireEvent.change(reachable, { target: { value: 'first.summary' } })
+  fireEvent.click(
+    within(screen.getByRole('group', { name: labels.p1Find })).getByRole('button', {
+      name: labels.adoptBinding,
+    }),
+  )
+  fireEvent.click(screen.getByRole('button', { name: labels.save }))
+  await screen.findByText(labels.saved)
+  expect(
+    fetcher.mock.calls.some(
+      ([url]) => url.endsWith('/matching-outputs') || url.endsWith('/scan-outputs'),
+    ),
+  ).toBe(false)
+  const saved = current.body.formal_method?.definition.procedure
+  if (saved?.kind !== 'orchestration') throw Error('expected saved graph')
+  expect(saved.steps).toEqual([
+    {
+      ...target,
+      depends_on: ['second', 'first'],
+      inputs: {
+        message: {
+          ...target.inputs.message,
+          binding: { source: 'step', step: 'first', output: 'summary' },
+        },
+      },
+    },
+    second,
+    sibling,
+    first,
+  ])
+})
+
+it('replaces an internal producer while preserving the fixed input, downstream consumers and exports', () => {
+  const plan = orchestrationDraft(draft).definition
+  const graph = plan.procedure
+  if (graph.kind !== 'orchestration') throw Error('expected graph')
+  const [first, second] = graph.steps
+  const candidate = structuredClone(plan)
+  if (candidate.procedure.kind !== 'orchestration') throw Error('expected candidate')
+  const next = candidate.procedure.steps[0]
+  next.candidates[0].method_id = RUN
+  next.outputs = { newPort: next.outputs.summary }
+  delete next.inputs.message
+  candidate.procedure.steps = [next]
+  const result = replaceP1Tool(plan, 'message', '@summary', candidate, 'newPort', {}, first.id)
+  if (!('plan' in result) || result.plan.procedure.kind !== 'orchestration')
+    throw Error('expected replacement')
+  const resultGraph = result.plan.procedure
+  expect(resultGraph.steps[0].inputs.fixed).toEqual(first.inputs.fixed)
+  expect(resultGraph.steps[1]).toEqual({
+    ...second,
+    inputs: {
+      message: {
+        ...second.inputs.message,
+        binding: { source: 'step', step: first.id, output: 'newPort' },
+      },
+    },
+  })
+  expect(resultGraph.exports).toEqual(graph.exports)
+  expect(graph.steps[1].inputs.message.binding).toMatchObject({ output: 'summary' })
+})

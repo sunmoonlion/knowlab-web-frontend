@@ -97,6 +97,7 @@ function FormalForm({
   const t = useTranslations('formalMethod')
   const client = useQueryClient()
   const [document, setDocument] = useState(initial)
+  const [reviewedPlan, setReviewedPlan] = useState<FormalDefinition | null>(null)
   const [definition, setDefinition] = useState<FormalDefinition | null>(
     initial.body.formal_method?.definition ?? null,
   )
@@ -142,7 +143,8 @@ function FormalForm({
   const draft = definition ? { definition, source, allowed_callers: callers } : null
   const [collaboration, setCollaboration] = useState(initial.body.collaboration ?? null)
   const reviewChanged = !same(collaboration, document.body.collaboration ?? null)
-  const dirty = reviewChanged || !same(draft, document.body.formal_method ?? null)
+  const methodChanged = !same(draft, document.body.formal_method ?? null)
+  const dirty = reviewChanged || methodChanged
   const adoption = { mutationKey: ['adopt-tool', initial.request_id] }
   const adopting = useIsMutating(adoption) > 0
   const ready =
@@ -223,10 +225,9 @@ function FormalForm({
         initial.request_id,
         {
           revision: document.revision,
+          ...(methodChanged && definition === reviewedPlan ? { adopt_p1: true } : {}),
           cells: [
-            ...(!same(draft, document.body.formal_method ?? null)
-              ? [{ path: 'formal_method', value: draft }]
-              : []),
+            ...(methodChanged ? [{ path: 'formal_method', value: draft }] : []),
             ...(reviewChanged ? [{ path: 'collaboration', value: collaboration }] : []),
           ],
         },
@@ -236,6 +237,7 @@ function FormalForm({
       if (!same(saved.body.collaboration ?? null, collaboration))
         throw new Error('saved_collaboration_mismatch')
       setDocument(saved)
+      setReviewedPlan(null)
       setValidation(null)
       setRun(null)
       setFrozen(null)
@@ -299,6 +301,14 @@ function FormalForm({
         {t('backToName')}
       </Link>
       <p className="text-sm">{t('draftNotice')}</p>
+      {document.p1_adoption && (
+        <p className="text-sm">
+          {t('p1LastAdoption', {
+            base: document.p1_adoption.base_revision,
+            saved: document.p1_adoption.saved_revision,
+          })}
+        </p>
+      )}
       <fieldset
         disabled={working || executionActive || adopting}
         className="space-y-2 rounded border p-4 text-sm"
@@ -572,7 +582,11 @@ function FormalForm({
                   methodId={methodId}
                   requestId={initial.request_id}
                   csrfToken={csrfToken}
-                  onAdopt={editDefinition}
+                  revision={document.revision}
+                  onAdopt={(next) => {
+                    setReviewedPlan(next)
+                    editDefinition(next)
+                  }}
                 />
                 <ExpertInputBinding
                   graph={definition.procedure}

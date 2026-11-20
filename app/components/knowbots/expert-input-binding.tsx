@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { formalCallerBindingSchema, type FormalDefinition } from '@/contracts/formal-methods'
+import { bindStepInput, reachableOutputs } from '@/lib/knowbots/formal-orchestration'
 import { same } from '@/lib/knowbots/workdraft'
 
 type Graph = Extract<FormalDefinition['procedure'], { kind: 'orchestration' }>
@@ -52,14 +53,7 @@ export function ExpertInputBinding({
           graph={graph}
           step={item.step}
           name={item.name}
-          onAdopt={(binding) => {
-            const step = item.step
-            const inputs = { ...step.inputs, [item.name]: { ...step.inputs[item.name], binding } }
-            onChange({
-              ...graph,
-              steps: graph.steps.map((s) => (s.id === step.id ? { ...s, inputs } : s)),
-            })
-          }}
+          onAdopt={(binding) => onChange(bindStepInput(graph, item.step.id, item.name, binding))}
         />
       )}
     </fieldset>
@@ -87,18 +81,10 @@ function BindingChoice({
         : '',
   )
   const [alias, setAlias] = useState(binding.source === 'caller' ? binding.name : name)
-  const outputs = graph.steps
-    .filter((s) => step.depends_on.includes(s.id))
-    .flatMap((s) =>
-      Object.entries(s.outputs)
-        .filter(
-          ([, out]) =>
-            same(slot.schema, out.schema) &&
-            same(slot.meaning, out.meaning) &&
-            (!slot.required || (s.always_required && out.required)),
-        )
-        .map(([output]) => ({ key: s.id + '.' + output, step: s.id, output })),
-    )
+  const outputs = reachableOutputs(graph, step, slot).map((binding) => ({
+    ...binding,
+    key: binding.step + '.' + binding.output,
+  }))
   const output = outputs.find((o) => o.key === choice)
   const aliasConflict = graph.steps.some((s) =>
     Object.entries(s.inputs).some(

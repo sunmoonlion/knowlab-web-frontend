@@ -173,6 +173,118 @@ function satisfies(provided: Slot, required: Slot) {
   )
 }
 
+// Only ancestors already ordered before the target can supply an existing artifact.
+export function reachableOutputs(graph: Graph, step: Graph['steps'][number], slot: Slot) {
+  const nodes = new Map(graph.steps.map((node) => [node.id, node]))
+  const ancestors = new Set<string>()
+  const pending = [...step.depends_on]
+  while (pending.length) {
+    const id = pending.pop()!
+    if (id === step.id || ancestors.has(id)) continue
+    ancestors.add(id)
+    pending.push(...(nodes.get(id)?.depends_on ?? []))
+  }
+  return graph.steps
+    .filter((s) => ancestors.has(s.id))
+    .flatMap((s) =>
+      Object.entries(s.outputs)
+        .filter(([, out]) => satisfies(out, slot) && (!slot.required || s.always_required))
+        .map(([output]) => ({ source: 'step' as const, step: s.id, output })),
+    )
+}
+
+export function bindStepInput(
+  graph: Graph,
+  target: string,
+  input: string,
+  binding: Graph['steps'][number]['inputs'][string]['binding'],
+): Graph {
+  return {
+    ...graph,
+    steps: graph.steps.map((step) =>
+      step.id === target
+        ? {
+            ...step,
+            depends_on:
+              binding.source === 'step'
+                ? [...new Set([...step.depends_on, binding.step])]
+                : step.depends_on,
+            inputs: { ...step.inputs, [input]: { ...step.inputs[input], binding } },
+          }
+        : step,
+    ),
+  }
+}
+
+export function prependP1Tool(
+  draft: FormalDefinition,
+  targetId: string,
+  input: string,
+  upstream: FormalDefinition,
+  output: string,
+) {
+  const graph = draft.procedure,
+    source = upstream.procedure
+  if (
+    graph.kind !== 'orchestration' ||
+    source.kind !== 'orchestration' ||
+    source.steps.length !== 1
+  )
+    return null
+  const target = graph.steps.find((s) => s.id === targetId)
+  const entry = target?.inputs[input],
+    provider = source.steps[0],
+    provided = provider.outputs[output]
+  if (
+    !target?.always_required ||
+    target.candidates.length !== 1 ||
+    entry?.binding.source !== 'caller' ||
+    !provided ||
+    !satisfies(provided, entry.slot)
+  )
+    return null
+  const ids = new Set(graph.steps.map((s) => s.id))
+  let id = 'prepare'
+  for (let n = 1; ids.has(id); n++) id = 'prepare_' + n
+  const aliases = new Map<string, Slot>()
+  for (const step of graph.steps)
+    for (const [name, original] of Object.entries(step.inputs)) {
+      if ((step.id !== targetId || name !== input) && original.binding.source === 'caller')
+        aliases.set(original.binding.name, original.slot)
+    }
+  const inputs = structuredClone(provider.inputs)
+  const deps = new Set<string>()
+  for (const value of Object.values(inputs)) {
+    if (value.binding.source !== 'caller') return null
+    const available = reachableOutputs(graph, target, value.slot)
+    if (available.length === 1) {
+      value.binding = available[0]
+      deps.add(available[0].step)
+      continue
+    }
+    let key = value.binding.name
+    for (let n = 1; aliases.has(key) && !same(aliases.get(key), value.slot); n++)
+      key = 'prepare_input_' + n
+    value.binding.name = key
+    aliases.set(key, value.slot)
+  }
+  const updated = bindStepInput(graph, targetId, input, { source: 'step', step: id, output })
+  const steps = updated.steps.flatMap((s) =>
+    s.id === targetId ? [{ ...provider, id, inputs, depends_on: [...deps] }, s] : [s],
+  )
+  const result = formalDefinitionSchema.safeParse({
+    ...draft,
+    ...combinedRequirements(draft, upstream),
+    procedure: {
+      ...updated,
+      steps,
+      max_steps: Math.max(graph.max_steps, steps.length),
+      max_expansions: Math.max(graph.max_expansions, steps.length + 1),
+    },
+  })
+  return result.success ? result.data : null
+}
+
 // A replacement keeps the expert's public exports, promises, checks and bounds.
 // Only bindings backed by the author's remaining inputs can satisfy the new leaf.
 export function replaceP1Tool(
@@ -182,25 +294,25 @@ export function replaceP1Tool(
   candidate: FormalDefinition,
   output: string,
   aliases: Record<string, string> = {},
+  targetId?: string,
 ):
   | { plan: FormalDefinition }
   | { issue: 'p1NeedsCaller'; slot: string }
   | { issue: 'p1OutputGap' | 'p1BindingGap' | 'p1SameTool' | 'versionUnavailable'; slot: string } {
   const graph = draft.procedure,
     other = candidate.procedure
-  if (
-    graph.kind !== 'orchestration' ||
-    other.kind !== 'orchestration' ||
-    graph.steps.length !== 1 ||
-    other.steps.length !== 1
-  )
+  if (graph.kind !== 'orchestration' || other.kind !== 'orchestration' || other.steps.length !== 1)
     return { issue: 'versionUnavailable', slot: '' }
-  const original = graph.steps[0],
+  const original = targetId ? graph.steps.find((s) => s.id === targetId) : graph.steps[0],
     replacement = other.steps[0],
-    anchor = graph.exports[delivery]
+    anchor = delivery.startsWith('@')
+      ? { step: targetId, output: delivery.slice(1) }
+      : graph.exports[delivery]
   if (
-    !original.inputs[gap] ||
+    !original?.always_required ||
+    original.inputs[gap]?.binding.source !== 'caller' ||
     !anchor ||
+    anchor.step !== original.id ||
     original.candidates.length !== 1 ||
     replacement.candidates.length !== 1
   )
@@ -209,23 +321,27 @@ export function replaceP1Tool(
     return { issue: 'p1SameTool', slot: '' }
   const exports = { ...graph.exports }
   const outputs: typeof original.outputs = {}
-  const mapped = new Map<string, string>()
-  for (const [name, ref] of Object.entries(graph.exports)) {
-    const port = ref.output === anchor.output ? output : ref.output
-    const before = original.outputs[ref.output],
-      after = Object.hasOwn(replacement.outputs, port) ? replacement.outputs[port] : undefined
-    if (
-      ref.step !== original.id ||
-      !before ||
-      !after ||
-      !satisfies(after, before) ||
-      (mapped.has(port) && mapped.get(port) !== ref.output)
-    )
-      return { issue: 'p1OutputGap', slot: name }
-    mapped.set(port, ref.output)
+  const used = new Set<string>([anchor.output])
+  for (const ref of Object.values(exports)) if (ref.step === original.id) used.add(ref.output)
+  for (const step of graph.steps)
+    for (const { binding } of Object.values(step.inputs))
+      if (binding.source === 'step' && binding.step === original.id) used.add(binding.output)
+  for (const oldPort of used) {
+    const port = oldPort === anchor.output ? output : oldPort
+    const before = original.outputs[oldPort],
+      after = replacement.outputs[port]
+    if (!before || !after || !satisfies(after, before) || Object.hasOwn(outputs, port))
+      return {
+        issue: 'p1OutputGap',
+        slot:
+          Object.keys(exports).find(
+            (name) => exports[name].step === original.id && exports[name].output === oldPort,
+          ) ?? oldPort,
+      }
     outputs[port] = before
-    exports[name] = { ...ref, output: port }
   }
+  for (const [name, ref] of Object.entries(exports))
+    if (ref.step === original.id && ref.output === anchor.output) exports[name] = { ...ref, output }
   const inputs: typeof original.inputs = {}
   const missing = original.inputs[gap].binding
   for (const [name, { slot }] of Object.entries(replacement.inputs)) {
@@ -239,6 +355,11 @@ export function replaceP1Tool(
       inputs[name] = previous
       continue
     }
+    const accessible = reachableOutputs(graph, original, slot)
+    if (accessible.length === 1) {
+      inputs[name] = { slot, binding: accessible[0] }
+      continue
+    }
     if (!slot.required) continue
     const missingSlot = original.inputs[gap].slot
     if (same(slot.meaning, missingSlot.meaning) && same(slot.schema, missingSlot.schema))
@@ -248,7 +369,7 @@ export function replaceP1Tool(
       return { issue: 'p1NeedsCaller', slot: name }
     const alias = binding.data.name
     if (
-      [...Object.values(original.inputs), ...Object.values(inputs)].some(
+      [...graph.steps.flatMap((s) => Object.values(s.inputs)), ...Object.values(inputs)].some(
         (item) =>
           item.binding.source === 'caller' && item.binding.name === alias && !same(item.slot, slot),
       )
@@ -266,7 +387,38 @@ export function replaceP1Tool(
     procedure: {
       ...graph,
       exports,
-      steps: [{ ...original, candidates: replacement.candidates, inputs, outputs }],
+      steps: graph.steps.map((s) => {
+        if (s.id === original.id)
+          return {
+            ...original,
+            candidates: replacement.candidates,
+            inputs,
+            outputs,
+            depends_on: [
+              ...new Set([
+                ...original.depends_on,
+                ...Object.values(inputs).flatMap((i) =>
+                  i.binding.source === 'step' ? [i.binding.step] : [],
+                ),
+              ]),
+            ],
+          }
+        if (anchor.output === output) return s
+        return {
+          ...s,
+          inputs: Object.fromEntries(
+            Object.entries(s.inputs).map(([name, entry]) => {
+              const b = entry.binding
+              return [
+                name,
+                b.source === 'step' && b.step === original.id && b.output === anchor.output
+                  ? { ...entry, binding: { ...b, output } }
+                  : entry,
+              ]
+            }),
+          ),
+        }
+      }),
     },
   })
   return result.success ? { plan: result.data } : { issue: 'versionUnavailable', slot: '' }
