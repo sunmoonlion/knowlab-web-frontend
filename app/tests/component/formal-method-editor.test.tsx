@@ -225,6 +225,30 @@ it('leaves an incomplete validation unfrozen and only sends the saved revision a
   expect(options.headers['X-CSRF-Token']).toBe(CSRF)
 })
 
+it.each(['service_function', 'registered_script'] as const)(
+  'requires trial evidence before freezing %s',
+  async (kind) => {
+    const binding =
+      kind === 'service_function'
+        ? functionSource
+        : {
+            ...functionSource,
+            kind,
+            source: METHOD,
+            entry: 'reconcile.py',
+          }
+    current.body.formal_method = formalDraftSchema.parse({ ...draft, source: binding })
+    const fallback = fetcher.getMockImplementation()!
+    fetcher.mockImplementation((url, options) =>
+      url.includes('/validations') ? respond(passed) : fallback(url, options),
+    )
+    show()
+    fireEvent.click(await screen.findByRole('button', { name: labels.refresh }))
+    await screen.findByText(labels.status.passed)
+    expect(screen.getByRole('button', { name: labels.confirmFreeze })).toBeDisabled()
+  },
+)
+
 it('freezes only after fetching a matching trusted receipt and never posts receipt claims', async () => {
   const fallback = fetcher.getMockImplementation()!
   fetcher.mockImplementation((url, options) =>

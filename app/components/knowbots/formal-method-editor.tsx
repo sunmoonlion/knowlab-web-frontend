@@ -162,6 +162,10 @@ function FormalForm({
   const runtimeGaps = document.runtime_gaps ?? []
   const instruction =
     source?.kind === 'skill_instruction' || source?.kind === 'registered_instruction'
+  const privateTrial =
+    instruction || source?.kind === 'registered_script' || source?.kind === 'service_function'
+  const requiresTrial =
+    privateTrial || Object.keys(definition?.capability_declaration.conditions ?? {}).length > 0
   const validated =
     !adopting &&
     runtimeGaps.length === 0 &&
@@ -173,13 +177,12 @@ function FormalForm({
     receipt.request_id === initial.request_id &&
     receipt.method_id === methodId &&
     receipt.revision === document.revision &&
-    (!(instruction || definition?.capability_declaration.conditions) || !!receipt.execution) &&
+    (!requiresTrial || !!receipt.execution) &&
     receiptCoversCallers(receipt, callers)
   const publicReady =
     definition?.procedure.kind !== 'orchestration' &&
-    !instruction &&
-    source?.kind !== 'registered_script' &&
-    source?.kind !== 'service_function' &&
+    !privateTrial &&
+    !!receipt?.execution &&
     validated &&
     receipt.checks.includes('business') &&
     !receipt.uncovered.length

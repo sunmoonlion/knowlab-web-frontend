@@ -108,7 +108,7 @@ const step = z
     on_failure: z.enum(['pause', 'fail']),
   })
   .strict()
-const collaborationId = z.string().regex(/^[A-Za-z][A-Za-z0-9_-]{0,47}$/)
+const collaborationId = z.string().regex(/^[A-Za-z][A-Za-z0-9_-]{0,63}$/)
 export const reviewComparisonSchema = z
   .object({
     assessment_output: name,
