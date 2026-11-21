@@ -95,7 +95,7 @@ export function FormalMethodExecution({
     supportsOrchestrationExecution(draft) ||
     (draft?.definition.procedure.kind === 'direct' &&
       (draft.definition.procedure.implementation.kind === 'mcp' ||
-        (['skill_script', 'registered_script'].includes(
+        (['skill_script', 'registered_script', 'service_function'].includes(
           draft.definition.procedure.implementation.kind,
         ) &&
           draft.allowed_callers.length === 1 &&

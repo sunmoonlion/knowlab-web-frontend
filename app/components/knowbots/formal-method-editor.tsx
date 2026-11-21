@@ -175,6 +175,7 @@ function FormalForm({
     definition?.procedure.kind !== 'orchestration' &&
     !instruction &&
     source?.kind !== 'registered_script' &&
+    source?.kind !== 'service_function' &&
     validated &&
     receipt.checks.includes('business') &&
     !receipt.uncovered.length

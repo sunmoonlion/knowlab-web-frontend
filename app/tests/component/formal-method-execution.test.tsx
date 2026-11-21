@@ -282,7 +282,7 @@ it.each(['skill_instruction', 'registered_instruction'] as const)(
   },
 )
 
-it.each(['skill_script', 'registered_script'] as const)(
+it.each(['skill_script', 'registered_script', 'service_function'] as const)(
   'submits a zero-turn host %s from the author page',
   async (kind) => {
     const script = structuredClone(draft)
