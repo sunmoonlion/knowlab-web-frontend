@@ -248,7 +248,11 @@ function FormalForm({
       setRun(null)
       setFrozen(null)
       setNotice(t('saved'))
-      await client.invalidateQueries({ queryKey: [...KEY, 'workdraft', initial.request_id] })
+      setMethodPage(0)
+      await Promise.all([
+        client.invalidateQueries({ queryKey: [...KEY, 'workdraft', initial.request_id] }),
+        client.invalidateQueries({ queryKey: ['formal-methods', initial.request_id] }),
+      ])
     } catch (exc) {
       setError(problem(exc))
     } finally {
