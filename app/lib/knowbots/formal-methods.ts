@@ -303,3 +303,39 @@ export async function scanToolOutputs(
   }
   throw new KnowbotContractError()
 }
+
+const sampleColumn = z.object({
+  material_id: z.string(),
+  version_no: z.number().int().positive(),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  sheet: z.string().max(255),
+  column: z.string().min(1).max(200),
+})
+export async function checkSampleColumn(
+  requestId: string,
+  pin: z.infer<typeof sampleColumn>,
+  csrfToken: string,
+  signal: AbortSignal,
+) {
+  const result = parseFormalReply(
+    sampleColumn.extend({ status: z.enum(['present', 'missing', 'unknown']) }),
+    await requestJson(
+      `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/workdraft/column-check`,
+      {
+        method: 'POST',
+        csrfToken,
+        body: pin,
+        signal,
+      },
+    ),
+  )
+  if (
+    result.material_id !== pin.material_id ||
+    result.version_no !== pin.version_no ||
+    result.sha256 !== pin.sha256 ||
+    result.sheet !== pin.sheet ||
+    result.column !== pin.column
+  )
+    throw new KnowbotContractError()
+  return result
+}

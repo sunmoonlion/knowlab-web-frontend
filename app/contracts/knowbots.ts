@@ -740,6 +740,10 @@ export const testDataAnsweredSchema = z.object({ status: z.string() }).loose()
 
 // ---------- 知识库栏（SDD 0046 第六节）：knowbase 里我展示给 knowlab 的资料，在 knowbase 管 ----------
 export const materialSchema = z.object({
+  sha256: z
+    .string()
+    .regex(/^[0-9a-f]{64}$/)
+    .nullish(),
   material_id: z.string(),
   name: z.string(),
   mine: z.boolean(),

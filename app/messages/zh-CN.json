@@ -1368,6 +1368,18 @@
     }
   },
   "formalMethod": {
+    "sampleEmpty": "请先在知识库把要核对的样本版本展示给 KnowLab。",
+    "sampleCheck": "核对样本表头",
+    "sampleVersion": "选择已向 KnowLab 展示的样本版本",
+    "sampleSheet": "工作表名（CSV 留空）",
+    "sampleColumn": "要核对的列名",
+    "sampleRead": "只核对这一列",
+    "samplePresent": "已在该版样本的表头找到这一列。",
+    "sampleMissing": "已核对完整表头，该版样本缺少这一列。",
+    "sampleUnknown": "现有表头不足以判断。请核对工作表名或另选已授权的样本。",
+    "sampleError": "无法核对此版本，请检查资料授权并重试。",
+    "sampleBridge": "按缺口补查前置方法",
+    "sampleBack": "返回选法",
     "applicableLines": "适用场景（每行一项）",
     "excludedLines": "排除场景（每行一项）",
     "promiseText": "交付承诺",

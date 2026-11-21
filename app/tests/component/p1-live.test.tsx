@@ -8,13 +8,17 @@ import { renderWith } from './knowbot-fixtures'
 vi.mock('@/i18n/navigation', () => ({ Link: 'a' }))
 
 const url = process.env.LUNA_P1_URL
-it.skipIf(!url).each(['bridge', 'replace'] as const)(
+const modes = ['bridge', 'replace']
+if (process.env.LUNA_P1_SAMPLE) modes.push('internal')
+it.skipIf(!url).each(modes)(
   'adopts, saves and reopens the indexed P1 %s plan',
   async (mode) => {
     const base = new URL(url!)
     if (base.hostname !== '127.0.0.1') throw Error('Expected loopback integration fixture')
     const fetchLocal = globalThis.fetch
+    let searches = 0
     vi.stubGlobal('fetch', async (path: string, init: RequestInit) => {
+      if (/\/(scan|matching)-outputs$/.test(path)) searches++
       const headers = new Headers(init.headers)
       headers.set(
         'Cookie',
@@ -47,20 +51,24 @@ it.skipIf(!url).each(['bridge', 'replace'] as const)(
             requestId={
               (mode === 'bridge'
                 ? process.env.LUNA_P1_REQUEST
-                : process.env.LUNA_P1_RESELECT_REQUEST)!
+                : mode === 'internal'
+                  ? process.env.LUNA_P1_INTERNAL_REQUEST
+                  : process.env.LUNA_P1_RESELECT_REQUEST)!
             }
             csrfToken="csrf-token-with-at-least-thirty-two-characters"
             resume={{
               method:
                 mode === 'bridge'
                   ? process.env.LUNA_P1_METHOD
-                  : process.env.LUNA_P1_RESELECT_METHOD,
+                  : mode === 'internal'
+                    ? process.env.LUNA_P1_INTERNAL_METHOD
+                    : process.env.LUNA_P1_RESELECT_METHOD,
             }}
           />,
         )
       const view = open()
       const choose = await screen.findByLabelText<HTMLSelectElement>(t.registeredTool)
-      const firstTool = mode === 'bridge' ? leaf : process.env.LUNA_P1_STRICT!
+      const firstTool = mode === 'replace' ? process.env.LUNA_P1_STRICT! : leaf
       await waitFor(() =>
         expect([...choose.options].some((o) => o.value.startsWith(firstTool))).toBe(true),
       )
@@ -70,13 +78,57 @@ it.skipIf(!url).each(['bridge', 'replace'] as const)(
       const adopt = screen.getByRole('button', { name: t.useToolAsStep })
       await waitFor(() => expect(adopt).toBeEnabled())
       fireEvent.click(adopt)
+      if (mode === 'internal') {
+        const chooseOutput = async (id: string) => {
+          const picker = await screen.findByLabelText<HTMLSelectElement>(t.p1Provider)
+          const value = () =>
+            [...picker.options].find((option) => option.value.startsWith(id))?.value
+          await waitFor(() => expect(value()).toBeTruthy())
+          fireEvent.change(picker, { target: { value: value() } })
+        }
+        const save = async () => {
+          fireEvent.click(screen.getByRole('button', { name: t.save }))
+          await screen.findByText(t.saved)
+        }
+        fireEvent.change(await screen.findByLabelText(t.p1Input), { target: { value: 'to' } })
+        await chooseOutput(process.env.LUNA_P1_STRICT!)
+        fireEvent.click(await screen.findByRole('button', { name: t.p1Adopt }))
+        await save()
+        view.unmount()
+        const pair = open()
+        fireEvent.click(await screen.findByLabelText(t.p1Automatic))
+        fireEvent.change(screen.getByLabelText(t.p1Target), { target: { value: 'prepare' } })
+        fireEvent.change(screen.getByLabelText(t.p1Input), { target: { value: 'to' } })
+        fireEvent.click(screen.getByRole('button', { name: t.p1Scan }))
+        await screen.findByText(t.p1ScanStatus.no_progress, { exact: false })
+        fireEvent.change(screen.getByLabelText(t.p1SearchBy), { target: { value: '@receipt' } })
+        fireEvent.click(screen.getByRole('button', { name: t.p1Scan }))
+        await chooseOutput(leaf)
+        const section = within(screen.getByRole('group', { name: t.p1Find }))
+        fireEvent.change(await section.findByRole('textbox'), { target: { value: 'buildSource' } })
+        fireEvent.click(await section.findByRole('button', { name: t.p1AdoptReplacement }))
+        await save()
+        pair.unmount()
+        open()
+        await screen.findByText(t.p1LastAdoption.replace('{base}', '1').replace('{saved}', '2'))
+        expect(await screen.findByText(/to ← 前置步骤输出: prepare.receipt/)).toBeVisible()
+        return
+      }
       const automatic = !!process.env.LUNA_P1_SHARED || mode === 'replace'
       if (automatic) fireEvent.click(await screen.findByLabelText(t.p1Automatic))
       fireEvent.change(await screen.findByLabelText(t.p1Input), { target: { value: 'to' } })
       if (mode === 'replace') {
+        if (process.env.LUNA_P1_SAMPLE)
+          fireEvent.change(screen.getByLabelText(t.p1PageBudget), { target: { value: '1' } })
         fireEvent.click(screen.getByRole('button', { name: t.p1Scan }))
         await screen.findByText(t.p1ScanStatus.no_progress, { exact: false })
         fireEvent.change(screen.getByLabelText(t.p1SearchBy), { target: { value: 'receipt' } })
+      }
+      if (mode === 'replace' && process.env.LUNA_P1_SAMPLE) {
+        fireEvent.click(screen.getByRole('button', { name: t.p1Scan }))
+        await screen.findByText(t.p1ScanStatus.budget, { exact: false })
+        expect(screen.queryByRole('button', { name: t.p1AdoptReplacement })).toBeNull()
+        fireEvent.change(screen.getByLabelText(t.p1PageBudget), { target: { value: '6' } })
       }
       if (process.env.LUNA_P1_SHARED) {
         const section = within(screen.getByRole('group', { name: t.p1Find }))
@@ -120,8 +172,35 @@ it.skipIf(!url).each(['bridge', 'replace'] as const)(
         await screen.findByText(t.p1LastAdoption.replace('{base}', '0').replace('{saved}', '1')),
       ).toBeInTheDocument()
       if (mode === 'bridge' && !process.env.LUNA_P1_SHARED) {
+        const prior = searches
+        if (process.env.LUNA_P1_SAMPLE)
+          fireEvent.click(screen.getByRole('button', { name: t.sampleCheck }))
         fireEvent.change(await screen.findByLabelText(t.p1Target), { target: { value: 'prepare' } })
         fireEvent.change(screen.getByLabelText(t.p1Input), { target: { value: 'to' } })
+        if (process.env.LUNA_P1_SAMPLE) {
+          const version = await screen.findByRole<HTMLOptionElement>('option', {
+            name: 'builds.csv · v1',
+          })
+          fireEvent.change(screen.getByLabelText(t.sampleVersion), {
+            target: { value: version.value },
+          })
+          const check = async (name: string, status: string) => {
+            fireEvent.change(screen.getByLabelText(t.sampleColumn), { target: { value: name } })
+            fireEvent.click(screen.getByRole('button', { name: t.sampleRead }))
+            await screen.findByText(status, { exact: false })
+          }
+          fireEvent.change(screen.getByLabelText(t.sampleSheet), {
+            target: { value: 'not-a-sheet' },
+          })
+          await check('release', t.sampleUnknown)
+          expect(screen.queryByRole('button', { name: t.sampleBridge })).toBeNull()
+          fireEvent.change(screen.getByLabelText(t.sampleSheet), { target: { value: '' } })
+          await check('release', t.samplePresent)
+          await check('revision', t.sampleMissing)
+          expect(searches).toBe(prior)
+          fireEvent.click(screen.getByRole('button', { name: t.sampleBridge }))
+          fireEvent.click(screen.getByRole('button', { name: t.p1Scan }))
+        }
         const tool = await screen.findByLabelText<HTMLSelectElement>(t.p1Provider)
         await waitFor(() =>
           expect([...tool.options].some((o) => o.value.startsWith(leaf))).toBe(true),

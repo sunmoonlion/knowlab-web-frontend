@@ -14,6 +14,7 @@ import {
 import { matchingToolOutputs, scanToolOutputs } from '@/lib/knowbots/formal-methods'
 import { AdoptTool, ToolInstallationChoice, useToolVersion } from './tool-version-choice'
 import { same } from '@/lib/knowbots/workdraft'
+import { SampleColumnCheck } from './sample-column-check'
 import { P1Changes } from './p1-changes'
 import { FormalOrchestrationSummary } from './formal-orchestration-summary'
 
@@ -37,6 +38,7 @@ export function P1Predecessor({
   const [targetId, setTarget] = useState('')
   const [existing, setExisting] = useState('')
   const [lookup, setLookup] = useState(false)
+  const [probe, setProbe] = useState(false)
   const [shared, setShared] = useState(false)
   const [pages, setPages] = useState<(number | string | null)[]>([0])
   const page = pages[pages.length - 1]
@@ -78,7 +80,7 @@ export function P1Predecessor({
           deliveries['@' + binding.output] = binding.output
   }
   const slot =
-    !gap || (available.length && !lookup)
+    !gap || probe || (available.length && !lookup)
       ? null
       : delivery
         ? step?.outputs[deliveries[delivery]]
@@ -248,7 +250,32 @@ export function P1Predecessor({
           </select>
         </label>
       )}
-      {!!available.length && !lookup && (
+      {probe && gap && step ? (
+        <SampleColumnCheck
+          key={JSON.stringify([requestId, methodId, revision, step.id, input])}
+          requestId={requestId}
+          csrfToken={csrfToken}
+          onClose={() => setProbe(false)}
+          onMissing={() => {
+            setAutomatic(true)
+            setLookup(false)
+            changeSearch('')
+            setProbe(false)
+          }}
+        />
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            changeSearch('')
+            setProbe(!probe)
+          }}
+        >
+          {t(probe ? 'sampleBack' : 'sampleCheck')}
+        </Button>
+      )}
+      {!!available.length && !lookup && !probe && (
         <>
           <label>
             {t('p1Available')}{' '}

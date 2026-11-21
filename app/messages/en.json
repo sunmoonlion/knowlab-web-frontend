@@ -1368,6 +1368,18 @@
     }
   },
   "formalMethod": {
+    "sampleEmpty": "Share a versioned sample with KnowLab from your knowledge library to check its header.",
+    "sampleCheck": "Check a sample header",
+    "sampleVersion": "Sample version shared with KnowLab",
+    "sampleSheet": "Worksheet name (leave empty for CSV)",
+    "sampleColumn": "Column name to check",
+    "sampleRead": "Check this column only",
+    "samplePresent": "This version contains the column.",
+    "sampleMissing": "The complete header of this version does not contain the column.",
+    "sampleUnknown": "The available header is inconclusive. Check the worksheet name or choose another authorized sample.",
+    "sampleError": "This version could not be checked. Verify access and retry.",
+    "sampleBridge": "Search for a method to supply the missing input",
+    "sampleBack": "Return to method selection",
     "applicableLines": "Applicable situations (one per line)",
     "excludedLines": "Excluded situations (one per line)",
     "promiseText": "Delivery promise",
