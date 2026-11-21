@@ -31,6 +31,7 @@ export function PlanChanges({
     compare(step.id + '.outputs', original?.outputs, step.outputs)
   }
   compare(t('graphExports'), graph.exports, next.exports)
+  compare(t('p4Title'), graph.object_batch, next.object_batch)
   compare('max_steps', graph.max_steps, next.max_steps)
   compare('max_expansions', graph.max_expansions, next.max_expansions)
   compare(t('permissions'), before.access_requirements, after.access_requirements)

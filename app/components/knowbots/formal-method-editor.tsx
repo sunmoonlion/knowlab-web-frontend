@@ -38,6 +38,7 @@ import { KEY } from './shared'
 import { FormalMethodExecution } from './formal-method-execution'
 import { DeliveryPromises } from './delivery-promises'
 import { ToolSlotEditor } from './tool-slot-editor'
+import { P4Comparison } from './p4-comparison'
 import { P2Join } from './p2-join'
 import { P1Predecessor } from './p1-predecessor'
 import { ReviewRequirements } from './review-requirements'
@@ -585,33 +586,48 @@ function FormalForm({
                     {t(gap.primitive, { step: gap.step })}
                   </p>
                 ))}
-                <P1Predecessor
+                <P4Comparison
                   draft={definition}
-                  methodId={methodId}
                   requestId={initial.request_id}
+                  methodId={methodId}
                   csrfToken={csrfToken}
-                  revision={document.revision}
+                  key={JSON.stringify([document.revision, definition])}
                   onAdopt={(next) => {
                     setReviewedPlan(next)
                     editDefinition(next)
                   }}
                 />
-                <P2Join
-                  key={JSON.stringify([document.revision, methodId, definition])}
-                  draft={definition}
-                  methodId={methodId}
-                  requestId={initial.request_id}
-                  csrfToken={csrfToken}
-                  revision={document.revision}
-                  onAdopt={(next) => {
-                    setReviewedPlan(next)
-                    editDefinition(next)
-                  }}
-                />
-                <ExpertInputBinding
-                  graph={definition.procedure}
-                  onChange={(procedure) => editDefinition({ ...definition, procedure })}
-                />
+                {!definition.procedure.object_batch && (
+                  <>
+                    <P1Predecessor
+                      draft={definition}
+                      methodId={methodId}
+                      requestId={initial.request_id}
+                      csrfToken={csrfToken}
+                      revision={document.revision}
+                      onAdopt={(next) => {
+                        setReviewedPlan(next)
+                        editDefinition(next)
+                      }}
+                    />
+                    <P2Join
+                      key={JSON.stringify([document.revision, methodId, definition])}
+                      draft={definition}
+                      methodId={methodId}
+                      requestId={initial.request_id}
+                      csrfToken={csrfToken}
+                      revision={document.revision}
+                      onAdopt={(next) => {
+                        setReviewedPlan(next)
+                        editDefinition(next)
+                      }}
+                    />
+                    <ExpertInputBinding
+                      graph={definition.procedure}
+                      onChange={(procedure) => editDefinition({ ...definition, procedure })}
+                    />
+                  </>
+                )}
               </>
             )}
             <div className="space-y-2 text-sm">

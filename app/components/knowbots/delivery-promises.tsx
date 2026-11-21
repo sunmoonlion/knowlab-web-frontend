@@ -22,7 +22,9 @@ export function DeliveryPromises({
           ...new Set(
             procedure.steps.flatMap((step) =>
               Object.values(step.inputs).flatMap(({ binding }) =>
-                binding.source === 'caller' ? [binding.name] : [],
+                binding.source === 'caller' || binding.source === 'object_item'
+                  ? [binding.name]
+                  : [],
               ),
             ),
           ),

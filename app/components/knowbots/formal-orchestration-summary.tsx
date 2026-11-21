@@ -33,9 +33,9 @@ export function FormalOrchestrationSummary({ definition }: { definition: FormalD
             {Object.entries(step.inputs).map(([name, { binding }]) => (
               <p key={name} className="break-all">
                 {name} ← {t(`bindingSources.${binding.source}`)}:{' '}
-                {binding.source === 'caller'
+                {binding.source === 'caller' || binding.source === 'object_item'
                   ? binding.name
-                  : binding.source === 'step'
+                  : binding.source === 'step' || binding.source === 'object_rows'
                     ? `${binding.step}.${binding.output}`
                     : binding.source === 'resource'
                       ? `${binding.requirement_id}.${binding.role}`

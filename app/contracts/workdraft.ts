@@ -254,6 +254,7 @@ export const workdraftSchema = z.object({
           'isolation_group',
           'staged_handoff',
           'sealed_findings',
+          'bounded_fanout',
           'isolated_reviewer',
           'different_model_family',
         ]),

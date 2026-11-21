@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import type { FormalDefinition } from '@/contracts/formal-methods'
 import { listFormalMethods, sharedIncubationTools } from '@/lib/knowbots/formal-methods'
@@ -12,8 +12,13 @@ export function ExpertFromTool({
   csrfToken,
   requestId,
   targetMethodId,
+  preview,
   onAdopt,
 }: {
+  preview?: (
+    worker: FormalDefinition,
+    confirm: (definition: FormalDefinition | null) => ReactNode,
+  ) => ReactNode
   csrfToken: string
   requestId: string
   targetMethodId: string
@@ -62,9 +67,34 @@ export function ExpertFromTool({
     }
     setPage(next)
   }
+  const confirm = (definition: FormalDefinition | null) => (
+    <AdoptTool
+      key={JSON.stringify([
+        requestId,
+        digestKey,
+        item?.selected,
+        item?.installations,
+        preview && definition?.procedure,
+      ])}
+      requestId={requestId}
+      item={item}
+      disabled={
+        !definition ||
+        binding.isPending ||
+        directory.isError ||
+        directory.isFetching ||
+        version.isFetching
+      }
+      label={t(preview ? 'p4Apply' : 'useToolAsStep')}
+      onAdopt={() => definition && onAdopt(definition)}
+      onUnavailable={() => {
+        void version.refetch()
+      }}
+    />
+  )
   return (
     <fieldset className="space-y-2 rounded border p-3">
-      <legend>{t('startExpert')}</legend>
+      <legend>{t(preview ? 'p4Worker' : 'startExpert')}</legend>
       <label className="block text-sm">
         {t('toolDirectory')}
         <select
@@ -142,23 +172,7 @@ export function ExpertFromTool({
           <p>{t('reviewToolDraft')}</p>
         </div>
       )}
-      <AdoptTool
-        key={JSON.stringify([requestId, digestKey, item?.selected, item?.installations])}
-        requestId={requestId}
-        item={item}
-        disabled={
-          !proposed ||
-          binding.isPending ||
-          directory.isError ||
-          directory.isFetching ||
-          version.isFetching
-        }
-        label={t('useToolAsStep')}
-        onAdopt={() => proposed && onAdopt(proposed)}
-        onUnavailable={() => {
-          void version.refetch()
-        }}
-      />
+      {preview ? proposed && preview(proposed, confirm) : confirm(proposed ?? null)}
     </fieldset>
   )
 }

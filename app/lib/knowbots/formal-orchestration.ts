@@ -15,6 +15,7 @@ export function supportsOrchestrationExecution(draft: FormalDraft | null): boole
     graph?.kind !== 'orchestration' ||
     draft.allowed_callers.length !== 1 ||
     draft.allowed_callers[0] !== 'host' ||
+    !!graph.object_batch ||
     graph.max_replans !== 0 ||
     graph.max_depth < 2 ||
     graph.steps.length === 0 ||

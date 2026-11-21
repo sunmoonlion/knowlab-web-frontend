@@ -72,6 +72,8 @@ const permission = z
 export const formalCallerBindingSchema = z.object({ source: z.literal('caller'), name }).strict()
 const binding = z.discriminatedUnion('source', [
   formalCallerBindingSchema,
+  z.object({ source: z.literal('object_item'), name }).strict(),
+  z.object({ source: z.literal('object_rows'), step: name, output: name }).strict(),
   z.object({ source: z.literal('step'), step: name, output: name }).strict(),
   z.object({ source: z.literal('literal'), value: z.unknown() }).strict(),
   z.object({ source: z.literal('resource'), requirement_id: name, role: name }).strict(),
@@ -155,6 +157,13 @@ export const formalDefinitionSchema = z
         .object({
           kind: z.literal('orchestration'),
           collaboration: collaborationSchema,
+          object_batch: z
+            .object({
+              max_objects: z.number().int().min(1).max(99),
+              on_missing: z.enum(['stop', 'request_partial']),
+            })
+            .strict()
+            .optional(),
           instructions: text,
           steps: z.array(step).min(1).max(100),
           exports: z.record(
