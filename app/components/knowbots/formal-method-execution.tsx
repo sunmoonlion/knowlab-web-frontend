@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
+import { PartialTrialResult } from './partial-trial-result'
 import { Button } from '@/components/ui/button'
 import {
   formalExecutionSpecSchema,
@@ -539,6 +540,15 @@ export function FormalMethodExecution({
                     {t(`outcomes.${c.outcome}`)} · {t(`callers.${c.caller ?? 'host'}`)}
                   </p>
                   <p>{c.detail}</p>
+                  {c.partial && (
+                    <PartialTrialResult
+                      key={c.partial.scope_digest}
+                      result={result}
+                      trialCase={c}
+                      csrfToken={csrfToken}
+                      onReceived={() => void run.refetch()}
+                    />
+                  )}
                   {c.caller === 'model' ? (
                     c.model_trace ? (
                       <details>

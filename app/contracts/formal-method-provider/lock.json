@@ -6,14 +6,16 @@
     "formal_method_compiler.py": "d81c2c623e70e1b4243dfefbc8411a118d42f38d64cc2faea33f8f6550fb5055",
     "formal_method_plan.py": "ba51aac57b588835d24c1a2a7f2b728121067028902fa216508a9f1e4efbfe46",
     "formal_method_admission.py": "958af627608682b8c0f1292453471d91572c7f59be72a4bd7f46cc1112dd1bec",
-    "formal_method_execution.py": "4e695d490e10da5045087a2e22f45f76c8f86ff14feb68a85f61f1cb830b8351"
+    "formal_method_execution.py": "d507843753a8637fc900a7c8095ebe1b6fce2b530e39262ef7573811347c572d"
   },
   "files_sha256": {
     "draft.schema.json": "59740ad3d37fa794d94be42d45adc170978aeae7b47ce9022b4483f32ab4808b",
     "execution-command.schema.json": "4c28f13efdd10f80bd9ea742fda0d08a10ddd3bca93744afa9255db6e9cd7d61",
     "execution-input.schema.json": "237a9dd684c24670ce195330e58d7ccbb378aac118407671a940e673fe142c58",
     "execution-request.schema.json": "f6167a92b0338094ad7c1d43f694151a8299cf197513d1fed21d21118ec21575",
-    "execution-result.schema.json": "bc84d23c0dae867a19e133958ce4798c53ea7bbff1daf8c9095af0e26635b668",
+    "execution-result.schema.json": "3a438ce916796d1fa165f1538f59ac8850d146c385094dcef5412da50d0ce4f2",
+    "partial-delivery-request.schema.json": "6b2f39e326c5c4952a469f96e580451f1d6b2968a730fed0993f85b4bc5ecd5e",
+    "partial-delivery-result.schema.json": "dcaded516cf76436941d21ccf6793d60826231aa0a833969b6d07d298952c955",
     "registration-request.schema.json": "a96d068605ce84c26adb9b50c1ad3b204b8206dc8d669d1889dcb81fd592b4a1",
     "samples.json": "689479567ade3914f1f7cdd67295acc4c3627a4739784232e7000c3ae4b3a4c9",
     "suite.schema.json": "a44b050d1d0404e92b97db2f805f7fc8d957a369b11e7db69f1940eca21a9f86",

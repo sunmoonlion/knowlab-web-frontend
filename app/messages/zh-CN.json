@@ -1613,6 +1613,21 @@
     }
   },
   "formalExecution": {
+    "branchProgress": "分支试跑结果",
+    "branchMissing": "受影响的承诺「{promise}」缺少输出 {outputs}。",
+    "branchDepends": "依赖步骤 {steps}",
+    "branchReceive": "确认仅接收 {step} 的产物",
+    "branchOpen": "查看已接收的 {step} 产物",
+    "branchReceived": "已接收 {step} 的部分成果，试跑结论保持原判。",
+    "branchUnavailable": "未能取得对应版本的产物，请刷新后重试。",
+    "branchState": {
+      "accepted": "步骤产物已核验",
+      "failed": "执行失败",
+      "cancelled": "已取消",
+      "unknown": "执行结果未知",
+      "not_run": "未执行",
+      "unverified": "产物证据未通过核验"
+    },
     "title": "实际执行验证",
     "hint": "测试输入与预期断言分别保存。断言只在结果返回后核验。试跑使用选定的电脑和预算，需要批准时会在这里等待。MCP 按核准的零增量调用费准入，收费脚本及模型用量分别计费。",
     "unsupported": "可试跑零模型轮次的直接 MCP、宿主调用的隔离脚本、获准的单轮纯指令，以及符合条件的固定流程。",

@@ -1613,6 +1613,21 @@
     }
   },
   "formalExecution": {
+    "branchProgress": "Branch trial results",
+    "branchMissing": "Promise “{promise}” is missing outputs {outputs}.",
+    "branchDepends": "Depends on {steps}",
+    "branchReceive": "Accept only the output of {step}",
+    "branchOpen": "View accepted output of {step}",
+    "branchReceived": "Received the partial output of {step}. The trial verdict still applies.",
+    "branchUnavailable": "Could not retrieve the reviewed output. Refresh and try again.",
+    "branchState": {
+      "accepted": "Verified output",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "unknown": "Outcome unknown",
+      "not_run": "Not run",
+      "unverified": "Evidence unverified"
+    },
     "title": "Execute validation",
     "hint": "Test inputs and expected assertions are saved separately. Assertions are checked after execution. Runs use the selected computer and budget and wait here for approvals. MCP calls require a reviewed zero incremental cost. Metered scripts and model usage are priced separately.",
     "unsupported": "Trials support zero-turn direct MCP methods, host-only isolated scripts, licensed single-turn instructions and eligible fixed host workflows.",

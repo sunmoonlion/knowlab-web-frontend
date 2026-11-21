@@ -750,3 +750,97 @@ it('requires an author-selected case for each conditional delivery and submits i
     },
   })
 })
+
+it('shows the missing promise, and releases only the branch receipt matching the selected scope', async () => {
+  const artifact = {
+    id: CALL,
+    version: 1,
+    digest: 'a'.repeat(64),
+    content_digest: DIGEST,
+    output_names: ['ok'],
+  }
+  const partial = {
+    steps: [
+      { step: 'left', depends_on: [], state: 'accepted', artifact, detail: '' },
+      {
+        step: 'right',
+        depends_on: [],
+        state: 'failed',
+        artifact: null,
+        detail: 'Approval expired',
+      },
+      {
+        step: 'merge',
+        depends_on: ['left', 'right'],
+        state: 'not_run',
+        artifact: null,
+        detail: '',
+      },
+    ],
+    missing_promises: {
+      result: { description: 'Compare both sources', missing_outputs: ['report'] },
+    },
+    scope_digest: DIGEST,
+    received: [] as string[],
+  }
+  const result = {
+    ...pending(),
+    status: 'failed',
+    actions: [],
+    admission: { ...value.admission, status: 'failed' },
+    cases: [
+      {
+        ...value.cases[0],
+        status: 'failed',
+        outcome: 'rejected',
+        detail: 'Trial stopped',
+        partial,
+      },
+    ],
+  }
+  let mismatch = true
+  let received = 0
+  fetcher.mockImplementation(async (url: string, init: RequestInit = {}) => {
+    if (!url.endsWith('/partial-deliveries')) return Response.json(result)
+    received++
+    const body = JSON.parse(String(init.body))
+    expect(body).toEqual({
+      request_id: REQUEST,
+      case_id: 'case_1',
+      repetition: 1,
+      step: 'left',
+      scope_digest: DIGEST,
+    })
+    if (!mismatch) partial.received = ['left']
+    return Response.json({
+      ...body,
+      method_id: METHOD,
+      run_id: RUN,
+      received_at: '2026-11-21T12:00:00Z',
+      artifact: { ...artifact, id: mismatch ? ENV : CALL },
+      outputs: { ok: 'verified-left' },
+    })
+  })
+  page(true, ['host'], orchestrationDraft(draft))
+  expect(await screen.findByText(/Compare both sources/)).toHaveTextContent('report')
+  expect(screen.getByText(/Approval expired/)).toBeVisible()
+  expect(received).toBe(0)
+  expect(
+    screen.queryByRole('button', { name: t.branchReceive.replace('{step}', 'right') }),
+  ).toBeNull()
+  const accept = await screen.findByRole('button', {
+    name: t.branchReceive.replace('{step}', 'left'),
+  })
+  fireEvent.click(accept)
+  await screen.findByText(t.branchUnavailable)
+  expect(screen.queryByText(/verified-left/)).toBeNull()
+  mismatch = false
+  fireEvent.click(accept)
+  expect(await screen.findByText(/verified-left/)).toBeVisible()
+  cleanup()
+  page(true, ['host'], orchestrationDraft(draft))
+  expect(
+    await screen.findByRole('button', { name: t.branchOpen.replace('{step}', 'left') }),
+  ).toBeVisible()
+  expect(received).toBe(2)
+})

@@ -142,6 +142,55 @@ export const formalExecutionActionSchema = z
     subject: z.record(z.string(), z.json()),
   })
   .strict()
+const slotName = z.string().regex(/^[A-Za-z][A-Za-z0-9_-]{0,63}$/)
+const branchArtifact = z
+  .object({
+    id: z.uuid(),
+    version: z.number().int().positive(),
+    digest: z.string().regex(/^[a-f0-9]{64}$/),
+    content_digest: digest,
+    output_names: z.array(slotName).max(100),
+  })
+  .strict()
+const partialReport = z
+  .object({
+    scope_digest: digest,
+    received: z.array(slotName),
+    steps: z
+      .array(
+        z
+          .object({
+            step: slotName,
+            depends_on: z.array(slotName),
+            detail: z.string().max(2000),
+            state: z.enum(['accepted', 'failed', 'cancelled', 'unknown', 'not_run', 'unverified']),
+            artifact: branchArtifact.nullable(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(100),
+    missing_promises: z.record(
+      slotName,
+      z.object({ description: z.string(), missing_outputs: z.array(slotName) }).strict(),
+    ),
+  })
+  .strict()
+export const branchDeliverySchema = z
+  .object({
+    method_id: z.uuid(),
+    request_id: z.uuid(),
+    run_id: z.uuid(),
+    case_id: caseId,
+    repetition: z.number().int().min(1).max(10),
+    step: slotName,
+    scope_digest: digest,
+    received_at: z.iso.datetime({ offset: true }),
+    artifact: branchArtifact,
+    outputs: z.record(slotName, z.json()).refine(boundedExecutionJson),
+  })
+  .strict()
+
 export const formalExecutionResultSchema = z
   .object({
     contract: z.literal('knowlab/formal-method-execution/v1'),
@@ -156,6 +205,7 @@ export const formalExecutionResultSchema = z
       .array(
         z
           .object({
+            partial: partialReport.optional(),
             case_id: caseId,
             caller: z.enum(['host', 'model']).optional(),
             model_trace: z

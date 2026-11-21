@@ -1,5 +1,6 @@
 import {
   formalExecutionResultSchema,
+  branchDeliverySchema,
   formalExecutionCommandSchema,
   formalFrozenSuiteSchema,
   type FormalExecutionSpec,
@@ -150,4 +151,48 @@ export async function decideFormalExecution(
     command,
     prior,
   )
+}
+
+export async function receiveTrialBranch(
+  result: FormalExecutionResult,
+  c: FormalExecutionResult['cases'][number],
+  stepId: string,
+  csrfToken: string,
+) {
+  const report = c.partial
+  const step = report?.steps.find((s) => s.step === stepId)
+  if (!report || step?.state !== 'accepted' || !step.artifact) throw new KnowbotContractError()
+  const body = {
+    request_id: result.request_id,
+    case_id: c.case_id,
+    repetition: c.repetition,
+    step: stepId,
+    scope_digest: report.scope_digest,
+  }
+  const receipt = parseFormalReply(
+    branchDeliverySchema,
+    await requestJson(runPath(result.method_id, result.run_id) + '/partial-deliveries', {
+      method: 'POST',
+      csrfToken,
+      body,
+    }),
+  )
+  if (
+    receipt.method_id !== result.method_id ||
+    receipt.run_id !== result.run_id ||
+    receipt.request_id !== body.request_id ||
+    receipt.case_id !== body.case_id ||
+    receipt.repetition !== body.repetition ||
+    receipt.scope_digest !== body.scope_digest ||
+    receipt.step !== stepId ||
+    receipt.artifact.id !== step.artifact.id ||
+    receipt.artifact.version !== step.artifact.version ||
+    receipt.artifact.digest !== step.artifact.digest ||
+    receipt.artifact.content_digest !== step.artifact.content_digest ||
+    JSON.stringify(receipt.artifact.output_names) !== JSON.stringify(step.artifact.output_names) ||
+    JSON.stringify(Object.keys(receipt.outputs).sort()) !==
+      JSON.stringify(step.artifact.output_names)
+  )
+    throw new KnowbotContractError()
+  return receipt
 }
