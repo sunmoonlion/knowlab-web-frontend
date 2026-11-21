@@ -95,6 +95,12 @@ export function FormalMethodExecution({
     supportsOrchestrationExecution(draft) ||
     (draft?.definition.procedure.kind === 'direct' &&
       (draft.definition.procedure.implementation.kind === 'mcp' ||
+        (draft.definition.procedure.implementation.kind === 'service_function' &&
+          draft.definition.procedure.implementation.source === 'knowbase' &&
+          draft.definition.procedure.implementation.entry === 'read_method_input' &&
+          draft.source?.kind === 'service_function' &&
+          draft.source.source === 'knowbase' &&
+          draft.source.entry === 'read_method_input') ||
         (['skill_script', 'registered_script', 'service_function'].includes(
           draft.definition.procedure.implementation.kind,
         ) &&

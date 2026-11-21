@@ -295,6 +295,19 @@ it.each(['skill_script', 'registered_script', 'service_function'] as const)(
     expect(posts[0].url).toContain('/executions')
   },
 )
+it.each([
+  ['knowbase', 'read_method_input', true],
+  ['knowbase', 'read_input', false],
+  ['other', 'read_method_input', false],
+] as const)('checks the exact registered function before enabling a model trial for %s/%s', (provider, entry, enabled) => {
+  const candidate = structuredClone(draft)
+  if (!candidate.source || candidate.definition.procedure.kind !== 'direct') throw new Error('expected tool')
+  Object.assign(candidate.source, { kind: 'service_function', source: provider, entry, asset_id: null, asset_revision: null })
+  Object.assign(candidate.definition.procedure.implementation, { kind: 'service_function', source: provider, entry })
+  page(false, ['model'], candidate)
+  expect(!!screen.queryByRole('button', { name: t.start })).toBe(enabled)
+})
+
 it('restores with GET only, answers the exact approval and cancels through the run identity', async () => {
   page(true)
   await screen.findByText('Approve fixture check')
