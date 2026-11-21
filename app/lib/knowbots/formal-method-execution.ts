@@ -1,6 +1,8 @@
 import {
   formalExecutionResultSchema,
   branchDeliverySchema,
+  type BranchDelivery,
+  type ReviewCriteria,
   formalExecutionCommandSchema,
   formalFrozenSuiteSchema,
   type FormalExecutionSpec,
@@ -9,6 +11,7 @@ import {
 } from '@/contracts/formal-method-execution'
 import { requestJson } from '@/lib/common/api-client'
 import { KnowbotContractError } from './client'
+import { same } from './workdraft'
 import { parseFormalReply, type ValidationCommand } from './formal-methods'
 
 const path = (method: string) => `/api/web/v1/method-units/${encodeURIComponent(method)}/executions`
@@ -159,7 +162,7 @@ export async function receiveTrialBranch(
   stepId: string,
   csrfToken: string,
 ) {
-  const report = c.partial
+  const report = c.partial ?? c.verified_steps
   const step = report?.steps.find((s) => s.step === stepId)
   if (!report || step?.state !== 'accepted' || !step.artifact) throw new KnowbotContractError()
   const body = {
@@ -171,7 +174,7 @@ export async function receiveTrialBranch(
   }
   const receipt = parseFormalReply(
     branchDeliverySchema,
-    await requestJson(runPath(result.method_id, result.run_id) + '/partial-deliveries', {
+    await requestJson(runPath(result.method_id, result.run_id) + '/step-deliveries', {
       method: 'POST',
       csrfToken,
       body,
@@ -195,4 +198,46 @@ export async function receiveTrialBranch(
   )
     throw new KnowbotContractError()
   return receipt
+}
+
+export async function prepareTrialReview(
+  receipt: BranchDelivery,
+  criteria: ReviewCriteria,
+  csrfToken: string,
+) {
+  const { method_id, run_id, request_id, case_id, repetition, step, scope_digest, artifact } =
+    receipt
+  const result = parseFormalReply(
+    branchDeliverySchema,
+    await requestJson(runPath(method_id, run_id) + '/branch-review', {
+      method: 'POST',
+      csrfToken,
+      body: {
+        request_id,
+        case_id,
+        repetition,
+        step,
+        scope_digest,
+        artifact,
+        criteria,
+        previous: receipt.review?.digest ?? null,
+      },
+    }),
+  )
+  if (
+    result.method_id !== method_id ||
+    result.run_id !== run_id ||
+    result.request_id !== request_id ||
+    result.case_id !== case_id ||
+    result.repetition !== repetition ||
+    result.step !== step ||
+    result.scope_digest !== scope_digest ||
+    result.received_at !== receipt.received_at ||
+    !same(result.artifact, artifact) ||
+    !same(result.outputs, receipt.outputs) ||
+    !result.review ||
+    !same(result.review.criteria, criteria)
+  )
+    throw new KnowbotContractError()
+  return result
 }

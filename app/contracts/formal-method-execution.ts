@@ -176,6 +176,44 @@ const partialReport = z
     ),
   })
   .strict()
+export const reviewCriteriaSchema = z
+  .object({
+    outputs: z.array(slotName).min(1).max(100),
+    assertions: z.array(formalAssertionSchema).min(1).max(64),
+    reviewer: z.enum(['isolated_reviewer', 'different_model_family']),
+  })
+  .strict()
+const branchReviewSchema = z
+  .object({
+    criteria: reviewCriteriaSchema,
+    checks: z
+      .array(
+        z
+          .object({
+            index: z.number().int().nonnegative(),
+            passed: z.boolean(),
+            detail: z.string(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(64),
+    status: z.enum(['v0_failed', 'awaiting_isolation']),
+    handoff: z.record(slotName, digest),
+    digest,
+  })
+  .strict()
+  .refine(
+    (r) =>
+      r.checks.length === r.criteria.assertions.length &&
+      r.checks.every((c, i) => c.index === i) &&
+      (r.status === 'awaiting_isolation'
+        ? r.checks.every((c) => c.passed) &&
+          Object.keys(r.handoff).length === r.criteria.outputs.length &&
+          r.criteria.outputs.every((k) => Object.hasOwn(r.handoff, k))
+        : r.checks.some((c) => !c.passed) && !Object.keys(r.handoff).length),
+  )
+export type ReviewCriteria = z.infer<typeof reviewCriteriaSchema>
 export const branchDeliverySchema = z
   .object({
     method_id: z.uuid(),
@@ -185,6 +223,7 @@ export const branchDeliverySchema = z
     repetition: z.number().int().min(1).max(10),
     step: slotName,
     scope_digest: digest,
+    review: branchReviewSchema.optional(),
     received_at: z.iso.datetime({ offset: true }),
     artifact: branchArtifact,
     outputs: z.record(slotName, z.json()).refine(boundedExecutionJson),
@@ -206,6 +245,7 @@ export const formalExecutionResultSchema = z
         z
           .object({
             partial: partialReport.optional(),
+            verified_steps: partialReport.optional(),
             case_id: caseId,
             caller: z.enum(['host', 'model']).optional(),
             model_trace: z
@@ -320,3 +360,5 @@ export function suiteCoversCallers(
     )
   )
 }
+
+export type BranchDelivery = z.infer<typeof branchDeliverySchema>

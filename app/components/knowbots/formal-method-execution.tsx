@@ -540,9 +540,9 @@ export function FormalMethodExecution({
                     {t(`outcomes.${c.outcome}`)} · {t(`callers.${c.caller ?? 'host'}`)}
                   </p>
                   <p>{c.detail}</p>
-                  {c.partial && (
+                  {(c.partial || c.verified_steps) && (
                     <PartialTrialResult
-                      key={c.partial.scope_digest}
+                      key={(c.partial ?? c.verified_steps)?.scope_digest}
                       result={result}
                       trialCase={c}
                       csrfToken={csrfToken}

@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import type { FormalExecutionResult } from '@/contracts/formal-method-execution'
 import { receiveTrialBranch } from '@/lib/knowbots/formal-method-execution'
 
+import { BranchReviewForm } from './branch-review-form'
+
 export function PartialTrialResult({
   result,
   trialCase,
@@ -22,11 +24,11 @@ export function PartialTrialResult({
     mutationFn: (step: string) => receiveTrialBranch(result, trialCase, step, csrfToken),
     onSuccess: onReceived,
   })
-  const report = trialCase.partial
+  const report = trialCase.partial ?? trialCase.verified_steps
   if (!report) return null
   return (
     <section className="space-y-2">
-      <h4>{t('branchProgress')}</h4>
+      <h4>{t(trialCase.partial ? 'branchProgress' : 'verifiedSteps')}</h4>
       {Object.entries(report.missing_promises).map(([id, p]) => (
         <p key={id}>
           {t('branchMissing', { promise: p.description, outputs: p.missing_outputs.join(', ') })}
@@ -70,10 +72,23 @@ export function PartialTrialResult({
       {receipt.isError && <p role="alert">{t('branchUnavailable')}</p>}
       {receipt.data && (
         <details open>
-          <summary>{t('branchReceived', { step: receipt.data.step })}</summary>
+          <summary>
+            {t(trialCase.partial ? 'branchReceived' : 'stepReceived', { step: receipt.data.step })}
+          </summary>
           <pre className="break-all whitespace-pre-wrap">
             {JSON.stringify(receipt.data.outputs, null, 2)}
           </pre>
+          <BranchReviewForm
+            key={[
+              receipt.data.run_id,
+              receipt.data.case_id,
+              receipt.data.repetition,
+              receipt.data.step,
+              receipt.data.review?.digest,
+            ].join(':')}
+            receipt={receipt.data}
+            csrfToken={csrfToken}
+          />
         </details>
       )}
     </section>
