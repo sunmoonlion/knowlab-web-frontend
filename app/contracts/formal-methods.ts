@@ -344,7 +344,7 @@ export const formalVersionSchema = z.object({
   definition: formalDefinitionSchema,
   provenance: z
     .object({
-      method_kind: z.enum(['tool', 'expert', 'expert_team']),
+      method_kind: z.enum(['tool', 'expert']),
       allowed_callers: formalCallersSchema.optional(),
       validation: formalReceiptSchema.optional(),
       dispatch: z.enum(['direct', 'orchestration']),
@@ -376,7 +376,7 @@ export const formalMethodsSchema = z
           method_id: z.uuid(),
           latest_version: z.number().int().min(1),
           digest,
-          method_kind: z.enum(['tool', 'expert', 'expert_team']),
+          method_kind: z.enum(['tool', 'expert']),
           title: z.string(),
           summary: z.string(),
           created_at: z.string(),

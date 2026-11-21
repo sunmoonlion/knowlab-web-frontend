@@ -1614,8 +1614,7 @@
     },
     "kind": {
       "tool": "工具方法",
-      "expert": "专家方法",
-      "expert_team": "专家团方法"
+      "expert": "专家方法"
     },
     "generatedInterfaces": "冻结的输入与产物视图",
     "generatedHint": "以下视图由已冻结定义生成，不可单独修改。",

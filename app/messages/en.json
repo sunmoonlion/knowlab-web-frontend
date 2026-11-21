@@ -1614,8 +1614,7 @@
     },
     "kind": {
       "tool": "Tool method",
-      "expert": "Expert method",
-      "expert_team": "Expert team method"
+      "expert": "Expert method"
     },
     "generatedInterfaces": "Frozen input and output views",
     "generatedHint": "These views are generated from the frozen definition and cannot be edited independently.",
