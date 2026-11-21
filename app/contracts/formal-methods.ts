@@ -116,6 +116,17 @@ export const formalDefinitionSchema = z
         applies_when: z.array(text).min(1).max(30),
         excludes: z.array(text).max(30),
         promises: z.record(name, text),
+        conditions: z
+          .record(
+            name,
+            z
+              .object({
+                when: text,
+                input_slots: z.array(name).max(100),
+              })
+              .strict(),
+          )
+          .optional(),
       })
       .strict(),
     access_requirements: z.array(permission).max(100),

@@ -32,6 +32,7 @@ type CaseEditor = {
   model_prompt: string
   values: string
   assertions: string
+  covers: string[]
   outcome: 'succeeded' | 'rejected'
   rejection_code: 'authorization_denied' | 'approval_denied' | 'input_invalid'
   repetitions: number
@@ -43,6 +44,7 @@ const blank = (n: number, caller: CaseEditor['caller'] = 'host'): CaseEditor => 
   case_id: `case_${n}`,
   values: '{}',
   assertions: '[]',
+  covers: [],
   outcome: 'succeeded',
   rejection_code: caller === 'model' ? 'approval_denied' : 'authorization_denied',
   repetitions: 1,
@@ -168,6 +170,7 @@ export function FormalMethodExecution({
           ...suite,
           cases: cases.map((c) => ({
             case_id: c.case_id,
+            ...(c.outcome === 'succeeded' && c.covers.length ? { covers_promises: c.covers } : {}),
             ...(c.caller === 'model' ? { caller: 'model' } : {}),
             input: {
               values: JSON.parse(c.values),
@@ -194,6 +197,15 @@ export function FormalMethodExecution({
         setError('caller_coverage')
         return
       }
+      const declaration = draft.definition.capability_declaration
+      const covered = new Set(execution.suite.cases.flatMap((c) => c.covers_promises ?? []))
+      if (
+        declaration.conditions &&
+        Object.keys(declaration.promises).some((id) => !covered.has(id))
+      ) {
+        setError('promise_coverage')
+        return
+      }
       const identity = { request_id: requestId, revision, run_id: crypto.randomUUID() }
       const next = { ...identity, execution }
       setSubmitted(next)
@@ -218,6 +230,7 @@ export function FormalMethodExecution({
           case_id: c.case_id,
           caller: c.caller ?? 'host',
           model_prompt: c.input.model_prompt ?? '',
+          covers: c.covers_promises ?? [],
           values: JSON.stringify(c.input.values, null, 2),
           assertions: JSON.stringify(c.expected.assertions, null, 2),
           outcome: c.expected.outcome,
@@ -308,6 +321,29 @@ export function FormalMethodExecution({
                   {!instruction && <option value="rejected">{t('rejected')}</option>}
                 </select>
               </label>
+              {draft?.definition.capability_declaration.conditions && c.outcome === 'succeeded' && (
+                <fieldset>
+                  <legend>{t('coversPromises')}</legend>
+                  {Object.entries(draft.definition.capability_declaration.promises).map(
+                    ([id, label]) => (
+                      <label key={id} className="block">
+                        <input
+                          type="checkbox"
+                          checked={c.covers.includes(id)}
+                          onChange={(e) =>
+                            update(i, {
+                              covers: e.target.checked
+                                ? [...c.covers, id]
+                                : c.covers.filter((key) => key !== id),
+                            })
+                          }
+                        />{' '}
+                        {label}
+                      </label>
+                    ),
+                  )}
+                </fieldset>
+              )}
               {c.outcome === 'succeeded' ? (
                 <label className="block">
                   {t('assertions')}
@@ -587,9 +623,11 @@ export function FormalMethodExecution({
         <p role="alert">
           {error === 'caller_coverage'
             ? t('callerCoverage')
-            : error === 'suite_invalid'
-              ? t('invalid')
-              : t('failed', { code: error ?? problem(run.error) })}
+            : error === 'promise_coverage'
+              ? t('missingPromiseCase')
+              : error === 'suite_invalid'
+                ? t('invalid')
+                : t('failed', { code: error ?? problem(run.error) })}
         </p>
       ) : null}
     </section>

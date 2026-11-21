@@ -299,14 +299,28 @@ it.each([
   ['knowbase', 'read_method_input', true],
   ['knowbase', 'read_input', false],
   ['other', 'read_method_input', false],
-] as const)('checks the exact registered function before enabling a model trial for %s/%s', (provider, entry, enabled) => {
-  const candidate = structuredClone(draft)
-  if (!candidate.source || candidate.definition.procedure.kind !== 'direct') throw new Error('expected tool')
-  Object.assign(candidate.source, { kind: 'service_function', source: provider, entry, asset_id: null, asset_revision: null })
-  Object.assign(candidate.definition.procedure.implementation, { kind: 'service_function', source: provider, entry })
-  page(false, ['model'], candidate)
-  expect(!!screen.queryByRole('button', { name: t.start })).toBe(enabled)
-})
+] as const)(
+  'checks the exact registered function before enabling a model trial for %s/%s',
+  (provider, entry, enabled) => {
+    const candidate = structuredClone(draft)
+    if (!candidate.source || candidate.definition.procedure.kind !== 'direct')
+      throw new Error('expected tool')
+    Object.assign(candidate.source, {
+      kind: 'service_function',
+      source: provider,
+      entry,
+      asset_id: null,
+      asset_revision: null,
+    })
+    Object.assign(candidate.definition.procedure.implementation, {
+      kind: 'service_function',
+      source: provider,
+      entry,
+    })
+    page(false, ['model'], candidate)
+    expect(!!screen.queryByRole('button', { name: t.start })).toBe(enabled)
+  },
+)
 
 it('restores with GET only, answers the exact approval and cancels through the run identity', async () => {
   page(true)
@@ -713,4 +727,26 @@ it.each<[string, (graph: Graph) => void]>([
   expect(supportsOrchestrationExecution(graph)).toBe(true)
   mutate(graph.definition.procedure as Graph)
   expect(supportsOrchestrationExecution(graph)).toBe(false)
+})
+
+it('requires an author-selected case for each conditional delivery and submits its promise ID', async () => {
+  const conditional = structuredClone(draft)
+  conditional.definition.capability_declaration.conditions = {
+    result: { when: 'A checked value is requested', input_slots: [] },
+  }
+  page(false, ['host'], conditional)
+  await fill()
+  fireEvent.click(screen.getByRole('button', { name: t.start }))
+  expect(await screen.findByText(t.missingPromiseCase)).toBeVisible()
+  expect(posts).toHaveLength(0)
+  fireEvent.click(screen.getByLabelText('Return checked value'))
+  fireEvent.click(screen.getByRole('button', { name: t.start }))
+  await waitFor(() => expect(posts).toHaveLength(1))
+  expect(posts[0].body).toMatchObject({
+    execution: {
+      suite: {
+        cases: [{ covers_promises: ['result'], input: { values: { message: 'input only' } } }],
+      },
+    },
+  })
 })

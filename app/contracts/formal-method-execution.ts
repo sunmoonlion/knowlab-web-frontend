@@ -40,6 +40,10 @@ export const formalAssertionSchema = z.discriminatedUnion('kind', [
 export const formalExecutionCaseSchema = z
   .object({
     case_id: caseId,
+    covers_promises: z
+      .array(z.string().regex(/^[A-Za-z][A-Za-z0-9_-]{0,63}$/))
+      .max(30)
+      .optional(),
     caller: z.enum(['host', 'model']).optional(),
     input: z
       .object({

@@ -36,6 +36,7 @@ import { ExpertFromTool } from './expert-from-tool'
 import { same } from '@/lib/knowbots/workdraft'
 import { KEY } from './shared'
 import { FormalMethodExecution } from './formal-method-execution'
+import { DeliveryPromises } from './delivery-promises'
 import { ToolSlotEditor } from './tool-slot-editor'
 import { P1Predecessor } from './p1-predecessor'
 import { ReviewRequirements } from './review-requirements'
@@ -169,7 +170,7 @@ function FormalForm({
     receipt.request_id === initial.request_id &&
     receipt.method_id === methodId &&
     receipt.revision === document.revision &&
-    (!instruction || !!receipt.execution) &&
+    (!(instruction || definition?.capability_declaration.conditions) || !!receipt.execution) &&
     receiptCoversCallers(receipt, callers)
   const publicReady =
     definition?.procedure.kind !== 'orchestration' &&
@@ -488,17 +489,7 @@ function FormalForm({
                 }
               />
             </label>
-            <p className="text-sm">
-              {t('applies')}: {definition.capability_declaration.applies_when.join('；')}
-            </p>
-            <p className="text-sm">
-              {t('excludes')}: {definition.capability_declaration.excludes.join('；') || t('none')}
-            </p>
-            <ul className="list-inside list-disc text-sm">
-              {Object.entries(definition.capability_declaration.promises).map(([key, value]) => (
-                <li key={key}>{value}</li>
-              ))}
-            </ul>
+            <DeliveryPromises definition={definition} onChange={editDefinition} />
             <label className="block text-sm">
               {t('procedure')}
               <textarea
@@ -622,27 +613,6 @@ function FormalForm({
               ) : (
                 <p>{t('none')}</p>
               )}
-            </div>
-            <div className="space-y-2 text-sm">
-              <h3 className="font-medium">{t('validationRules')}</h3>
-              {definition.how_to_validate.map((rule, index) => (
-                <label className="block" key={rule.promise_id}>
-                  {definition.capability_declaration.promises[rule.promise_id] ?? rule.promise_id}
-                  <textarea
-                    className={input}
-                    value={rule.check}
-                    onChange={(e) =>
-                      editDefinition({
-                        ...definition,
-                        how_to_validate: definition.how_to_validate.map((r, i) =>
-                          i === index ? { ...r, check: e.target.value } : r,
-                        ),
-                      })
-                    }
-                  />
-                  <span className="text-muted-foreground">{rule.evidence}</span>
-                </label>
-              ))}
             </div>
             <div className="space-y-2 text-sm">
               <h3 className="font-medium">{t('approvals')}</h3>

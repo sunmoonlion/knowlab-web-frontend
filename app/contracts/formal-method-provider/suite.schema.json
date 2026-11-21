@@ -187,6 +187,16 @@
     "FormalExecutionCase": {
       "additionalProperties": false,
       "properties": {
+        "covers_promises": {
+          "default": [],
+          "items": {
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 30,
+          "title": "Covers Promises",
+          "type": "array"
+        },
         "case_id": {
           "pattern": "^[A-Za-z0-9_-]{1,48}$",
           "title": "Case Id",

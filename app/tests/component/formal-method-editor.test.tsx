@@ -1278,3 +1278,23 @@ it('replaces an internal producer while preserving the fixed input, downstream c
   expect(resultGraph.exports).toEqual(graph.exports)
   expect(graph.steps[1].inputs.message.binding).toMatchObject({ output: 'summary' })
 })
+
+it('persists application boundaries and a conditional promise across reopening', async () => {
+  const editor = show()
+  fireEvent.change(await screen.findByLabelText(labels.applicableLines), {
+    target: { value: '已有报告\n已有会议纪要' },
+  })
+  fireEvent.change(screen.getByLabelText(labels.excludedLines), { target: { value: '实时预测' } })
+  fireEvent.change(screen.getByLabelText(labels.promiseWhen), {
+    target: { value: '有可核验的文字' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: labels.save }))
+  await screen.findByText(labels.saved)
+  editor.unmount()
+  show()
+  expect(await screen.findByLabelText(labels.promiseWhen)).toHaveValue('有可核验的文字')
+  expect(screen.getByLabelText(labels.applicableLines)).toHaveValue('已有报告\n已有会议纪要')
+  expect(current.body.formal_method?.definition.capability_declaration.conditions).toEqual({
+    summary: { when: '有可核验的文字', input_slots: [] },
+  })
+})
