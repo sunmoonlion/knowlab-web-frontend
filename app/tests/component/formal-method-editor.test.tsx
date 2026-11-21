@@ -134,6 +134,15 @@ const frozen = {
   provenance: { method_kind: 'tool', dispatch: 'direct', interfaces: { inputs: {}, outputs: {} } },
   created_at: receipt.completed_at,
 }
+const functionSource = {
+  ...source,
+  asset_id: null,
+  asset_revision: null,
+  kind: 'service_function',
+  source: 'knowbase',
+  entry: 'query_facts',
+  license_basis: 'synthetic-reviewed-source',
+}
 const fetcher = vi.fn()
 const respond = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status })
 let current = initial
@@ -144,7 +153,7 @@ beforeEach(() => {
   fetcher.mockImplementation(async (url: string, options: RequestInit) => {
     if (url.endsWith('/workdraft')) return respond(current)
     if (url.startsWith('/api/web/v1/method-units?formal=true')) return respond({ items: [] })
-    if (url.endsWith('/formal-method-sources')) return respond({ items: [source] })
+    if (url.endsWith('/formal-method-sources')) return respond({ items: [source, functionSource] })
     if (url.includes('/validations')) return respond(pending)
     if (url.endsWith('/formal-versions/1')) return respond(frozen)
     if (url.endsWith('/cells')) {
@@ -179,28 +188,31 @@ it('preserves a legacy draft and never opens its technical binding or source pic
   expect(fetcher.mock.calls.some(([, options]) => options.method !== 'GET')).toBe(false)
 })
 
-it('imports into an empty draft and pins an existing source without reinstalling it', async () => {
-  current = { ...initial, revision: 0, body: { ...initial.body, formal_method: null } }
-  show()
-  const upload = await screen.findByLabelText(labels.import)
-  const file = new File([JSON.stringify(draft.definition)], 'method.json', {
-    type: 'application/json',
-  })
-  Object.defineProperty(file, 'text', { value: async () => JSON.stringify(draft.definition) })
-  fireEvent.change(upload, { target: { files: [file] } })
-  const picker = await screen.findByLabelText(labels.source)
-  const option = await screen.findByRole<HTMLOptionElement>('option', {
-    name: 'synthetic.check · 1 · check',
-  })
-  expect(screen.getByRole('button', { name: labels.save })).toBeDisabled()
-  fireEvent.change(picker, { target: { value: option.value } })
-  fireEvent.click(screen.getByRole('button', { name: labels.save }))
-  await screen.findByText(labels.saved)
-  const writes = fetcher.mock.calls.filter(([, options]) => options.method !== 'GET')
-  expect(writes).toHaveLength(1)
-  expect(writes[0][0]).toMatch(/\/workdraft\/cells$/)
-  expect(JSON.parse(writes[0][1].body).cells[0].value.source).toEqual(source)
-})
+it.each([source, functionSource])(
+  'pins the selected $kind source in the saved workdraft',
+  async (selected) => {
+    current = { ...initial, revision: 0, body: { ...initial.body, formal_method: null } }
+    show()
+    const upload = await screen.findByLabelText(labels.import)
+    const file = new File([JSON.stringify(draft.definition)], 'method.json', {
+      type: 'application/json',
+    })
+    Object.defineProperty(file, 'text', { value: async () => JSON.stringify(draft.definition) })
+    fireEvent.change(upload, { target: { files: [file] } })
+    const picker = await screen.findByLabelText(labels.source)
+    const option = await screen.findByRole<HTMLOptionElement>('option', {
+      name: selected.source + ' · ' + selected.version + ' · ' + selected.entry,
+    })
+    expect(screen.getByRole('button', { name: labels.save })).toBeDisabled()
+    fireEvent.change(picker, { target: { value: option.value } })
+    fireEvent.click(screen.getByRole('button', { name: labels.save }))
+    await screen.findByText(labels.saved)
+    const writes = fetcher.mock.calls.filter(([, options]) => options.method !== 'GET')
+    expect(writes).toHaveLength(1)
+    expect(writes[0][0]).toMatch(/\/workdraft\/cells$/)
+    expect(JSON.parse(writes[0][1].body).cells[0].value.source).toEqual(selected)
+  },
+)
 
 it('leaves an incomplete validation unfrozen and only sends the saved revision and run identity', async () => {
   show()

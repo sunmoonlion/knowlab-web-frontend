@@ -30,6 +30,7 @@ const implementation = z
       'mcp',
       'skill_instruction',
       'skill_script',
+      'service_function',
       'registered_script',
       'registered_instruction',
     ]),
