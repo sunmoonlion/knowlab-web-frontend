@@ -93,7 +93,9 @@ export function FormalMethodExecution({
     supportsOrchestrationExecution(draft) ||
     (draft?.definition.procedure.kind === 'direct' &&
       (draft.definition.procedure.implementation.kind === 'mcp' ||
-        (draft.definition.procedure.implementation.kind === 'skill_script' &&
+        (['skill_script', 'registered_script'].includes(
+          draft.definition.procedure.implementation.kind,
+        ) &&
           draft.allowed_callers.length === 1 &&
           draft.allowed_callers[0] === 'host')) &&
       draft.definition.procedure.max_model_turns === 0)

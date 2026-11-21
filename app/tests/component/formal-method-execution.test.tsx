@@ -279,16 +279,19 @@ it('submits a licensed single-turn instruction trial with separate assertions', 
   expect(posts[0].body).toMatchObject({ execution: { suite: { cases: suite.cases } } })
 })
 
-it('submits a zero-turn host script from the author page', async () => {
-  const script = structuredClone(draft)
-  if (script.definition.procedure.kind !== 'direct') throw new Error('expected tool')
-  script.definition.procedure.implementation.kind = 'skill_script'
-  page(false, ['host'], script)
-  await fill()
-  fireEvent.click(screen.getByRole('button', { name: t.start }))
-  await screen.findByText('Approve fixture check')
-  expect(posts[0].url).toContain('/executions')
-})
+it.each(['skill_script', 'registered_script'] as const)(
+  'submits a zero-turn host %s from the author page',
+  async (kind) => {
+    const script = structuredClone(draft)
+    if (script.definition.procedure.kind !== 'direct') throw new Error('expected tool')
+    script.definition.procedure.implementation.kind = kind
+    page(false, ['host'], script)
+    await fill()
+    fireEvent.click(screen.getByRole('button', { name: t.start }))
+    await screen.findByText('Approve fixture check')
+    expect(posts[0].url).toContain('/executions')
+  },
+)
 it('restores with GET only, answers the exact approval and cancels through the run identity', async () => {
   page(true)
   await screen.findByText('Approve fixture check')
