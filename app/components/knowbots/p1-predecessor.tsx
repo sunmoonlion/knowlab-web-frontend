@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import type { FormalDefinition } from '@/contracts/formal-methods'
 import {
   bindStepInput,
-  prependP1Tool,
+  prependTool,
   reachableOutputs,
   replaceP1Tool,
 } from '@/lib/knowbots/formal-orchestration'
@@ -15,7 +15,7 @@ import { matchingToolOutputs, scanToolOutputs } from '@/lib/knowbots/formal-meth
 import { AdoptTool, ToolInstallationChoice, useToolVersion } from './tool-version-choice'
 import { same } from '@/lib/knowbots/workdraft'
 import { SampleColumnCheck } from './sample-column-check'
-import { P1Changes } from './p1-changes'
+import { PlanChanges } from './plan-changes'
 import { FormalOrchestrationSummary } from './formal-orchestration-summary'
 
 export function P1Predecessor({
@@ -154,7 +154,7 @@ export function P1Predecessor({
       : null
   const bridge =
     !delivery && step && selected && proposed
-      ? prependP1Tool(draft, step.id, input, proposed, selected.output)
+      ? prependTool(draft, step.id, input, proposed, selected.output, 'chain')
       : null
   const reuse =
     edge && step && graph.kind === 'orchestration'
@@ -478,7 +478,7 @@ export function P1Predecessor({
               {draft.how_to_validate.map((rule) => rule.check).join(' · ')}
             </p>
           )}
-          <P1Changes before={draft} after={preview} />
+          <PlanChanges before={draft} after={preview} />
           <FormalOrchestrationSummary definition={preview} />
           <details>
             <summary>{t('permissions')}</summary>

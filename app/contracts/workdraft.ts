@@ -237,7 +237,7 @@ export const workdraftSchema = z.object({
   title: z.string(),
   revision: z.number().int().min(0),
   body: bodySchema,
-  p1_adoption: z
+  plan_adoption: z
     .object({
       base_revision: z.number().int().nonnegative(),
       saved_revision: z.number().int().positive(),

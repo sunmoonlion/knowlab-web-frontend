@@ -1298,3 +1298,63 @@ it('persists application boundaries and a conditional promise across reopening',
     summary: { when: '有可核验的文字', input_slots: [] },
   })
 })
+
+it('keeps the join preview separate when a shared branch installation changes before adoption', async () => {
+  const authored = orchestrationDraft(draft)
+  const graph = authored.definition.procedure
+  if (graph.kind !== 'orchestration' || draft.definition.procedure.kind !== 'direct')
+    throw Error('fixture')
+  const join = graph.steps[0]
+  join.inputs.fixed = { ...join.inputs.message, binding: { source: 'caller', name: 'fixed' } }
+  graph.steps = [join]
+  graph.exports.summary.step = join.id
+  current = { ...initial, body: { ...initial.body, formal_method: authored } }
+  const fallback = fetcher.getMockImplementation()!
+  const ref = { method_id: childId, version: 2, digest: fingerprint }
+  const { procedure, ...contract } = draft.definition
+  if (procedure.kind !== 'direct') throw Error('fixture')
+  let installationRevision = 1
+  fetcher.mockImplementation(async (url, options) => {
+    if (url.endsWith('/matching-outputs'))
+      return respond({
+        items: [{ reference: ref, title: 'prepared result', output: 'summary' }],
+        next: null,
+      })
+    if (url.includes('/incubation-tools/') && url.includes('/versions/'))
+      return respond({
+        items: [
+          {
+            reference: ref,
+            scope: 'platform',
+            title: 'prepared result',
+            interface: { ...contract, inputs: procedure.inputs, outputs: procedure.outputs },
+            installations: [
+              { asset_id: childId, revision: installationRevision, name: 'reader', account: null },
+            ],
+            selected: childId,
+          },
+        ],
+        next: null,
+      })
+    return fallback(url, options)
+  })
+  show()
+  const panel = within(await screen.findByRole('group', { name: labels.p2Join }))
+  fireEvent.change(panel.getByLabelText(labels.p2Target), { target: { value: join.id } })
+  for (const input of ['message', 'fixed']) {
+    fireEvent.change(panel.getByLabelText(labels.p2Input), { target: { value: input } })
+    fireEvent.change(panel.getByLabelText(labels.toolDirectory), { target: { value: 'shared' } })
+    const choice = await panel.findByRole<HTMLOptionElement>('option', { name: /prepared result/ })
+    fireEvent.change(panel.getByLabelText(labels.p1Provider), { target: { value: choice.value } })
+    const add = panel.getByRole('button', { name: labels.p2Add })
+    await waitFor(() => expect(add).toBeEnabled())
+    fireEvent.click(add)
+  }
+  installationRevision++
+  fireEvent.click(panel.getByRole('button', { name: labels.p2Adopt }))
+  await panel.findByText(labels.p2Stale)
+  expect(screen.getByRole('button', { name: labels.save })).toBeDisabled()
+  expect(fetcher.mock.calls.some(([url]) => url.endsWith('/cells'))).toBe(false)
+  fireEvent.click(panel.getByRole('button', { name: labels.p2Undo }))
+  expect(panel.getByRole('button', { name: labels.p2Adopt })).toBeDisabled()
+})

@@ -10,8 +10,9 @@ vi.mock('@/i18n/navigation', () => ({ Link: 'a' }))
 const url = process.env.LUNA_P1_URL
 const modes = ['bridge', 'replace']
 if (process.env.LUNA_P1_SAMPLE) modes.push('internal')
+if (process.env.LUNA_P2_REQUEST) modes.push('join')
 it.skipIf(!url).each(modes)(
-  'adopts, saves and reopens the indexed P1 %s plan',
+  'adopts, saves and reopens the indexed %s plan',
   async (mode) => {
     const base = new URL(url!)
     if (base.hostname !== '127.0.0.1') throw Error('Expected loopback integration fixture')
@@ -49,26 +50,35 @@ it.skipIf(!url).each(modes)(
         renderWith(
           <FormalMethodEditor
             requestId={
-              (mode === 'bridge'
-                ? process.env.LUNA_P1_REQUEST
-                : mode === 'internal'
-                  ? process.env.LUNA_P1_INTERNAL_REQUEST
-                  : process.env.LUNA_P1_RESELECT_REQUEST)!
+              (mode === 'join'
+                ? process.env.LUNA_P2_REQUEST
+                : mode === 'bridge'
+                  ? process.env.LUNA_P1_REQUEST
+                  : mode === 'internal'
+                    ? process.env.LUNA_P1_INTERNAL_REQUEST
+                    : process.env.LUNA_P1_RESELECT_REQUEST)!
             }
             csrfToken="csrf-token-with-at-least-thirty-two-characters"
             resume={{
               method:
-                mode === 'bridge'
-                  ? process.env.LUNA_P1_METHOD
-                  : mode === 'internal'
-                    ? process.env.LUNA_P1_INTERNAL_METHOD
-                    : process.env.LUNA_P1_RESELECT_METHOD,
+                mode === 'join'
+                  ? process.env.LUNA_P2_METHOD
+                  : mode === 'bridge'
+                    ? process.env.LUNA_P1_METHOD
+                    : mode === 'internal'
+                      ? process.env.LUNA_P1_INTERNAL_METHOD
+                      : process.env.LUNA_P1_RESELECT_METHOD,
             }}
           />,
         )
       const view = open()
       const choose = await screen.findByLabelText<HTMLSelectElement>(t.registeredTool)
-      const firstTool = mode === 'replace' ? process.env.LUNA_P1_STRICT! : leaf
+      const firstTool =
+        mode === 'join'
+          ? process.env.LUNA_P2_JOIN!
+          : mode === 'replace'
+            ? process.env.LUNA_P1_STRICT!
+            : leaf
       await waitFor(() =>
         expect([...choose.options].some((o) => o.value.startsWith(firstTool))).toBe(true),
       )
@@ -78,6 +88,31 @@ it.skipIf(!url).each(modes)(
       const adopt = screen.getByRole('button', { name: t.useToolAsStep })
       await waitFor(() => expect(adopt).toBeEnabled())
       fireEvent.click(adopt)
+      if (mode === 'join') {
+        const panel = within(await screen.findByRole('group', { name: t.p2Join }))
+        fireEvent.change(panel.getByLabelText(t.p2Target), { target: { value: 'step_1' } })
+        for (const port of ['to', 'other']) {
+          fireEvent.change(panel.getByLabelText(t.p2Input), { target: { value: port } })
+          const picker = await panel.findByLabelText<HTMLSelectElement>(t.p1Provider)
+          const selected = [...picker.options].find((o) => o.value.startsWith(leaf))!
+          fireEvent.change(picker, { target: { value: selected.value } })
+          const add = panel.getByRole('button', { name: t.p2Add })
+          await waitFor(() => expect(add).toBeEnabled())
+          fireEvent.click(add)
+          if (port === 'to') expect(panel.getByRole('button', { name: t.p2Adopt })).toBeDisabled()
+        }
+        expect(panel.getByText(/other ← 前置步骤输出: branch_1.receipt/)).toBeVisible()
+        fireEvent.click(panel.getByRole('button', { name: t.p2Adopt }))
+        await waitFor(() => expect(screen.queryByRole('button', { name: t.p2Adopt })).toBeNull())
+        fireEvent.click(screen.getByRole('button', { name: t.save }))
+        await screen.findByText(t.saved)
+        view.unmount()
+        open()
+        await screen.findByText(t.planLastAdoption.replace('{base}', '0').replace('{saved}', '1'))
+        expect(screen.getByText(/to ← 前置步骤输出: branch.receipt/)).toBeVisible()
+        expect(screen.getByText(/other ← 前置步骤输出: branch_1.receipt/)).toBeVisible()
+        return
+      }
       if (mode === 'internal') {
         const chooseOutput = async (id: string) => {
           const picker = await screen.findByLabelText<HTMLSelectElement>(t.p1Provider)
@@ -110,7 +145,7 @@ it.skipIf(!url).each(modes)(
         await save()
         pair.unmount()
         open()
-        await screen.findByText(t.p1LastAdoption.replace('{base}', '1').replace('{saved}', '2'))
+        await screen.findByText(t.planLastAdoption.replace('{base}', '1').replace('{saved}', '2'))
         expect(await screen.findByText(/to ← 前置步骤输出: prepare.receipt/)).toBeVisible()
         return
       }
@@ -169,7 +204,7 @@ it.skipIf(!url).each(modes)(
         ),
       ).toBeInTheDocument()
       expect(
-        await screen.findByText(t.p1LastAdoption.replace('{base}', '0').replace('{saved}', '1')),
+        await screen.findByText(t.planLastAdoption.replace('{base}', '0').replace('{saved}', '1')),
       ).toBeInTheDocument()
       if (mode === 'bridge' && !process.env.LUNA_P1_SHARED) {
         const prior = searches
@@ -217,7 +252,7 @@ it.skipIf(!url).each(modes)(
         await screen.findByText(t.saved)
         reopened.unmount()
         const threeSteps = open()
-        await screen.findByText(t.p1LastAdoption.replace('{base}', '1').replace('{saved}', '2'))
+        await screen.findByText(t.planLastAdoption.replace('{base}', '1').replace('{saved}', '2'))
         expect(await screen.findByText(/to ← 前置步骤输出: prepare_1.receipt/)).toBeInTheDocument()
         fireEvent.change(screen.getByLabelText(t.targetInput), {
           target: { value: 'prepare_1.to' },

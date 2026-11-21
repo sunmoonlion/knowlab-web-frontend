@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl'
 import type { FormalDefinition } from '@/contracts/formal-methods'
 import { same } from '@/lib/knowbots/workdraft'
 
-export function P1Changes({
+export function PlanChanges({
   before,
   after,
 }: {

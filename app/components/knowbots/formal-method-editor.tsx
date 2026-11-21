@@ -38,6 +38,7 @@ import { KEY } from './shared'
 import { FormalMethodExecution } from './formal-method-execution'
 import { DeliveryPromises } from './delivery-promises'
 import { ToolSlotEditor } from './tool-slot-editor'
+import { P2Join } from './p2-join'
 import { P1Predecessor } from './p1-predecessor'
 import { ReviewRequirements } from './review-requirements'
 import { FormalOrchestrationSummary } from './formal-orchestration-summary'
@@ -232,7 +233,7 @@ function FormalForm({
         initial.request_id,
         {
           revision: document.revision,
-          ...(methodChanged && definition === reviewedPlan ? { adopt_p1: true } : {}),
+          ...(methodChanged && definition === reviewedPlan ? { adopt_plan: true } : {}),
           cells: [
             ...(methodChanged ? [{ path: 'formal_method', value: draft }] : []),
             ...(reviewChanged ? [{ path: 'collaboration', value: collaboration }] : []),
@@ -312,11 +313,11 @@ function FormalForm({
         {t('backToName')}
       </Link>
       <p className="text-sm">{t('draftNotice')}</p>
-      {document.p1_adoption && (
+      {document.plan_adoption && (
         <p className="text-sm">
-          {t('p1LastAdoption', {
-            base: document.p1_adoption.base_revision,
-            saved: document.p1_adoption.saved_revision,
+          {t('planLastAdoption', {
+            base: document.plan_adoption.base_revision,
+            saved: document.plan_adoption.saved_revision,
           })}
         </p>
       )}
@@ -585,6 +586,18 @@ function FormalForm({
                   </p>
                 ))}
                 <P1Predecessor
+                  draft={definition}
+                  methodId={methodId}
+                  requestId={initial.request_id}
+                  csrfToken={csrfToken}
+                  revision={document.revision}
+                  onAdopt={(next) => {
+                    setReviewedPlan(next)
+                    editDefinition(next)
+                  }}
+                />
+                <P2Join
+                  key={JSON.stringify([document.revision, methodId, definition])}
                   draft={definition}
                   methodId={methodId}
                   requestId={initial.request_id}

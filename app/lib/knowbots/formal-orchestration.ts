@@ -145,8 +145,10 @@ export function combinedRequirements(draft: FormalDefinition, candidate: FormalD
   const requirements = [...draft.access_requirements]
   const approvals = [...draft.what_requires_approval]
   for (const need of candidate.access_requirements) {
-    const existing = requirements.find((r) => same(r, need))
-    let key = need.requirement_id
+    const existing = requirements.find((r) =>
+      same(r, { ...need, requirement_id: r.requirement_id }),
+    )
+    let key = existing?.requirement_id ?? need.requirement_id
     if (!existing) {
       let n = 0
       while (requirements.some((r) => r.requirement_id === key)) key = 'prepare_access_' + ++n
@@ -216,12 +218,13 @@ export function bindStepInput(
   }
 }
 
-export function prependP1Tool(
+export function prependTool(
   draft: FormalDefinition,
   targetId: string,
   input: string,
   upstream: FormalDefinition,
   output: string,
+  topology: 'chain' | 'branch',
 ) {
   const graph = draft.procedure,
     source = upstream.procedure
@@ -244,8 +247,9 @@ export function prependP1Tool(
   )
     return null
   const ids = new Set(graph.steps.map((s) => s.id))
-  let id = 'prepare'
-  for (let n = 1; ids.has(id); n++) id = 'prepare_' + n
+  const prefix = topology === 'branch' ? 'branch' : 'prepare'
+  let id = prefix
+  for (let n = 1; ids.has(id); n++) id = prefix + '_' + n
   const aliases = new Map<string, Slot>()
   for (const step of graph.steps)
     for (const [name, original] of Object.entries(step.inputs)) {
@@ -256,15 +260,20 @@ export function prependP1Tool(
   const deps = new Set<string>()
   for (const value of Object.values(inputs)) {
     if (value.binding.source !== 'caller') return null
-    const available = reachableOutputs(graph, target, value.slot)
+    const available = topology === 'chain' ? reachableOutputs(graph, target, value.slot) : []
     if (available.length === 1) {
       value.binding = available[0]
       deps.add(available[0].step)
       continue
     }
-    let key = value.binding.name
-    for (let n = 1; aliases.has(key) && !same(aliases.get(key), value.slot); n++)
-      key = 'prepare_input_' + n
+    let key =
+      topology === 'branch' ? (id + '_' + value.binding.name).slice(0, 64) : value.binding.name
+    for (
+      let n = 1;
+      aliases.has(key) && (topology === 'branch' || !same(aliases.get(key), value.slot));
+      n++
+    )
+      key = prefix + '_input_' + n
     value.binding.name = key
     aliases.set(key, value.slot)
   }

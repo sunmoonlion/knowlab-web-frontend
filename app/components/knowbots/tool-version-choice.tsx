@@ -96,6 +96,23 @@ export function ToolInstallationChoice({
   )
 }
 
+export async function verifyToolInstallation(
+  requestId: string,
+  item: NonNullable<ReturnType<typeof useToolVersion>['item']>,
+) {
+  const expected = item.installations.find((asset) => asset.asset_id === item.selected)
+  const current = (await sharedIncubationTools(requestId, null, item.reference)).items[0]
+  if (
+    !expected ||
+    !current?.interface ||
+    current.selected !== expected.asset_id ||
+    !current.installations.some(
+      (asset) => asset.asset_id === expected.asset_id && asset.revision === expected.revision,
+    )
+  )
+    throw new Error('incubation_binding_changed')
+}
+
 // Per-click callbacks are discarded when this preview unmounts or its key changes.
 export function AdoptTool({
   requestId,
@@ -116,18 +133,7 @@ export function AdoptTool({
   const confirm = useMutation({
     mutationKey: ['adopt-tool', requestId],
     mutationFn: async () => {
-      if (!item) throw new Error('missing_version')
-      const expected = item.installations.find((asset) => asset.asset_id === item.selected)
-      const current = (await sharedIncubationTools(requestId, null, item.reference)).items[0]
-      if (
-        !expected ||
-        !current?.interface ||
-        current.selected !== expected.asset_id ||
-        !current.installations.some(
-          (asset) => asset.asset_id === expected.asset_id && asset.revision === expected.revision,
-        )
-      )
-        throw new Error('incubation_binding_changed')
+      if (item) await verifyToolInstallation(requestId, item)
     },
   })
   return (

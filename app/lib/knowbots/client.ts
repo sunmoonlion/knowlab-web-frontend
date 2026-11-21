@@ -326,7 +326,7 @@ export async function fetchWorkdraft(requestId: string): Promise<Workdraft> {
 // 存几格（自动保存）：带读到的 revision，对不上回 409 workdraft_revision
 export async function saveWorkdraftCells(
   requestId: string,
-  body: { revision: number; cells: CellEdit[]; adopt_p1?: boolean },
+  body: { revision: number; cells: CellEdit[]; adopt_plan?: boolean },
   csrfToken: string,
 ): Promise<Workdraft> {
   return parse(
