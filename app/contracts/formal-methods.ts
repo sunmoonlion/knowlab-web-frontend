@@ -25,7 +25,14 @@ const slot = z
 export const formalValueSlotSchema = slot
 const implementation = z
   .object({
-    kind: z.enum(['platform', 'mcp', 'skill_instruction', 'skill_script']),
+    kind: z.enum([
+      'platform',
+      'mcp',
+      'skill_instruction',
+      'skill_script',
+      'registered_script',
+      'registered_instruction',
+    ]),
     source: text,
     version: text,
     digest,

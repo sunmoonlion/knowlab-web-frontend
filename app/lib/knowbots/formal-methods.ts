@@ -20,10 +20,12 @@ export function parseFormalReply<T>(schema: z.ZodType<T>, value: unknown): T {
 }
 
 const methodPath = (id: string) => `/api/web/v1/method-units/${encodeURIComponent(id)}`
-export async function listFormalMethods(offset = 0) {
+export async function listFormalMethods(offset = 0, requestId?: string) {
   return parseFormalReply(
     formalMethodsSchema,
-    await requestJson(`/api/web/v1/method-units?formal=true&limit=30&offset=${offset}`),
+    await requestJson(
+      `/api/web/v1/method-units?formal=true&limit=30&offset=${offset}${requestId ? '&request_id=' + encodeURIComponent(requestId) : ''}`,
+    ),
   ).items
 }
 

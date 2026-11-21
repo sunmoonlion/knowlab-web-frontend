@@ -112,8 +112,8 @@ function FormalForm({
   const [selectedTitle, setSelectedTitle] = useState<string | null>(null)
   const [methodPage, setMethodPage] = useState(0)
   const methods = useQuery({
-    queryKey: ['formal-methods', methodPage],
-    queryFn: () => listFormalMethods(methodPage * 30),
+    queryKey: ['formal-methods', initial.request_id, methodPage],
+    queryFn: () => listFormalMethods(methodPage * 30, initial.request_id),
     retry: false,
   })
   const [run, setRun] = useState<ValidationCommand | null>(() =>
@@ -529,6 +529,12 @@ function FormalForm({
                           ...definition,
                           procedure: {
                             ...definition.procedure,
+                            max_model_turns: [
+                              'registered_instruction',
+                              'skill_instruction',
+                            ].includes(selected.kind)
+                              ? Math.max(1, definition.procedure.max_model_turns)
+                              : 0,
                             implementation: {
                               kind: selected.kind,
                               source: selected.source,

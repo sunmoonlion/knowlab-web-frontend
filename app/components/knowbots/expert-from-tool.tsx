@@ -26,8 +26,8 @@ export function ExpertFromTool({
   const [page, setPage] = useState(0)
   const [digestKey, setDigestKey] = useState('')
   const catalog = useQuery({
-    queryKey: ['formal-methods', page],
-    queryFn: () => listFormalMethods(page * 30),
+    queryKey: ['formal-methods', requestId, page],
+    queryFn: () => listFormalMethods(page * 30, requestId),
     retry: false,
   })
   const owned = catalog.data?.filter(
