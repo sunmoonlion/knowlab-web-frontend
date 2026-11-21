@@ -253,6 +253,7 @@ export const workdraftSchema = z.object({
         primitive: z.enum([
           'isolation_group',
           'staged_handoff',
+          'sealed_findings',
           'isolated_reviewer',
           'different_model_family',
         ]),

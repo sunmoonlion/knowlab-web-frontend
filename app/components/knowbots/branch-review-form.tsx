@@ -11,6 +11,9 @@ import {
 } from '@/contracts/formal-method-execution'
 import { prepareTrialReview } from '@/lib/knowbots/formal-method-execution'
 
+import { ReviewStages } from './review-stages'
+import type { ReviewComparison } from '@/contracts/formal-methods'
+
 type Rule = ReviewCriteria['assertions'][number]
 function editRule(rule: Rule) {
   const [, output, ...parts] = rule.pointer.split('/')
@@ -43,6 +46,10 @@ export function BranchReviewForm({
   const [family, setFamily] = useState(
     receipt.review?.criteria.reviewer === 'different_model_family',
   )
+  const [comparison, setComparison] = useState<ReviewComparison | undefined>(
+    receipt.review?.criteria.comparison,
+  )
+  const independentOutputs = [...new Set(rules.map((r) => r.output))]
   const [invalid, setInvalid] = useState(false)
   const [saved, setSaved] = useState(receipt)
   const [dirty, setDirty] = useState(false)
@@ -73,7 +80,8 @@ export function BranchReviewForm({
         return { kind: r.kind, pointer, value: r.kind === 'equals' ? JSON.parse(r.value) : r.value }
       })
       const criteria = reviewCriteriaSchema.parse({
-        outputs: [...new Set(rules.map((r) => r.output))],
+        outputs: independentOutputs,
+        ...(comparison && { comparison }),
         assertions,
         reviewer: family ? 'different_model_family' : 'isolated_reviewer',
       })
@@ -95,9 +103,11 @@ export function BranchReviewForm({
             <label>
               {t('reviewOutput')}{' '}
               <select value={r.output} onChange={(e) => update({ output: e.target.value })}>
-                {receipt.artifact.output_names.map((n) => (
-                  <option key={n}>{n}</option>
-                ))}
+                {receipt.artifact.output_names
+                  .filter((n) => comparison?.assessment_output !== n)
+                  .map((n) => (
+                    <option key={n}>{n}</option>
+                  ))}
               </select>
             </label>
             <label>
@@ -148,7 +158,7 @@ export function BranchReviewForm({
         type="button"
         variant="outline"
         disabled={rules.length >= 64}
-        onClick={() => change([...rules, empty])}
+        onClick={() => change([...rules, { ...empty, output: rules[0].output }])}
       >
         {t('reviewAdd')}
       </Button>
@@ -163,6 +173,15 @@ export function BranchReviewForm({
         />{' '}
         {t('reviewFamily')}
       </label>
+      <ReviewStages
+        comparison={comparison}
+        available={receipt.artifact.output_names.filter((n) => !independentOutputs.includes(n))}
+        firstRound={independentOutputs}
+        onChange={(value) => {
+          setComparison(value)
+          setDirty(true)
+        }}
+      />
       <Button type="button" onClick={submit}>
         {t('reviewSave')}
       </Button>
@@ -176,6 +195,12 @@ export function BranchReviewForm({
               {name} · {digest}
             </p>
           ))}
+          {saved.review.deferred && (
+            <p className="break-all">
+              {t('reviewDeferred', { output: saved.review.deferred.assessment_output })} ·{' '}
+              {saved.review.deferred.assessment_digest}
+            </p>
+          )}
           {saved.review.checks.map((c) => (
             <p key={c.index}>
               {saved.review!.criteria.assertions[c.index].pointer} ·{' '}

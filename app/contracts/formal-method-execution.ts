@@ -1,5 +1,10 @@
 import { z } from 'zod'
-import { formalValidationSchema, receiptCoversCallers, type FormalDraft } from './formal-methods'
+import {
+  reviewComparisonSchema,
+  formalValidationSchema,
+  receiptCoversCallers,
+  type FormalDraft,
+} from './formal-methods'
 
 const digest = z.string().regex(/^sha256:[a-f0-9]{64}$/)
 const caseId = z.string().regex(/^[A-Za-z0-9_-]{1,48}$/)
@@ -178,14 +183,25 @@ const partialReport = z
   .strict()
 export const reviewCriteriaSchema = z
   .object({
+    comparison: reviewComparisonSchema.optional(),
     outputs: z.array(slotName).min(1).max(100),
     assertions: z.array(formalAssertionSchema).min(1).max(64),
     reviewer: z.enum(['isolated_reviewer', 'different_model_family']),
   })
   .strict()
+  .refine((c) => !c.comparison || !c.outputs.includes(c.comparison.assessment_output))
 const branchReviewSchema = z
   .object({
     criteria: reviewCriteriaSchema,
+    deferred: z
+      .object({
+        assessment_output: slotName,
+        assessment_digest: digest,
+        opens_after: z.literal('independent_findings_sealed'),
+        unresolved_to: z.literal('task_owner'),
+      })
+      .strict()
+      .optional(),
     checks: z
       .array(
         z
@@ -205,6 +221,9 @@ const branchReviewSchema = z
   .strict()
   .refine(
     (r) =>
+      (r.criteria.comparison && r.status === 'awaiting_isolation'
+        ? r.deferred?.assessment_output === r.criteria.comparison.assessment_output
+        : !r.deferred) &&
       r.checks.length === r.criteria.assertions.length &&
       r.checks.every((c, i) => c.index === i) &&
       (r.status === 'awaiting_isolation'

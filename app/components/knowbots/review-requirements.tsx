@@ -1,6 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import { ReviewStages } from './review-stages'
 import type { FormalDefinition } from '@/contracts/formal-methods'
 import type { WorkdraftBody } from '@/contracts/workdraft'
 
@@ -44,7 +45,10 @@ export function ReviewRequirements({
     const role = { ...(roles[step] ?? { isolation_group: null, handoff_from: [] }) }
     const reviews = { ...role.review_requirements }
     if (requirement) reviews[producer] = requirement
-    else delete reviews[producer]
+    else {
+      delete reviews[producer]
+      delete role.comparison
+    }
     if (Object.keys(reviews).length) role.review_requirements = reviews
     else delete role.review_requirements
     if (role.review_requirements || role.isolation_group || role.handoff_from.length)
@@ -55,21 +59,49 @@ export function ReviewRequirements({
   return (
     <>
       {Array.from(edges).flatMap(([reviewer, sources]) =>
-        Array.from(sources).map((producer) => (
-          <label className="block text-sm" key={reviewer + ':' + producer}>
-            {t('reviewEdge', { reviewer, producer })}{' '}
-            <select
-              value={collaboration?.[reviewer]?.review_requirements?.[producer] ?? ''}
-              onChange={(event) =>
-                update(reviewer, producer, event.target.value as Requirement | '')
-              }
-            >
-              <option value="">{t('noReview')}</option>
-              <option value="isolated_reviewer">{t('isolatedReview')}</option>
-              <option value="different_model_family">{t('familyReview')}</option>
-            </select>
-          </label>
-        )),
+        Array.from(sources).map((producer) => {
+          const role = collaboration?.[reviewer]
+          const step = graph?.kind === 'orchestration' && graph.steps.find((s) => s.id === reviewer)
+          const bindings = step ? Object.values(step.inputs).map((f) => f.binding) : []
+          const direct =
+            step &&
+            step.depends_on.length === 1 &&
+            step.depends_on[0] === producer &&
+            bindings.every((b) => b.source === 'step' && b.step === producer)
+          const outputs = direct
+            ? [...new Set(bindings.flatMap((b) => (b.source === 'step' ? [b.output] : [])))]
+            : []
+          return (
+            <div key={reviewer + ':' + producer}>
+              <label className="block text-sm">
+                {t('reviewEdge', { reviewer, producer })}{' '}
+                <select
+                  value={collaboration?.[reviewer]?.review_requirements?.[producer] ?? ''}
+                  onChange={(event) =>
+                    update(reviewer, producer, event.target.value as Requirement | '')
+                  }
+                >
+                  <option value="">{t('noReview')}</option>
+                  <option value="isolated_reviewer">{t('isolatedReview')}</option>
+                  <option value="different_model_family">{t('familyReview')}</option>
+                </select>
+              </label>
+              {role?.review_requirements?.[producer] && (
+                <ReviewStages
+                  comparison={role.comparison}
+                  available={outputs.length >= 2 ? outputs : []}
+                  firstRound={outputs.filter((n) => n !== role.comparison?.assessment_output)}
+                  onChange={(value) => {
+                    const next = { ...role }
+                    if (value) next.comparison = value
+                    else delete next.comparison
+                    onChange({ ...collaboration, [reviewer]: next })
+                  }}
+                />
+              )}
+            </div>
+          )
+        }),
       )}
     </>
   )

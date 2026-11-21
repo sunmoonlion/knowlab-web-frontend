@@ -90,11 +90,20 @@ const step = z
   })
   .strict()
 const collaborationId = z.string().regex(/^[A-Za-z][A-Za-z0-9_-]{0,47}$/)
+export const reviewComparisonSchema = z
+  .object({
+    assessment_output: name,
+    max_reworks: z.number().int().min(0).max(2),
+  })
+  .strict()
+export type ReviewComparison = z.infer<typeof reviewComparisonSchema>
+
 export const collaborationSchema = z
   .record(
     collaborationId,
     z
       .object({
+        comparison: reviewComparisonSchema.optional(),
         isolation_group: collaborationId.nullable().default(null),
         review_requirements: z
           .record(collaborationId, z.enum(['isolated_reviewer', 'different_model_family']))

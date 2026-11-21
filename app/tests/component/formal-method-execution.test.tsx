@@ -845,67 +845,88 @@ it('shows the missing promise, and releases only the branch receipt matching the
   expect(received).toBe(2)
 })
 
-it('checks only chosen outputs and reopens the saved review without starting a model', async () => {
-  const { BranchReviewForm } = await import('@/components/knowbots/branch-review-form')
-  const artifact = {
-    id: CALL,
-    version: 2,
-    digest: 'b'.repeat(64),
-    content_digest: DIGEST,
-    output_names: ['notes', 'result'],
-  }
-  const source = {
-    request_id: REQUEST,
-    method_id: METHOD,
-    run_id: RUN,
-    case_id: 'case_1',
-    repetition: 1,
-    step: 'left',
-    scope_digest: DIGEST,
-    artifact,
-    received_at: '2026-11-21T12:00:00Z',
-    outputs: { notes: 'excluded', result: 42 },
-  }
-  const criteria = {
-    outputs: ['result'],
-    assertions: [{ kind: 'equals' as const, pointer: '/result', value: 42 }],
-    reviewer: 'different_model_family' as const,
-  }
-  const review = {
-    criteria,
-    digest: DIGEST,
-    status: 'awaiting_isolation' as const,
-    checks: [{ index: 0, passed: true, detail: 'matched' }],
-    handoff: { result: DIGEST },
-  }
-  fetcher.mockImplementation(async (url: string, init: RequestInit) => {
-    expect(url).toMatch(/\/branch-review$/)
-    expect(JSON.parse(String(init.body))).toEqual({
+it.each([false, true])(
+  'checks chosen outputs and reopens the saved review, two rounds %s',
+  async (strict) => {
+    const { BranchReviewForm } = await import('@/components/knowbots/branch-review-form')
+    const artifact = {
+      id: CALL,
+      version: 2,
+      digest: 'b'.repeat(64),
+      content_digest: DIGEST,
+      output_names: ['notes', 'result'],
+    }
+    const source = {
       request_id: REQUEST,
+      method_id: METHOD,
+      run_id: RUN,
       case_id: 'case_1',
       repetition: 1,
       step: 'left',
       scope_digest: DIGEST,
       artifact,
-      previous: null,
+      received_at: '2026-11-21T12:00:00Z',
+      outputs: { notes: 'excluded', result: 42 },
+    }
+    const criteria = {
+      ...(strict && { comparison: { assessment_output: 'notes', max_reworks: 2 } }),
+      outputs: ['result'],
+      assertions: [{ kind: 'equals' as const, pointer: '/result', value: 42 }],
+      reviewer: 'different_model_family' as const,
+    }
+    const review = {
       criteria,
+      ...(strict && {
+        deferred: {
+          assessment_output: 'notes',
+          assessment_digest: DIGEST,
+          opens_after: 'independent_findings_sealed' as const,
+          unresolved_to: 'task_owner' as const,
+        },
+      }),
+      digest: DIGEST,
+      status: 'awaiting_isolation' as const,
+      checks: [{ index: 0, passed: true, detail: 'matched' }],
+      handoff: { result: DIGEST },
+    }
+    fetcher.mockImplementation(async (url: string, init: RequestInit) => {
+      expect(url).toMatch(/\/branch-review$/)
+      expect(JSON.parse(String(init.body))).toEqual({
+        request_id: REQUEST,
+        case_id: 'case_1',
+        repetition: 1,
+        step: 'left',
+        scope_digest: DIGEST,
+        artifact,
+        previous: null,
+        criteria,
+      })
+      return Response.json({ ...source, review })
     })
-    return Response.json({ ...source, review })
-  })
-  renderWith(<BranchReviewForm receipt={source} csrfToken={CSRF} />)
-  fireEvent.change(screen.getByLabelText(t.reviewOutput), { target: { value: 'result' } })
-  fireEvent.click(screen.getByRole('button', { name: t.reviewSave }))
-  expect(await screen.findByRole('alert')).toHaveTextContent(t.reviewInvalid)
-  expect(fetcher).not.toHaveBeenCalled()
-  fireEvent.change(screen.getByLabelText(t.reviewExpected), { target: { value: '42' } })
-  fireEvent.click(screen.getByLabelText(t.reviewFamily))
-  fireEvent.click(screen.getByRole('button', { name: t.reviewSave }))
-  expect(await screen.findByText(t.reviewWaiting)).toBeVisible()
-  expect(fetcher).toHaveBeenCalledTimes(1)
-  cleanup()
-  renderWith(<BranchReviewForm receipt={{ ...source, review }} csrfToken={CSRF} />)
-  expect(screen.getByLabelText(t.reviewOutput)).toHaveValue('result')
-  expect(screen.getByLabelText(t.reviewFamily)).toBeChecked()
-  expect(screen.getByLabelText(t.reviewExpected)).toHaveValue('42')
-  expect(screen.getByText(t.reviewWaiting)).toBeVisible()
-})
+    renderWith(<BranchReviewForm receipt={source} csrfToken={CSRF} />)
+    fireEvent.change(screen.getByLabelText(t.reviewOutput), { target: { value: 'result' } })
+    fireEvent.click(screen.getByRole('button', { name: t.reviewSave }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(t.reviewInvalid)
+    expect(fetcher).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByLabelText(t.reviewExpected), { target: { value: '42' } })
+    if (strict) {
+      fireEvent.change(screen.getByLabelText(t.reviewStage), { target: { value: 'strict' } })
+      expect(screen.getByLabelText(t.reviewAssessment)).toHaveValue('notes')
+      fireEvent.change(screen.getByLabelText(t.reviewReworks), { target: { value: '2' } })
+    }
+    fireEvent.click(screen.getByLabelText(t.reviewFamily))
+    fireEvent.click(screen.getByRole('button', { name: t.reviewSave }))
+    expect(await screen.findByText(t.reviewWaiting)).toBeVisible()
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    cleanup()
+    renderWith(<BranchReviewForm receipt={{ ...source, review }} csrfToken={CSRF} />)
+    expect(screen.getByLabelText(t.reviewOutput)).toHaveValue('result')
+    expect(screen.getByLabelText(t.reviewFamily)).toBeChecked()
+    if (strict) {
+      expect(screen.getByLabelText(t.reviewAssessment)).toHaveValue('notes')
+      expect(screen.getByText(t.reviewDisposition)).toBeVisible()
+    }
+    expect(screen.getByLabelText(t.reviewExpected)).toHaveValue('42')
+    expect(screen.getByText(t.reviewWaiting)).toBeVisible()
+  },
+)
