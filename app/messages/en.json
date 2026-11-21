@@ -1586,7 +1586,7 @@
     "title": "Execute validation",
     "hint": "Test inputs and expected assertions are saved separately. Assertions are checked after execution. Runs use the selected computer and budget and wait here for approvals. MCP calls require a reviewed zero incremental cost. Metered scripts and model usage are priced separately.",
     "unsupported": "Trials support zero-turn direct MCP methods, host-only isolated scripts, licensed single-turn instructions and eligible fixed host workflows.",
-    "instructionValidation": "Instruction trials require an execution license and a single host-initiated model turn without tools or approvals.",
+    "instructionValidation": "Select your registered instruction version or a licensed Skill instruction. The host runs one model turn. The method cannot request additional tools or approvals.",
     "instructionTrial": "Each repetition sends the instructions and case inputs to the configured model once. The platform checks the suite budget before dispatch and charges for actual usage. Expected results and assertions stay with the evaluator.",
     "suiteVersion": "Test suite version {version}",
     "caseNumber": "Test case {number}",

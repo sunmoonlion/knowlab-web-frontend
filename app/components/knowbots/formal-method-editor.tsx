@@ -156,6 +156,8 @@ function FormalForm({
   const shownVersion = frozen ?? inspected
   const selectedMethod = methods.data?.find((method) => method.method_id === methodId)
   const runtimeGaps = document.runtime_gaps ?? []
+  const instruction =
+    source?.kind === 'skill_instruction' || source?.kind === 'registered_instruction'
   const validated =
     !adopting &&
     runtimeGaps.length === 0 &&
@@ -167,11 +169,12 @@ function FormalForm({
     receipt.request_id === initial.request_id &&
     receipt.method_id === methodId &&
     receipt.revision === document.revision &&
-    (source?.kind !== 'skill_instruction' || !!receipt.execution) &&
+    (!instruction || !!receipt.execution) &&
     receiptCoversCallers(receipt, callers)
   const publicReady =
     definition?.procedure.kind !== 'orchestration' &&
-    source?.kind !== 'skill_instruction' &&
+    !instruction &&
+    source?.kind !== 'registered_script' &&
     validated &&
     receipt.checks.includes('business') &&
     !receipt.uncovered.length

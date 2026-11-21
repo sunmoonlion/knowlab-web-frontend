@@ -77,10 +77,12 @@ export function FormalMethodExecution({
   const procedure = draft?.definition.procedure
   const orchestration = procedure?.kind === 'orchestration'
   const instruction =
-    procedure?.kind === 'direct' && procedure.implementation.kind === 'skill_instruction'
+    procedure?.kind === 'direct' &&
+    (procedure.implementation.kind === 'skill_instruction' ||
+      procedure.implementation.kind === 'registered_instruction')
   const licensedInstruction =
     instruction &&
-    draft?.source?.kind === 'skill_instruction' &&
+    draft?.source?.kind === procedure.implementation.kind &&
     draft.source.license_basis !== 'pending' &&
     draft.allowed_callers.length === 1 &&
     draft.allowed_callers[0] === 'host' &&

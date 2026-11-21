@@ -262,22 +262,25 @@ it('requires a licensed instruction source before offering a billable trial', ()
   expect(fetcher).not.toHaveBeenCalled()
 })
 
-it('submits a licensed single-turn instruction trial with separate assertions', async () => {
-  const instruction = structuredClone(draft)
-  if (!instruction.source || instruction.definition.procedure.kind !== 'direct')
-    throw new Error('expected tool')
-  instruction.source.kind = 'skill_instruction'
-  instruction.source.license_basis = 'author_grant'
-  instruction.definition.procedure.implementation.kind = 'skill_instruction'
-  instruction.definition.procedure.max_model_turns = 1
-  page(false, ['host'], instruction)
-  expect(screen.getByText(t.instructionTrial)).toBeInTheDocument()
-  expect(screen.queryByRole('option', { name: t.rejected })).not.toBeInTheDocument()
-  await fill()
-  fireEvent.click(screen.getByRole('button', { name: t.start }))
-  await waitFor(() => expect(posts).toHaveLength(1))
-  expect(posts[0].body).toMatchObject({ execution: { suite: { cases: suite.cases } } })
-})
+it.each(['skill_instruction', 'registered_instruction'] as const)(
+  'submits a single-turn %s trial with separate assertions',
+  async (kind) => {
+    const instruction = structuredClone(draft)
+    if (!instruction.source || instruction.definition.procedure.kind !== 'direct')
+      throw new Error('expected tool')
+    instruction.source.kind = kind
+    instruction.source.license_basis = kind === 'registered_instruction' ? 'owner' : 'author_grant'
+    instruction.definition.procedure.implementation.kind = kind
+    instruction.definition.procedure.max_model_turns = 1
+    page(false, ['host'], instruction)
+    expect(screen.getByText(t.instructionTrial)).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: t.rejected })).not.toBeInTheDocument()
+    await fill()
+    fireEvent.click(screen.getByRole('button', { name: t.start }))
+    await waitFor(() => expect(posts).toHaveLength(1))
+    expect(posts[0].body).toMatchObject({ execution: { suite: { cases: suite.cases } } })
+  },
+)
 
 it.each(['skill_script', 'registered_script'] as const)(
   'submits a zero-turn host %s from the author page',
