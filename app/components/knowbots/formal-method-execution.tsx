@@ -78,7 +78,18 @@ export function FormalMethodExecution({
   const orchestration = procedure?.kind === 'orchestration'
   const instruction =
     procedure?.kind === 'direct' && procedure.implementation.kind === 'skill_instruction'
+  const licensedInstruction =
+    instruction &&
+    draft?.source?.kind === 'skill_instruction' &&
+    draft.source.license_basis !== 'pending' &&
+    draft.allowed_callers.length === 1 &&
+    draft.allowed_callers[0] === 'host' &&
+    procedure.max_model_turns === 1 &&
+    !procedure.implementation.requirement_ids.length &&
+    !draft.definition.access_requirements.length &&
+    !draft.definition.what_requires_approval.length
   const supported =
+    licensedInstruction ||
     supportsOrchestrationExecution(draft) ||
     (draft?.definition.procedure.kind === 'direct' &&
       (draft.definition.procedure.implementation.kind === 'mcp' ||
@@ -219,6 +230,7 @@ export function FormalMethodExecution({
       <p className="text-muted-foreground text-sm">{t('hint')}</p>
       <p className="text-muted-foreground text-sm">{t('callerCoverage')}</p>
       {orchestration ? <p>{t('orchestrationHint')}</p> : null}
+      {licensedInstruction ? <p>{t('instructionTrial')}</p> : null}
       {!supported ? <p>{t(instruction ? 'instructionValidation' : 'unsupported')}</p> : null}
       {supported && !command ? (
         <fieldset disabled={disabled || busy} className="space-y-3">
@@ -283,7 +295,7 @@ export function FormalMethodExecution({
                   onChange={(e) => update(i, { outcome: e.target.value as CaseEditor['outcome'] })}
                 >
                   <option value="succeeded">{t('succeeded')}</option>
-                  <option value="rejected">{t('rejected')}</option>
+                  {!instruction && <option value="rejected">{t('rejected')}</option>}
                 </select>
               </label>
               {c.outcome === 'succeeded' ? (

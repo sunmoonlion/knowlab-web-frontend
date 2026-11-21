@@ -167,9 +167,11 @@ function FormalForm({
     receipt.request_id === initial.request_id &&
     receipt.method_id === methodId &&
     receipt.revision === document.revision &&
+    (source?.kind !== 'skill_instruction' || !!receipt.execution) &&
     receiptCoversCallers(receipt, callers)
   const publicReady =
     definition?.procedure.kind !== 'orchestration' &&
+    source?.kind !== 'skill_instruction' &&
     validated &&
     receipt.checks.includes('business') &&
     !receipt.uncovered.length
