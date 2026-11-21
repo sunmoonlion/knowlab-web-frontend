@@ -13,8 +13,10 @@ export function ExpertFromTool({
   requestId,
   targetMethodId,
   preview,
+  candidate = false,
   onAdopt,
 }: {
+  candidate?: boolean
   preview?: (
     worker: FormalDefinition,
     confirm: (definition: FormalDefinition | null) => ReactNode,
@@ -36,7 +38,7 @@ export function ExpertFromTool({
     retry: false,
   })
   const owned = catalog.data?.filter(
-    (item) => item.method_kind === 'tool' && item.method_id !== targetMethodId,
+    (item) => (candidate || item.method_kind === 'tool') && item.method_id !== targetMethodId,
   )
   const grants = useQuery({
     queryKey: ['incubation-tools', requestId, after],
@@ -58,7 +60,13 @@ export function ExpertFromTool({
     version: selected.latest_version,
     digest: selected.digest,
   }
-  const { version, item, binding, proposed } = useToolVersion(requestId, ref, shared, csrfToken)
+  const { version, item, binding, proposed } = useToolVersion(
+    requestId,
+    ref,
+    shared,
+    csrfToken,
+    candidate,
+  )
   const go = (next: number) => {
     setDigestKey('')
     if (shared) {
@@ -85,7 +93,7 @@ export function ExpertFromTool({
         directory.isFetching ||
         version.isFetching
       }
-      label={t(preview ? 'p4Apply' : 'useToolAsStep')}
+      label={t(candidate ? 'p5Apply' : preview ? 'p4Apply' : 'useToolAsStep')}
       onAdopt={() => definition && onAdopt(definition)}
       onUnavailable={() => {
         void version.refetch()
@@ -94,7 +102,7 @@ export function ExpertFromTool({
   )
   return (
     <fieldset className="space-y-2 rounded border p-3">
-      <legend>{t(preview ? 'p4Worker' : 'startExpert')}</legend>
+      <legend>{t(candidate ? 'p5Candidate' : preview ? 'p4Worker' : 'startExpert')}</legend>
       <label className="block text-sm">
         {t('toolDirectory')}
         <select
@@ -106,18 +114,18 @@ export function ExpertFromTool({
             setDigestKey('')
           }}
         >
-          <option value="owned">{t('ownTools')}</option>
+          <option value="owned">{t(candidate ? 'p5Own' : 'ownTools')}</option>
           <option value="shared">{t('sharedTools')}</option>
         </select>
       </label>
       <label className="block text-sm">
-        {t('registeredTool')}
+        {t(candidate ? 'p5Candidate' : 'registeredTool')}
         <select
           className="bg-background mt-1 w-full rounded border p-2"
           value={selected ? digestKey : ''}
           onChange={(e) => setDigestKey(e.target.value)}
         >
-          <option value="">{t('chooseRegisteredTool')}</option>
+          <option value="">{t(candidate ? 'p5Pick' : 'chooseRegisteredTool')}</option>
           {tools?.map((item) => (
             <option key={key(item)} value={key(item)}>
               {item.title} · v{item.latest_version}

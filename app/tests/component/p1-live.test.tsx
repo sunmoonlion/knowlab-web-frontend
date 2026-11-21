@@ -10,6 +10,7 @@ vi.mock('@/i18n/navigation', () => ({ Link: 'a' }))
 const url = process.env.LUNA_P1_URL
 const modes = ['bridge', 'replace']
 if (process.env.LUNA_P1_SAMPLE) modes.push('internal')
+if (process.env.LUNA_P5_REQUEST) modes.push('choice')
 if (process.env.LUNA_P4_REQUEST) modes.push('comparison')
 if (process.env.LUNA_P2_REQUEST) modes.push('join')
 it.skipIf(!url).each(modes)(
@@ -47,33 +48,20 @@ it.skipIf(!url).each(modes)(
       const t = messages.formalMethod,
         leaf = process.env.LUNA_P1_LEAF!
       const predecessor = process.env.LUNA_P1_SHARED || leaf
+      const prefix = {
+        choice: 'LUNA_P5',
+        comparison: 'LUNA_P4',
+        join: 'LUNA_P2',
+        bridge: 'LUNA_P1',
+        internal: 'LUNA_P1_INTERNAL',
+        replace: 'LUNA_P1_RESELECT',
+      }[mode]
       const open = () =>
         renderWith(
           <FormalMethodEditor
-            requestId={
-              (mode === 'comparison'
-                ? process.env.LUNA_P4_REQUEST
-                : mode === 'join'
-                  ? process.env.LUNA_P2_REQUEST
-                  : mode === 'bridge'
-                    ? process.env.LUNA_P1_REQUEST
-                    : mode === 'internal'
-                      ? process.env.LUNA_P1_INTERNAL_REQUEST
-                      : process.env.LUNA_P1_RESELECT_REQUEST)!
-            }
+            requestId={process.env[prefix + '_REQUEST']!}
             csrfToken="csrf-token-with-at-least-thirty-two-characters"
-            resume={{
-              method:
-                mode === 'comparison'
-                  ? process.env.LUNA_P4_METHOD
-                  : mode === 'join'
-                    ? process.env.LUNA_P2_METHOD
-                    : mode === 'bridge'
-                      ? process.env.LUNA_P1_METHOD
-                      : mode === 'internal'
-                        ? process.env.LUNA_P1_INTERNAL_METHOD
-                        : process.env.LUNA_P1_RESELECT_METHOD,
-            }}
+            resume={{ method: process.env[prefix + '_METHOD'] }}
           />,
         )
       const view = open()
@@ -95,6 +83,51 @@ it.skipIf(!url).each(modes)(
       const adopt = screen.getByRole('button', { name: t.useToolAsStep })
       await waitFor(() => expect(adopt).toBeEnabled())
       fireEvent.click(adopt)
+      if (mode === 'choice') {
+        const nested = process.env.LUNA_P5_EXPERT!
+        fireEvent.click(screen.getByRole('button', { name: t.p5Configure }))
+        const panel = within(screen.getByRole('group', { name: t.p5Title }))
+        fireEvent.change(
+          panel.getByLabelText(t.p5Equals.replace('{method}', leaf).replace('{version}', '1')),
+          { target: { value: 'direct' } },
+        )
+        fireEvent.change(panel.getByLabelText(t.p5NewValue), { target: { value: 'review' } })
+        const picker = panel.getByRole<HTMLSelectElement>('combobox', { name: t.p5Candidate })
+        await waitFor(() =>
+          expect([...picker.options].some((o) => o.value.startsWith(nested))).toBe(true),
+        )
+        fireEvent.change(picker, {
+          target: { value: [...picker.options].find((o) => o.value.startsWith(nested))!.value },
+        })
+        const check = await panel.findByRole('button', { name: t.p5Check })
+        fireEvent.click(check)
+        await panel.findByText(
+          t.p5Limits.replace('{depth}', '3').replace('{steps}', '2').replace('{expansions}', '3'),
+        )
+        expect(panel.getByRole('button', { name: t.p5Apply })).toBeDisabled()
+        fireEvent.change(panel.getByLabelText(t.max_depth), { target: { value: '3' } })
+        fireEvent.change(panel.getByLabelText(t.max_expansions), { target: { value: '3' } })
+        fireEvent.change(panel.getByLabelText(t.max_steps), { target: { value: '2' } })
+        fireEvent.change(panel.getByLabelText(t.p5NewValue), { target: { value: 'direct' } })
+        expect(panel.getByRole('button', { name: t.p5Apply })).toBeDisabled()
+        fireEvent.change(panel.getByLabelText(t.p5NewValue), { target: { value: 'review' } })
+        fireEvent.click(panel.getByRole('button', { name: t.p5Check }))
+        await waitFor(() => expect(panel.getByRole('button', { name: t.p5Apply })).toBeEnabled())
+        fireEvent.click(panel.getByRole('button', { name: t.p5Apply }))
+        fireEvent.click(screen.getByRole('button', { name: t.save }))
+        await screen.findByText(t.saved)
+        view.unmount()
+        open()
+        await screen.findByText(t.planLastAdoption.replace('{base}', '0').replace('{saved}', '1'))
+        const sample = screen.getByLabelText(t.p5Sample)
+        fireEvent.change(sample, { target: { value: 'review' } })
+        expect(
+          screen.getByText(t.p5Match.replace('{method}', nested).replace('{version}', '1')),
+        ).toBeVisible()
+        fireEvent.change(sample, { target: { value: 'unknown' } })
+        expect(screen.getByText(t.p5NoMatch)).toBeVisible()
+        return
+      }
       if (mode === 'comparison') {
         fireEvent.click(screen.getByRole('button', { name: t.p4Configure }))
         const panel = within(screen.getByRole('group', { name: t.p4Title }))

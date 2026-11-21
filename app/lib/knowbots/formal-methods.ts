@@ -1,3 +1,4 @@
+import type { FormalDefinition } from '@/contracts/formal-methods'
 import { z } from 'zod'
 import {
   sharedToolInterfaceSchema,
@@ -337,5 +338,31 @@ export async function checkSampleColumn(
     result.column !== pin.column
   )
     throw new KnowbotContractError()
+  return result
+}
+
+export async function previewCandidateChoice(
+  requestId: string,
+  methodId: string,
+  revision: number,
+  definition: FormalDefinition,
+  csrfToken: string,
+) {
+  const result = parseFormalReply(
+    z
+      .object({
+        fits: z.boolean(),
+        depth: z.number().int().positive(),
+        steps: z.number().int().positive(),
+        expansions: z.number().int().positive(),
+        revision: z.number().int().nonnegative(),
+      })
+      .strict(),
+    await requestJson(
+      `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/workdraft/candidate-preview`,
+      { method: 'POST', csrfToken, body: { method_id: methodId, revision, definition } },
+    ),
+  )
+  if (result.revision !== revision) throw new KnowbotContractError()
   return result
 }

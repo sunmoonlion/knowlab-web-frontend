@@ -16,6 +16,7 @@ export function supportsOrchestrationExecution(draft: FormalDraft | null): boole
     draft.allowed_callers.length !== 1 ||
     draft.allowed_callers[0] !== 'host' ||
     !!graph.object_batch ||
+    graph.steps.some((s) => !!s.candidate_choice) ||
     graph.max_replans !== 0 ||
     graph.max_depth < 2 ||
     graph.steps.length === 0 ||
@@ -87,6 +88,32 @@ export function expertFromTool(version: FormalVersion): FormalDefinition | null 
     ...contract,
     inputs: tool.inputs,
     outputs: tool.outputs,
+  })
+}
+
+// P5 may place a frozen expert in a candidate slot through its public interface.
+export function candidateFromVersion(version: FormalVersion): FormalDefinition | null {
+  if (version.definition.procedure.kind === 'direct') return expertFromTool(version)
+  const { provenance } = version
+  if (
+    provenance.dispatch !== 'orchestration' ||
+    !provenance.validation ||
+    !validatedCallers(provenance.validation).includes('host') ||
+    !(provenance.allowed_callers ?? ['host']).includes('host')
+  )
+    return null
+  const { inputs, outputs } = provenance.interfaces
+  return expertFromToolContract(version, {
+    ...version.definition,
+    inputs: Object.fromEntries(
+      Object.entries(inputs).map(([k, i]) => [
+        k,
+        { ...i.slot, required: i.required_by.length > 0 },
+      ]),
+    ),
+    outputs: Object.fromEntries(
+      Object.entries(outputs).map(([k, o]) => [k, { ...o.slot, required: o.always_present }]),
+    ),
   })
 }
 

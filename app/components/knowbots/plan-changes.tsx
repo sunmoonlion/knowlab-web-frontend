@@ -22,6 +22,7 @@ export function PlanChanges({
   for (const step of next.steps) {
     const original = graph.steps.find((s) => s.id === step.id)
     compare(step.id + '.candidates', original?.candidates, step.candidates)
+    compare(step.id + '.candidate_choice', original?.candidate_choice, step.candidate_choice)
     compare(step.id + '.depends_on', original?.depends_on, step.depends_on)
     for (const name of new Set([
       ...Object.keys(original?.inputs ?? {}),
@@ -32,6 +33,7 @@ export function PlanChanges({
   }
   compare(t('graphExports'), graph.exports, next.exports)
   compare(t('p4Title'), graph.object_batch, next.object_batch)
+  compare('max_depth', graph.max_depth, next.max_depth)
   compare('max_steps', graph.max_steps, next.max_steps)
   compare('max_expansions', graph.max_expansions, next.max_expansions)
   compare(t('permissions'), before.access_requirements, after.access_requirements)

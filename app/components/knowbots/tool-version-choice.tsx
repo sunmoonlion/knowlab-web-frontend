@@ -8,7 +8,11 @@ import {
   sharedIncubationTools,
   chooseToolInstallation,
 } from '@/lib/knowbots/formal-methods'
-import { expertFromTool, expertFromToolContract } from '@/lib/knowbots/formal-orchestration'
+import {
+  candidateFromVersion,
+  expertFromTool,
+  expertFromToolContract,
+} from '@/lib/knowbots/formal-orchestration'
 
 type Reference = { method_id: string; version: number; digest: string }
 
@@ -17,12 +21,14 @@ export function useToolVersion(
   ref: Reference | undefined,
   shared: boolean,
   csrfToken: string,
+  allowExpert = false,
 ) {
   const version = useQuery({
     queryKey: [
       'expert-source-version',
       requestId,
       shared,
+      allowExpert,
       ref?.method_id,
       ref?.version,
       ref?.digest,
@@ -38,7 +44,10 @@ export function useToolVersion(
       }
       const value = await getFormalVersion(ref.method_id, ref.version)
       if (value.digest !== ref.digest) throw new Error('method_integrity')
-      return { draft: expertFromTool(value), item: null }
+      return {
+        draft: allowExpert ? candidateFromVersion(value) : expertFromTool(value),
+        item: null,
+      }
     },
   })
   const item = version.data?.item

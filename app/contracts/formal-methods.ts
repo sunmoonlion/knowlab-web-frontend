@@ -81,6 +81,23 @@ const binding = z.discriminatedUnion('source', [
 const step = z
   .object({
     id: name,
+    candidate_choice: z
+      .object({
+        input: name,
+        cases: z
+          .array(
+            z
+              .object({
+                equals: z.string().min(1).max(128).regex(/\S/),
+                candidate: formalMethodRefSchema,
+              })
+              .strict(),
+          )
+          .min(2)
+          .max(8),
+      })
+      .strict()
+      .optional(),
     candidates: z.array(formalMethodRefSchema).min(1).max(100),
     select_when: text,
     required_when: text,

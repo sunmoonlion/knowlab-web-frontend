@@ -21,8 +21,17 @@ export function FormalOrchestrationSummary({ definition }: { definition: FormalD
               {t('predecessors')}: {step.depends_on.join(', ') || t('none')}
             </p>
             <p>
-              {t('stepConditions')}: {step.select_when} · {step.required_when}
+              {t('stepConditions')}:{' '}
+              {step.candidate_choice
+                ? t('p5ByInput', { input: step.candidate_choice.input })
+                : step.select_when}{' '}
+              · {step.required_when}
             </p>
+            {step.candidate_choice?.cases.map((c) => (
+              <p key={c.equals}>
+                {c.equals} → {c.candidate.method_id} · v{c.candidate.version}
+              </p>
+            ))}
             <p>{t('exactDependencies')}</p>
             {step.candidates.map((ref) => (
               <p key={`${ref.method_id}:${ref.version}:${ref.digest}`} className="break-all">
