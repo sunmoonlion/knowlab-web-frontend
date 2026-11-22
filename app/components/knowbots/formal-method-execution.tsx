@@ -104,7 +104,7 @@ export function FormalMethodExecution({
           draft.source?.kind === 'service_function' &&
           draft.source.source === 'knowbase' &&
           draft.source.entry === 'read_method_input') ||
-        (['skill_script', 'registered_script', 'service_function'].includes(
+        (['a2a', 'skill_script', 'registered_script', 'service_function'].includes(
           draft.definition.procedure.implementation.kind,
         ) &&
           draft.allowed_callers.length === 1 &&

@@ -28,6 +28,7 @@ const implementation = z
     kind: z.enum([
       'platform',
       'mcp',
+      'a2a',
       'skill_instruction',
       'skill_script',
       'service_function',
