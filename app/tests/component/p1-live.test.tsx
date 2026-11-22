@@ -159,7 +159,7 @@ it.skipIf(!url).each(modes)(
         await screen.findByText(t.planLastAdoption.replace('{base}', '0').replace('{saved}', '1'))
         expect(screen.getByLabelText(t.p4Max)).toHaveValue(3)
         expect(screen.getByLabelText(t.p4Missing)).toHaveValue('request_partial')
-        expect(screen.getByText(t.bounded_fanout.replace('{step}', 'per_object'))).toBeVisible()
+        expect(screen.queryByText(t.bounded_fanout.replace('{step}', 'per_object'))).toBeNull()
         return
       }
       if (mode === 'join' || mode === 'review') {
@@ -207,7 +207,7 @@ it.skipIf(!url).each(modes)(
             screen.getByText(t.p3Handoffs.replace('{sources}', 'branch, branch_1')),
           ).toBeVisible()
           for (const id of ['branch', 'branch_1', 'step_1'])
-            expect(screen.getByText(t.isolation_group.replace('{step}', id))).toBeVisible()
+            expect(screen.getByText(t.p3Group.replace('{group}', id))).toBeVisible()
         }
         return
       }
