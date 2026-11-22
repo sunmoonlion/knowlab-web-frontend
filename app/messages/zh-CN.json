@@ -1642,7 +1642,7 @@
     "verifiedCallers": "已验证调用方",
     "qualificationUnknown": "暂无可核验的调用方回执",
     "orchestrationScope": "固定流程自用实测：每步必须执行且只引用一个精确方法版本，可引用已通过验证的工具方法或专家方法。服务端核验完整依赖树及当前使用资格；这里只展示当前层。可在草稿中修改调用参数与前置输出绑定。",
-    "orchestrationPrivate": "此阶段的编排仅支持私有冻结与孵化实测，尚未开放普通会话专家入口。",
+    "orchestrationPublication": "公开冻结需要专家试跑和独立业务复核通过，且作者对每个锁定依赖都具备公开交付资格。",
     "stepRequirement": "执行要求",
     "predecessors": "前置步骤",
     "stepConditions": "选择与必做条件",

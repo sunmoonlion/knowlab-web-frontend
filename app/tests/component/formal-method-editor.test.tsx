@@ -534,7 +534,7 @@ it('shows the validated caller from the frozen server receipt', async () => {
   await screen.findByText(`${labels.verifiedCallers}: ${labels.model}`)
 })
 
-it('shows exact graph connections and keeps a fully validated graph private', async () => {
+it('shows exact graph connections and keeps a graph without execution evidence private', async () => {
   current.body.formal_method = orchestrationDraft(draft)
   const fallback = fetcher.getMockImplementation()!
   fetcher.mockImplementation((url, options) =>
@@ -553,7 +553,7 @@ it('shows exact graph connections and keeps a fully validated graph private', as
   expect(screen.getByText(/fixed ← 固定值: "fixed input"/)).toBeInTheDocument()
   expect(screen.getByText(/message ← 前置步骤输出: first.summary/)).toBeInTheDocument()
   expect(screen.getByText(/summary ← second.summary/)).toBeInTheDocument()
-  expect(screen.getByText(labels.orchestrationPrivate)).toBeInTheDocument()
+  expect(screen.getByText(labels.orchestrationPublication)).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: labels.refresh }))
   await waitFor(() =>
     expect(screen.getByRole('button', { name: labels.confirmFreeze })).toBeEnabled(),
@@ -563,6 +563,29 @@ it('shows exact graph connections and keeps a fully validated graph private', as
   fireEvent.change(screen.getByLabelText(labels.visibility), { target: { value: 'public' } })
   expect(screen.getByRole('button', { name: labels.confirmFreeze })).toBeDisabled()
   expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(0)
+})
+
+it('offers public freeze for an expert with business coverage and trial evidence', async () => {
+  current.body.formal_method = orchestrationDraft(draft)
+  const execution = {
+    contract: 'knowlab/formal-method-execution/v1',
+    request_digest: fingerprint,
+    suite_id: RUN,
+    suite_version: 1,
+    suite_digest: fingerprint,
+    evidence_digest: fingerprint,
+  }
+  const fallback = fetcher.getMockImplementation()!
+  fetcher.mockImplementation((url, options) =>
+    url.includes('/validations')
+      ? respond({ ...passed, receipt: { ...receipt, source_digest: null, execution } })
+      : fallback(url, options),
+  )
+  show()
+  fireEvent.click(await screen.findByRole('button', { name: labels.refresh }))
+  await waitFor(() => expect(screen.getByRole('option', { name: labels.public })).toBeEnabled())
+  fireEvent.change(screen.getByLabelText(labels.visibility), { target: { value: 'public' } })
+  expect(screen.getByRole('button', { name: labels.confirmFreeze })).toBeEnabled()
 })
 
 const childId = 'a45d7d69-1d43-4f13-9207-81de485e18e1'

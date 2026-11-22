@@ -1642,7 +1642,7 @@
     "verifiedCallers": "Validated callers",
     "qualificationUnknown": "No verifiable caller receipt available",
     "orchestrationScope": "Private fixed-flow tests require every step and one exact method version per step. Dependencies may be qualified tool or expert methods. The server verifies the complete dependency tree and current use rights; this view shows only the current level. Caller arguments and predecessor output bindings can be edited in the draft.",
-    "orchestrationPrivate": "Composed methods currently support private freezing and incubation tests only. The ordinary session expert entry is not enabled.",
+    "orchestrationPublication": "Public freezing requires a completed expert trial, independent coverage review, and public delivery rights for every pinned dependency.",
     "stepRequirement": "Execution requirement",
     "predecessors": "Predecessors",
     "stepConditions": "Selection and requirement conditions",

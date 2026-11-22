@@ -180,7 +180,6 @@ function FormalForm({
     (!requiresTrial || !!receipt.execution) &&
     receiptCoversCallers(receipt, callers)
   const publicReady =
-    definition?.procedure.kind !== 'orchestration' &&
     !privateTrial &&
     !!receipt?.execution &&
     validated &&
@@ -800,7 +799,9 @@ function FormalForm({
       >
         <legend className="px-1 font-medium">{t('freeze')}</legend>
         <p className="text-muted-foreground text-sm">{t('freezeHint')}</p>
-        {definition?.procedure.kind === 'orchestration' ? <p>{t('orchestrationPrivate')}</p> : null}
+        {definition?.procedure.kind === 'orchestration' ? (
+          <p>{t('orchestrationPublication')}</p>
+        ) : null}
         <label className="block text-sm">
           {t('version')}
           <input
