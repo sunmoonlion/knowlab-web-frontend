@@ -102,8 +102,8 @@ function ApplicationProcess({ item, csrfToken }: { item: Application; csrfToken:
               <div>
                 <strong>{t('suggestedPlan')}</strong>
                 <ul>
-                  {detail.data.origin.suggested_plan.methods.map((m) => (
-                    <li key={m.method_id}>
+                  {detail.data.origin.suggested_plan.methods.map((m, step) => (
+                    <li key={`${step}:${m.method_id}:${m.version}`}>
                       {m.method_id} · v{m.version}
                     </li>
                   ))}
