@@ -1154,6 +1154,67 @@ it('imports the review requirement from a portable formal graph and rejects unre
   expect(screen.getByLabelText('second 复核 first 的产物')).toHaveValue('different_model_family')
 })
 
+it.each(['direct', 'plain graph', 'review graph'])(
+  'replaces saved collaboration when importing a %s and preserves it after reopening',
+  async (kind) => {
+    const graph = orchestrationDraft(draft)
+    current.body.formal_method = graph
+    current.body.collaboration = {
+      first: { isolation_group: 'author', handoff_from: [] },
+      second: {
+        isolation_group: 'review',
+        handoff_from: ['first'],
+        review_requirements: { first: 'different_model_family' },
+      },
+    }
+    const expected =
+      kind === 'review graph'
+        ? {
+            second: {
+              isolation_group: null,
+              handoff_from: [],
+              review_requirements: { first: 'isolated_reviewer' as const },
+            },
+          }
+        : null
+    const definition = structuredClone(kind === 'direct' ? draft.definition : graph.definition)
+    definition.capability_declaration.title = '导入的替代方法'
+    if (definition.procedure.kind === 'orchestration' && expected)
+      definition.procedure.collaboration = expected
+    const fallback = fetcher.getMockImplementation()!
+    fetcher.mockImplementation((url, options) => {
+      if (!url.endsWith('/cells')) return fallback(url, options)
+      const body = JSON.parse(options.body)
+      const edits = Object.fromEntries(
+        body.cells.map((c: { path: string; value: unknown }) => [c.path, c.value]),
+      )
+      current = { ...current, revision: current.revision + 1, body: { ...current.body, ...edits } }
+      return respond(current)
+    })
+    const view = show()
+    fireEvent.change(await screen.findByLabelText(labels.import), {
+      target: { files: [{ size: 100, text: async () => JSON.stringify(definition) }] },
+    })
+    await screen.findByDisplayValue('导入的替代方法')
+    if (kind === 'direct') {
+      const option = await screen.findByRole<HTMLOptionElement>('option', {
+        name: 'synthetic.check · 1 · check',
+      })
+      fireEvent.change(screen.getByLabelText(labels.source), { target: { value: option.value } })
+    }
+    fireEvent.click(screen.getByRole('button', { name: labels.save }))
+    await screen.findByText(labels.saved)
+    expect(current.body.collaboration).toEqual(expected)
+    expect(current.body.formal_method?.definition.procedure).not.toHaveProperty('collaboration')
+    view.unmount()
+    show()
+    await screen.findByDisplayValue('导入的替代方法')
+    expect(screen.queryByText(labels.p3Group.replace('{group}', 'author'))).toBeNull()
+    if (kind === 'review graph')
+      expect(screen.getByLabelText('second 复核 first 的产物')).toHaveValue('isolated_reviewer')
+  },
+)
+
 it('keeps every promised output and fixed input when the author replaces a downstream tool', () => {
   const original = orchestrationDraft(draft).definition
   const graph = original.procedure

@@ -448,9 +448,10 @@ function FormalForm({
                 const parsed = formalDefinitionSchema.parse(JSON.parse(await file.text()))
                 if (parsed.procedure.kind === 'orchestration') {
                   const { collaboration: importedRoles, ...procedure } = parsed.procedure
-                  if (importedRoles) setCollaboration(importedRoles)
+                  setCollaboration(importedRoles ?? null)
                   editDefinition({ ...parsed, procedure })
                 } else {
+                  setCollaboration(null)
                   editDefinition(parsed)
                 }
                 setSource(null)
