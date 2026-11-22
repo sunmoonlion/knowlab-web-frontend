@@ -72,6 +72,8 @@ it.skipIf(!url).each(modes)(
           />,
         )
       const view = open()
+      const modeSwitch = screen.getByRole('switch', { name: messages.workdraft.developerMode })
+      if (!(modeSwitch as HTMLInputElement).checked) fireEvent.click(modeSwitch)
       const choose = await screen.findByLabelText<HTMLSelectElement>(t.registeredTool)
       const firstTool =
         mode === 'comparison'

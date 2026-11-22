@@ -147,6 +147,7 @@ const fetcher = vi.fn()
 const respond = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status })
 let current = initial
 beforeEach(() => {
+  sessionStorage.setItem('knowlab.author-mode.' + REQUEST, 'developer')
   current = structuredClone(initial)
   fetcher.mockReset()
   vi.stubGlobal('fetch', fetcher)
@@ -180,6 +181,7 @@ const show = () =>
   )
 
 it('withdraws the saved method and collaboration together at the displayed revision', async () => {
+  sessionStorage.removeItem('knowlab.author-mode.' + REQUEST)
   vi.stubGlobal('confirm', vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true))
   show()
   const button = await screen.findByRole('button', { name: labels.withdrawDraft })

@@ -123,6 +123,7 @@ function page() {
 }
 
 beforeEach(() => {
+  sessionStorage.clear()
   server = workdraft()
   vi.mocked(fetchWorkdraft)
     .mockReset()
@@ -144,6 +145,7 @@ describe('工作稿：格子与自动保存（专家孵化方案第六节）', (
   it('成稿文件随工作稿保存，重新载入保留，清空恢复仅对话交回', async () => {
     server = workdraft({ body: { ...emptyBody(), steps: [step('s1')] } })
     const view = page()
+    fireEvent.click(screen.getByRole('switch', { name: w.developerMode }))
     fireEvent.change(await screen.findByLabelText(w.step.outputFile), {
       target: { value: '财务分析报告.md' },
     })
@@ -482,6 +484,8 @@ describe('工作稿：格子与自动保存（专家孵化方案第六节）', (
     expect(screen.getByTestId('problem-steps/s1/title')).toHaveTextContent(w.problems.noTitle)
     expect(screen.getByLabelText(w.expert.does)).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByLabelText(w.expert.name)).not.toHaveAttribute('aria-invalid')
+    expect(screen.getByTestId('problems-elsewhere')).toHaveTextContent(w.problems.reviewField)
+    fireEvent.click(screen.getByRole('switch', { name: w.developerMode }))
     expect(screen.getByTestId('problems-elsewhere')).toHaveTextContent('a knowbot cannot use these')
   })
 })
@@ -502,6 +506,10 @@ describe('工作稿：顶上的按钮', () => {
     const dialog = within(await screen.findByRole('dialog', { name: w.preview.title }))
     expect(dialog.getByText('出不了版本的地方：1 处')).toBeInTheDocument()
     expect(dialog.getByText(w.problems.noSteps)).toBeInTheDocument()
+    expect(dialog.queryByTestId('preview-manifest')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: w.formalMethod })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('switch', { name: w.developerMode }))
+    expect(screen.getByRole('link', { name: w.formalMethod })).toBeInTheDocument()
     expect(dialog.getByTestId('preview-manifest')).toHaveTextContent('knowbot-manifest/v2')
   })
 
@@ -575,6 +583,7 @@ describe('工作稿：顶上的按钮', () => {
       }),
     )
     page()
+    fireEvent.click(screen.getByRole('switch', { name: w.developerMode }))
     fireEvent.click(await screen.findByRole('button', { name: w.toolbar.import }))
     const dialog = within(screen.getByRole('dialog', { name: w.import.title }))
     fireEvent.change(dialog.getByLabelText(w.import.text), { target: { value: '{不是 JSON' } })
@@ -595,6 +604,7 @@ describe('工作稿：顶上的按钮', () => {
   it('导入不进来：说只认清单 v2', async () => {
     vi.mocked(importWorkdraft).mockRejectedValue(refused('manifest_invalid'))
     page()
+    fireEvent.click(screen.getByRole('switch', { name: w.developerMode }))
     fireEvent.click(await screen.findByRole('button', { name: w.toolbar.import }))
     const dialog = within(screen.getByRole('dialog', { name: w.import.title }))
     fireEvent.change(dialog.getByLabelText(w.import.text), { target: { value: '{"schema": "x"}' } })

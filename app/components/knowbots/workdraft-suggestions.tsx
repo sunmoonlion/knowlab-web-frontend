@@ -1,5 +1,8 @@
 'use client'
 
+import { StructuredValue } from './structured-value'
+import { useDeveloperMode } from './author-mode'
+
 import { useTranslations } from 'next-intl'
 import { createContext, useContext, useState } from 'react'
 
@@ -98,8 +101,25 @@ function shown(value: unknown): string {
 export function SuggestionBox({ suggestion: s }: { suggestion: Suggestion }) {
   const t = useTranslations('workdraft.ai')
   const { busy, decide } = useContext(SuggestionsContext)
+  const developer = useDeveloperMode()
+  const w = useTranslations('workdraft')
+  const labels: Record<string, string> = {
+    title: w('step.title'),
+    does: w('step.does'),
+    why: w('step.why'),
+    rules: w('step.rules'),
+    outputs: w('step.outputs'),
+    checks: w('step.checks'),
+  }
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(() => shown(s.value))
+  let parsed: unknown
+  let valid = true
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    valid = false
+  }
   const [bad, setBad] = useState(false)
   const structured = s.value !== undefined && s.value !== null && typeof s.value !== 'string'
   const needsValue = s.op === 'set' || s.op === 'add'
@@ -124,7 +144,9 @@ export function SuggestionBox({ suggestion: s }: { suggestion: Suggestion }) {
       </p>
       {s.op === 'move' ? (
         <p>{t('moveTo', { n: Number(s.value) + 1 })}</p>
-      ) : s.op === 'remove' ? null : structured ? (
+      ) : s.op === 'remove' ? null : structured && !developer ? (
+        <StructuredValue labels={labels} value={s.value} label={t('label')} />
+      ) : structured ? (
         <pre className="bg-background/60 max-h-48 overflow-auto rounded p-1.5 whitespace-pre-wrap">
           {shown(s.value)}
         </pre>
@@ -140,7 +162,27 @@ export function SuggestionBox({ suggestion: s }: { suggestion: Suggestion }) {
       ) : null}
       {editing ? (
         <div className="space-y-1">
-          {needsValue ? (
+          {needsValue && structured && !developer ? (
+            valid ? (
+              <StructuredValue
+                labels={labels}
+                label={t('editLabel')}
+                value={parsed}
+                onChange={(v) => setText(JSON.stringify(v))}
+              />
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setText(shown(s.value))
+                  setBad(false)
+                }}
+              >
+                {w('restoreSuggestion')}
+              </Button>
+            )
+          ) : needsValue ? (
             <textarea
               aria-label={t('editLabel')}
               className={`${BOX} ${structured ? 'font-mono text-xs' : ''}`}
@@ -149,9 +191,15 @@ export function SuggestionBox({ suggestion: s }: { suggestion: Suggestion }) {
               onChange={(e) => setText(e.target.value)}
             />
           ) : null}
-          {bad ? <p className="text-destructive">{t('badJson')}</p> : null}
+          {developer && bad ? <p className="text-destructive">{t('badJson')}</p> : null}
           <div className="flex gap-2">
-            <Button size="sm" disabled={busy || (needsValue && !text.trim())} onClick={submit}>
+            <Button
+              size="sm"
+              disabled={
+                busy || (needsValue && (!text.trim() || (structured && !developer && !valid)))
+              }
+              onClick={submit}
+            >
               {t('acceptEdited')}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
@@ -228,13 +276,14 @@ export function PendingSteps() {
 export function OtherSuggestions() {
   const t = useTranslations('workdraft.ai')
   const { at } = useContext(SuggestionsContext)
+  const developer = useDeveloperMode()
   const found = at('elsewhere')
   if (found.length === 0) return null
   return (
     <Card title={t('elsewhere')}>
       {found.map((s) => (
         <div key={s.id} className="space-y-1">
-          <code className="text-xs">{s.path}</code>
+          {developer && <code className="text-xs">{s.path}</code>}
           <SuggestionBox suggestion={s} />
         </div>
       ))}

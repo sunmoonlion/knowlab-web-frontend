@@ -63,7 +63,8 @@ describe('表格行测试条件', () => {
     vi.mocked(reviseRequest).mockResolvedValue(3)
     const previous = version({ cases })
     renderWith(<RequestForm csrfToken={CSRF} revise={{ requestId: REQUEST, version: previous }} />)
-    expect(screen.getByLabelText(labels.rowWhere)).toHaveValue(JSON.stringify(row.where))
+    expect(screen.queryByLabelText(labels.rowWhere)).not.toBeInTheDocument()
+    expect(screen.getByDisplayValue('2024')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText(labels.value), { target: { value: '101' } })
     fireEvent.click(screen.getByLabelText(/我同意/))
     fireEvent.click(screen.getByRole('button', { name: labels.submitRevision }))
@@ -84,6 +85,7 @@ describe('表格行测试条件', () => {
           revise={{ requestId: REQUEST, version: version({ cases }) }}
         />,
       )
+      fireEvent.click(screen.getByRole('switch'))
       fireEvent.change(screen.getByLabelText(labels.rowWhere), { target: { value: where } })
       fireEvent.click(screen.getByLabelText(/我同意/))
       fireEvent.click(screen.getByRole('button', { name: labels.submitRevision }))
@@ -99,6 +101,7 @@ describe('表格行测试条件', () => {
 })
 
 beforeEach(() => {
+  sessionStorage.clear()
   vi.resetAllMocks()
   vi.mocked(fetchDetail).mockResolvedValue(detail())
   // 上次选的是自己来（第一次是 null，见「第一次自己选模式」）

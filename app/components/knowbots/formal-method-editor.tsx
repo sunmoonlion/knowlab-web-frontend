@@ -35,6 +35,7 @@ import {
 import { ExpertInputBinding } from './expert-input-binding'
 import { ExpertFromTool } from './expert-from-tool'
 import { same } from '@/lib/knowbots/workdraft'
+import { AuthorModePanel, SavedMethodSummary, useDeveloperMode } from './author-mode'
 import { KEY } from './shared'
 import { FormalMethodExecution } from './formal-method-execution'
 import { DeliveryPromises } from './delivery-promises'
@@ -58,7 +59,19 @@ type Resume = {
 const id = (value?: string) => (z.uuid().safeParse(value).success ? value! : null)
 const sourceKey = (source: FormalSource) => JSON.stringify(source)
 
-export function FormalMethodEditor({
+export function FormalMethodEditor(props: {
+  requestId: string
+  csrfToken: string
+  resume?: Resume
+}) {
+  return (
+    <AuthorModePanel key={props.requestId} scope={props.requestId}>
+      <FormalContent {...props} />
+    </AuthorModePanel>
+  )
+}
+
+function FormalContent({
   requestId,
   csrfToken,
   resume = {},
@@ -114,6 +127,10 @@ function FormalForm({
   onWithdraw: () => void
 }) {
   const t = useTranslations('formalMethod')
+  const developer = useDeveloperMode()
+  const tw = useTranslations('workdraft')
+  const [opened, setOpened] = useState(false)
+  if (developer && !opened) setOpened(true)
   const client = useQueryClient()
   const [document, setDocument] = useState(initial)
   const [reviewedPlan, setReviewedPlan] = useState<FormalDefinition | null>(null)
@@ -365,603 +382,636 @@ function FormalForm({
       <Link className="text-sm underline" href={`/names/${initial.request_id}`}>
         {t('backToName')}
       </Link>
-      <p className="text-sm">{t('draftNotice')}</p>
-      {definition?.procedure.kind === 'orchestration' && (
-        <details>
-          <summary>{t('runtimePatterns')}</summary>
-          {runtime.data ? (
-            <ul>
-              {Object.entries(runtime.data.patterns).map(([key, enabled]) => (
-                <li key={key}>
-                  {t('patterns.' + key)} · {t(enabled ? 'patternAvailable' : 'patternDisabled')}
-                </li>
-              ))}
-            </ul>
+      {!developer && (
+        <section className="space-y-3">
+          {document.body.formal_method ? (
+            <>
+              <SavedMethodSummary draft={document.body.formal_method} />
+              <Button
+                disabled={working || executionActive || adopting}
+                variant="outline"
+                onClick={() => void withdrawDraft()}
+              >
+                {t('withdrawDraft')}
+              </Button>
+            </>
           ) : (
-            <p>{t('patternUnknown')}</p>
+            <Link className="underline" href={`/names/${initial.request_id}/workdraft`}>
+              {tw('title')}
+            </Link>
           )}
-        </details>
+          <p>{tw('formalModeHint')}</p>
+        </section>
       )}
-      {document.plan_adoption && (
-        <p className="text-sm">
-          {t('planLastAdoption', {
-            base: document.plan_adoption.base_revision,
-            saved: document.plan_adoption.saved_revision,
-          })}
-        </p>
-      )}
-      <fieldset
-        disabled={working || executionActive || adopting}
-        className="space-y-2 rounded border p-4 text-sm"
-      >
-        <legend className="px-1 font-medium">{t('methodTarget')}</legend>
-        <label>
-          {t('chooseMethod')}
-          <select
-            className={input}
-            value={methodId}
-            onChange={(e) => {
-              setMethodId(e.target.value)
-              setValidation(null)
-              setRun(null)
-              setFrozen(null)
-              setInspected(null)
-              setSelectedTitle(
-                methods.data?.find((method) => method.method_id === e.target.value)?.title ?? null,
-              )
-              setVersion(
-                (methods.data?.find((method) => method.method_id === e.target.value)
-                  ?.latest_version ?? 0) + 1,
-              )
-            }}
+      {opened && (
+        <div hidden={!developer} className="space-y-5">
+          <p className="text-sm">{t('draftNotice')}</p>
+          {definition?.procedure.kind === 'orchestration' && (
+            <details>
+              <summary>{t('runtimePatterns')}</summary>
+              {runtime.data ? (
+                <ul>
+                  {Object.entries(runtime.data.patterns).map(([key, enabled]) => (
+                    <li key={key}>
+                      {t('patterns.' + key)} · {t(enabled ? 'patternAvailable' : 'patternDisabled')}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>{t('patternUnknown')}</p>
+              )}
+            </details>
+          )}
+          {document.plan_adoption && (
+            <p className="text-sm">
+              {t('planLastAdoption', {
+                base: document.plan_adoption.base_revision,
+                saved: document.plan_adoption.saved_revision,
+              })}
+            </p>
+          )}
+          <fieldset
+            disabled={working || executionActive || adopting}
+            className="space-y-2 rounded border p-4 text-sm"
           >
-            <option value={newMethodId}>{t('newMethod')}</option>
-            {methodId !== newMethodId &&
-            !methods.data?.some((method) => method.method_id === methodId) ? (
-              <option value={methodId}>{selectedTitle ?? t('resumedMethod')}</option>
+            <legend className="px-1 font-medium">{t('methodTarget')}</legend>
+            <label>
+              {t('chooseMethod')}
+              <select
+                className={input}
+                value={methodId}
+                onChange={(e) => {
+                  setMethodId(e.target.value)
+                  setValidation(null)
+                  setRun(null)
+                  setFrozen(null)
+                  setInspected(null)
+                  setSelectedTitle(
+                    methods.data?.find((method) => method.method_id === e.target.value)?.title ??
+                      null,
+                  )
+                  setVersion(
+                    (methods.data?.find((method) => method.method_id === e.target.value)
+                      ?.latest_version ?? 0) + 1,
+                  )
+                }}
+              >
+                <option value={newMethodId}>{t('newMethod')}</option>
+                {methodId !== newMethodId &&
+                !methods.data?.some((method) => method.method_id === methodId) ? (
+                  <option value={methodId}>{selectedTitle ?? t('resumedMethod')}</option>
+                ) : null}
+                {methods.data
+                  ?.filter((method) => method.method_id !== newMethodId)
+                  .map((method) => (
+                    <option key={method.method_id} value={method.method_id}>
+                      {method.title} · {t(`kind.${method.method_kind}`)} · {method.latest_version}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            {methods.isError ? <p role="alert">{t('methodsFailed')}</p> : null}
+            {selectedMethod ? (
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  setWorking(true)
+                  setError(null)
+                  try {
+                    setInspected(
+                      await getFormalVersion(
+                        selectedMethod.method_id,
+                        selectedMethod.latest_version,
+                      ),
+                    )
+                  } catch (exc) {
+                    setError(problem(exc))
+                  } finally {
+                    setWorking(false)
+                  }
+                }}
+              >
+                {t('viewFrozen')}
+              </Button>
             ) : null}
-            {methods.data
-              ?.filter((method) => method.method_id !== newMethodId)
-              .map((method) => (
-                <option key={method.method_id} value={method.method_id}>
-                  {method.title} · {t(`kind.${method.method_kind}`)} · {method.latest_version}
-                </option>
-              ))}
-          </select>
-        </label>
-        {methods.isError ? <p role="alert">{t('methodsFailed')}</p> : null}
-        {selectedMethod ? (
-          <Button
-            variant="outline"
-            onClick={async () => {
-              setWorking(true)
-              setError(null)
-              try {
-                setInspected(
-                  await getFormalVersion(selectedMethod.method_id, selectedMethod.latest_version),
-                )
-              } catch (exc) {
-                setError(problem(exc))
-              } finally {
-                setWorking(false)
-              }
-            }}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                disabled={!methodPage || methods.isFetching}
+                onClick={() => setMethodPage((page) => page - 1)}
+              >
+                {t('previous')}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={methods.data?.length !== 30 || methods.isFetching}
+                onClick={() => setMethodPage((page) => page + 1)}
+              >
+                {t('next')}
+              </Button>
+            </div>
+          </fieldset>
+          <fieldset
+            disabled={working || executionActive || adopting}
+            className="space-y-4 rounded border p-4"
           >
-            {t('viewFrozen')}
-          </Button>
-        ) : null}
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            disabled={!methodPage || methods.isFetching}
-            onClick={() => setMethodPage((page) => page - 1)}
-          >
-            {t('previous')}
-          </Button>
-          <Button
-            variant="outline"
-            disabled={methods.data?.length !== 30 || methods.isFetching}
-            onClick={() => setMethodPage((page) => page + 1)}
-          >
-            {t('next')}
-          </Button>
-        </div>
-      </fieldset>
-      <fieldset
-        disabled={working || executionActive || adopting}
-        className="space-y-4 rounded border p-4"
-      >
-        <legend className="px-1 font-medium">{t('definition')}</legend>
-        {!definition ? (
-          <ExpertFromTool
-            csrfToken={csrfToken}
-            requestId={initial.request_id}
-            targetMethodId={methodId}
-            onAdopt={(next) => {
-              editDefinition(next)
-              setSource(null)
-              setCallers(['host'])
-              setVisibility('private')
-              setRun(null)
-              setExecutionRun(false)
-              setInspected(null)
-              setError(null)
-            }}
-          />
-        ) : null}
-        <ReviewRequirements
-          definition={definition}
-          collaboration={collaboration}
-          onChange={(value) => {
-            setCollaboration(value)
-            setReviewedPlan(null)
-            changed()
-          }}
-        />
-        <label className="block text-sm">
-          {t('import')}
-          <input
-            className={input}
-            type="file"
-            accept=".json,application/json"
-            onChange={async (event) => {
-              const file = event.target.files?.[0]
-              if (!file) return
-              setError(null)
-              try {
-                if (file.size > 1_000_000) throw new Error('definition_size')
-                const parsed = formalDefinitionSchema.parse(JSON.parse(await file.text()))
-                if (parsed.procedure.kind === 'orchestration') {
-                  const { collaboration: importedRoles, ...procedure } = parsed.procedure
-                  setCollaboration(importedRoles ?? null)
-                  editDefinition({ ...parsed, procedure })
-                } else {
-                  setCollaboration(null)
-                  editDefinition(parsed)
-                }
-                setSource(null)
-              } catch {
-                setError('definition_invalid')
-              }
-            }}
-          />
-        </label>
-        <p className="text-muted-foreground text-sm">{t('importHint')}</p>
-        {definition ? (
-          <>
+            <legend className="px-1 font-medium">{t('definition')}</legend>
+            {!definition ? (
+              <ExpertFromTool
+                csrfToken={csrfToken}
+                requestId={initial.request_id}
+                targetMethodId={methodId}
+                onAdopt={(next) => {
+                  editDefinition(next)
+                  setSource(null)
+                  setCallers(['host'])
+                  setVisibility('private')
+                  setRun(null)
+                  setExecutionRun(false)
+                  setInspected(null)
+                  setError(null)
+                }}
+              />
+            ) : null}
+            <ReviewRequirements
+              definition={definition}
+              collaboration={collaboration}
+              onChange={(value) => {
+                setCollaboration(value)
+                setReviewedPlan(null)
+                changed()
+              }}
+            />
             <label className="block text-sm">
-              {t('methodTitle')}
+              {t('import')}
               <input
                 className={input}
-                value={definition.capability_declaration.title}
-                onChange={(e) =>
-                  editDefinition({
-                    ...definition,
-                    capability_declaration: {
-                      ...definition.capability_declaration,
-                      title: e.target.value,
-                    },
-                  })
-                }
+                type="file"
+                accept=".json,application/json"
+                onChange={async (event) => {
+                  const file = event.target.files?.[0]
+                  if (!file) return
+                  setError(null)
+                  try {
+                    if (file.size > 1_000_000) throw new Error('definition_size')
+                    const parsed = formalDefinitionSchema.parse(JSON.parse(await file.text()))
+                    if (parsed.procedure.kind === 'orchestration') {
+                      const { collaboration: importedRoles, ...procedure } = parsed.procedure
+                      setCollaboration(importedRoles ?? null)
+                      editDefinition({ ...parsed, procedure })
+                    } else {
+                      setCollaboration(null)
+                      editDefinition(parsed)
+                    }
+                    setSource(null)
+                  } catch {
+                    setError('definition_invalid')
+                  }
+                }}
               />
             </label>
-            <label className="block text-sm">
-              {t('purpose')}
-              <textarea
-                className={input}
-                value={definition.capability_declaration.purpose}
-                onChange={(e) =>
-                  editDefinition({
-                    ...definition,
-                    capability_declaration: {
-                      ...definition.capability_declaration,
-                      purpose: e.target.value,
-                    },
-                  })
-                }
-              />
-            </label>
-            <DeliveryPromises definition={definition} onChange={editDefinition} />
-            <label className="block text-sm">
-              {t('procedure')}
-              <textarea
-                className={input}
-                rows={6}
-                value={definition.procedure.instructions}
-                onChange={(e) =>
-                  editDefinition({
-                    ...definition,
-                    procedure: { ...definition.procedure, instructions: e.target.value },
-                  })
-                }
-              />
-            </label>
-            <p className="text-sm">
-              {t(definition.procedure.kind === 'direct' ? 'direct' : 'orchestration')}
-            </p>
-            {definition.procedure.kind === 'direct' ? (
+            <p className="text-muted-foreground text-sm">{t('importHint')}</p>
+            {definition ? (
               <>
-                <ToolSlotEditor
-                  tool={definition.procedure}
-                  onChange={(procedure) => editDefinition({ ...definition, procedure })}
-                />
                 <label className="block text-sm">
-                  {t('source')}
-                  <select
+                  {t('methodTitle')}
+                  <input
                     className={input}
-                    value={source ? sourceKey(source) : ''}
-                    onChange={(e) => {
-                      const selected =
-                        sources.data?.find((item) => sourceKey(item) === e.target.value) ?? null
-                      setSource(selected)
-                      changed()
-                      if (selected && definition.procedure.kind === 'direct') {
-                        setDefinition({
-                          ...definition,
-                          procedure: {
-                            ...definition.procedure,
-                            max_model_turns: [
-                              'registered_instruction',
-                              'skill_instruction',
-                            ].includes(selected.kind)
-                              ? Math.max(1, definition.procedure.max_model_turns)
-                              : 0,
-                            implementation: {
-                              kind: selected.kind,
-                              source: selected.source,
-                              version: selected.version,
-                              digest: selected.digest,
-                              entry: selected.entry,
-                              requirement_ids: definition.procedure.implementation.requirement_ids,
-                            },
-                          },
-                        })
-                      }
-                    }}
-                  >
-                    <option value="">{t('chooseSource')}</option>
-                    {source && !sources.data?.some((item) => same(item, source)) ? (
-                      <option value={sourceKey(source)}>
-                        {t('pinnedSource', { source: source.source, version: source.version })}
-                      </option>
-                    ) : null}
-                    {sources.data?.map((item) => (
-                      <option key={sourceKey(item)} value={sourceKey(item)}>
-                        {item.source} · {item.version} · {item.entry}
-                      </option>
-                    ))}
-                  </select>
+                    value={definition.capability_declaration.title}
+                    onChange={(e) =>
+                      editDefinition({
+                        ...definition,
+                        capability_declaration: {
+                          ...definition.capability_declaration,
+                          title: e.target.value,
+                        },
+                      })
+                    }
+                  />
                 </label>
-                {sources.isError ? <p role="alert">{t('sourceFailed')}</p> : null}
-                {sources.data?.length === 0 ? <p role="status">{t('noSources')}</p> : null}
-                <p className="text-muted-foreground text-sm">{t('sourceHint')}</p>
-                {source ? (
-                  <p className="text-sm break-all">
-                    {t('license')}:{' '}
-                    {source.license_basis === 'pending'
-                      ? t('licensePending')
-                      : !sources.isError &&
-                          !sources.isFetching &&
-                          sources.data?.some((item) => same(item, source))
-                        ? t('licenseVerified')
-                        : t('licenseRecheck')}
+                <label className="block text-sm">
+                  {t('purpose')}
+                  <textarea
+                    className={input}
+                    value={definition.capability_declaration.purpose}
+                    onChange={(e) =>
+                      editDefinition({
+                        ...definition,
+                        capability_declaration: {
+                          ...definition.capability_declaration,
+                          purpose: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </label>
+                <DeliveryPromises definition={definition} onChange={editDefinition} />
+                <label className="block text-sm">
+                  {t('procedure')}
+                  <textarea
+                    className={input}
+                    rows={6}
+                    value={definition.procedure.instructions}
+                    onChange={(e) =>
+                      editDefinition({
+                        ...definition,
+                        procedure: { ...definition.procedure, instructions: e.target.value },
+                      })
+                    }
+                  />
+                </label>
+                <p className="text-sm">
+                  {t(definition.procedure.kind === 'direct' ? 'direct' : 'orchestration')}
+                </p>
+                {definition.procedure.kind === 'direct' ? (
+                  <>
+                    <ToolSlotEditor
+                      tool={definition.procedure}
+                      onChange={(procedure) => editDefinition({ ...definition, procedure })}
+                    />
+                    <label className="block text-sm">
+                      {t('source')}
+                      <select
+                        className={input}
+                        value={source ? sourceKey(source) : ''}
+                        onChange={(e) => {
+                          const selected =
+                            sources.data?.find((item) => sourceKey(item) === e.target.value) ?? null
+                          setSource(selected)
+                          changed()
+                          if (selected && definition.procedure.kind === 'direct') {
+                            setDefinition({
+                              ...definition,
+                              procedure: {
+                                ...definition.procedure,
+                                max_model_turns: [
+                                  'registered_instruction',
+                                  'skill_instruction',
+                                ].includes(selected.kind)
+                                  ? Math.max(1, definition.procedure.max_model_turns)
+                                  : 0,
+                                implementation: {
+                                  kind: selected.kind,
+                                  source: selected.source,
+                                  version: selected.version,
+                                  digest: selected.digest,
+                                  entry: selected.entry,
+                                  requirement_ids:
+                                    definition.procedure.implementation.requirement_ids,
+                                },
+                              },
+                            })
+                          }
+                        }}
+                      >
+                        <option value="">{t('chooseSource')}</option>
+                        {source && !sources.data?.some((item) => same(item, source)) ? (
+                          <option value={sourceKey(source)}>
+                            {t('pinnedSource', { source: source.source, version: source.version })}
+                          </option>
+                        ) : null}
+                        {sources.data?.map((item) => (
+                          <option key={sourceKey(item)} value={sourceKey(item)}>
+                            {item.source} · {item.version} · {item.entry}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {sources.isError ? <p role="alert">{t('sourceFailed')}</p> : null}
+                    {sources.data?.length === 0 ? <p role="status">{t('noSources')}</p> : null}
+                    <p className="text-muted-foreground text-sm">{t('sourceHint')}</p>
+                    {source ? (
+                      <p className="text-sm break-all">
+                        {t('license')}:{' '}
+                        {source.license_basis === 'pending'
+                          ? t('licensePending')
+                          : !sources.isError &&
+                              !sources.isFetching &&
+                              sources.data?.some((item) => same(item, source))
+                            ? t('licenseVerified')
+                            : t('licenseRecheck')}
+                      </p>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <FormalOrchestrationSummary
+                      definition={definition}
+                      collaboration={collaboration}
+                    />
+                    {runtimeGaps.map((gap) => (
+                      <p role="status" key={gap.step + gap.primitive}>
+                        {t(gap.primitive, { step: gap.step })}
+                      </p>
+                    ))}
+                    <P5Choice
+                      draft={definition}
+                      requestId={initial.request_id}
+                      methodId={methodId}
+                      csrfToken={csrfToken}
+                      revision={document.revision}
+                      key={JSON.stringify([
+                        initial.request_id,
+                        methodId,
+                        document.revision,
+                        definition,
+                      ])}
+                      onAdopt={(next) => {
+                        setReviewedPlan(next)
+                        editDefinition(next)
+                      }}
+                    />
+                    {!definition.procedure.steps.some((s) => !!s.candidate_choice) && (
+                      <P4Comparison
+                        draft={definition}
+                        requestId={initial.request_id}
+                        methodId={methodId}
+                        csrfToken={csrfToken}
+                        key={JSON.stringify([document.revision, definition])}
+                        onAdopt={(next) => {
+                          setReviewedPlan(next)
+                          editDefinition(next)
+                        }}
+                      />
+                    )}
+                    {!definition.procedure.object_batch &&
+                      !definition.procedure.steps.some((s) => !!s.candidate_choice) && (
+                        <>
+                          <P1Predecessor
+                            draft={definition}
+                            methodId={methodId}
+                            requestId={initial.request_id}
+                            csrfToken={csrfToken}
+                            revision={document.revision}
+                            onAdopt={(next) => {
+                              setReviewedPlan(next)
+                              editDefinition(next)
+                            }}
+                          />
+                          <P2Join
+                            key={JSON.stringify([document.revision, methodId, definition])}
+                            draft={definition}
+                            methodId={methodId}
+                            requestId={initial.request_id}
+                            csrfToken={csrfToken}
+                            revision={document.revision}
+                            onAdopt={(next) => {
+                              setReviewedPlan(next)
+                              editDefinition(next)
+                            }}
+                          />
+                          {!collaboration && (
+                            <P3Review
+                              key={JSON.stringify([
+                                initial.request_id,
+                                document.revision,
+                                methodId,
+                                definition,
+                              ])}
+                              draft={definition}
+                              methodId={methodId}
+                              requestId={initial.request_id}
+                              csrfToken={csrfToken}
+                              revision={document.revision}
+                              onAdopt={(next) => {
+                                if (
+                                  next.procedure.kind !== 'orchestration' ||
+                                  !next.procedure.collaboration
+                                )
+                                  return
+                                const { collaboration: roles, ...procedure } = next.procedure
+                                const plan = { ...next, procedure }
+                                setCollaboration(roles)
+                                setReviewedPlan(plan)
+                                editDefinition(plan)
+                              }}
+                            />
+                          )}
+                          <ExpertInputBinding
+                            graph={definition.procedure}
+                            onChange={(procedure) => editDefinition({ ...definition, procedure })}
+                          />
+                        </>
+                      )}
+                  </>
+                )}
+                <div className="space-y-2 text-sm">
+                  <h3 className="font-medium">{t('permissions')}</h3>
+                  {definition.access_requirements.length ? (
+                    definition.access_requirements.map((requirement) => (
+                      <p key={requirement.requirement_id}>
+                        {requirement.capability_ref} · {requirement.operations.join(', ')} ·{' '}
+                        {requirement.data_transfer.purpose}
+                      </p>
+                    ))
+                  ) : (
+                    <p>{t('none')}</p>
+                  )}
+                </div>
+                <div className="space-y-2 text-sm">
+                  <h3 className="font-medium">{t('approvals')}</h3>
+                  {definition.what_requires_approval.length ? (
+                    definition.what_requires_approval.map((rule) => (
+                      <p key={`${rule.requirement_id}:${rule.when}`}>
+                        {rule.when} · {rule.operations.join(', ')}
+                      </p>
+                    ))
+                  ) : (
+                    <p>{t('platformApprovals')}</p>
+                  )}
+                </div>
+                <fieldset className="space-x-4 text-sm">
+                  <legend>{t('callers')}</legend>
+                  <p className="text-muted-foreground text-sm">{t('callerQualificationHint')}</p>
+                  {(['host', 'model'] as const).map((caller) => (
+                    <label key={caller}>
+                      <input
+                        type="checkbox"
+                        checked={callers.includes(caller)}
+                        onChange={(e) => {
+                          setCallers(
+                            e.target.checked
+                              ? [...callers, caller]
+                              : callers.filter((c) => c !== caller),
+                          )
+                          changed()
+                        }}
+                      />{' '}
+                      {t(caller)}
+                    </label>
+                  ))}
+                </fieldset>
+              </>
+            ) : null}
+            <Button type="button" disabled={!ready || !dirty} onClick={() => void save()}>
+              {t('save')}
+            </Button>
+            {document.body.formal_method && (
+              <Button type="button" variant="outline" onClick={() => void withdrawDraft()}>
+                {t('withdrawDraft')}
+              </Button>
+            )}
+          </fieldset>
+          <section className="space-y-3 rounded border p-4">
+            <h2 className="font-medium">{t('validation')}</h2>
+            <p className="text-muted-foreground text-sm">{t('validationHint')}</p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                disabled={
+                  working ||
+                  executionActive ||
+                  dirty ||
+                  !ready ||
+                  runtimeGaps.length > 0 ||
+                  document.revision < 1
+                }
+                onClick={() => void validate(false)}
+              >
+                {t('validate')}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={working || executionActive || executionRun || dirty || !run}
+                onClick={() => void validate(true)}
+              >
+                {t('refresh')}
+              </Button>
+            </div>
+            {validation ? (
+              <div className="space-y-2 text-sm" role="status">
+                <p>{t(`status.${validation.status}`)}</p>
+                {validation.details.map((detail, i) => (
+                  <p key={i}>{detail}</p>
+                ))}
+                {validation.missing_checks.length ? (
+                  <p>
+                    {t('missing')}:{' '}
+                    {validation.missing_checks.map((check) => t(`checks.${check}`)).join('、')}
                   </p>
                 ) : null}
-              </>
-            ) : (
-              <>
-                <FormalOrchestrationSummary definition={definition} collaboration={collaboration} />
-                {runtimeGaps.map((gap) => (
-                  <p role="status" key={gap.step + gap.primitive}>
-                    {t(gap.primitive, { step: gap.step })}
+                {receipt?.uncovered.map((gap, i) => (
+                  <p key={i}>
+                    {gap.scenario} · {gap.reason} · {gap.scope}
                   </p>
                 ))}
-                <P5Choice
-                  draft={definition}
-                  requestId={initial.request_id}
-                  methodId={methodId}
-                  csrfToken={csrfToken}
-                  revision={document.revision}
-                  key={JSON.stringify([
-                    initial.request_id,
-                    methodId,
-                    document.revision,
-                    definition,
-                  ])}
-                  onAdopt={(next) => {
-                    setReviewedPlan(next)
-                    editDefinition(next)
-                  }}
-                />
-                {!definition.procedure.steps.some((s) => !!s.candidate_choice) && (
-                  <P4Comparison
-                    draft={definition}
-                    requestId={initial.request_id}
-                    methodId={methodId}
-                    csrfToken={csrfToken}
-                    key={JSON.stringify([document.revision, definition])}
-                    onAdopt={(next) => {
-                      setReviewedPlan(next)
-                      editDefinition(next)
-                    }}
-                  />
-                )}
-                {!definition.procedure.object_batch &&
-                  !definition.procedure.steps.some((s) => !!s.candidate_choice) && (
-                    <>
-                      <P1Predecessor
-                        draft={definition}
-                        methodId={methodId}
-                        requestId={initial.request_id}
-                        csrfToken={csrfToken}
-                        revision={document.revision}
-                        onAdopt={(next) => {
-                          setReviewedPlan(next)
-                          editDefinition(next)
-                        }}
-                      />
-                      <P2Join
-                        key={JSON.stringify([document.revision, methodId, definition])}
-                        draft={definition}
-                        methodId={methodId}
-                        requestId={initial.request_id}
-                        csrfToken={csrfToken}
-                        revision={document.revision}
-                        onAdopt={(next) => {
-                          setReviewedPlan(next)
-                          editDefinition(next)
-                        }}
-                      />
-                      {!collaboration && (
-                        <P3Review
-                          key={JSON.stringify([
-                            initial.request_id,
-                            document.revision,
-                            methodId,
-                            definition,
-                          ])}
-                          draft={definition}
-                          methodId={methodId}
-                          requestId={initial.request_id}
-                          csrfToken={csrfToken}
-                          revision={document.revision}
-                          onAdopt={(next) => {
-                            if (
-                              next.procedure.kind !== 'orchestration' ||
-                              !next.procedure.collaboration
-                            )
-                              return
-                            const { collaboration: roles, ...procedure } = next.procedure
-                            const plan = { ...next, procedure }
-                            setCollaboration(roles)
-                            setReviewedPlan(plan)
-                            editDefinition(plan)
-                          }}
-                        />
-                      )}
-                      <ExpertInputBinding
-                        graph={definition.procedure}
-                        onChange={(procedure) => editDefinition({ ...definition, procedure })}
-                      />
-                    </>
-                  )}
-              </>
-            )}
-            <div className="space-y-2 text-sm">
-              <h3 className="font-medium">{t('permissions')}</h3>
-              {definition.access_requirements.length ? (
-                definition.access_requirements.map((requirement) => (
-                  <p key={requirement.requirement_id}>
-                    {requirement.capability_ref} · {requirement.operations.join(', ')} ·{' '}
-                    {requirement.data_transfer.purpose}
-                  </p>
-                ))
-              ) : (
-                <p>{t('none')}</p>
-              )}
-            </div>
-            <div className="space-y-2 text-sm">
-              <h3 className="font-medium">{t('approvals')}</h3>
-              {definition.what_requires_approval.length ? (
-                definition.what_requires_approval.map((rule) => (
-                  <p key={`${rule.requirement_id}:${rule.when}`}>
-                    {rule.when} · {rule.operations.join(', ')}
-                  </p>
-                ))
-              ) : (
-                <p>{t('platformApprovals')}</p>
-              )}
-            </div>
-            <fieldset className="space-x-4 text-sm">
-              <legend>{t('callers')}</legend>
-              <p className="text-muted-foreground text-sm">{t('callerQualificationHint')}</p>
-              {(['host', 'model'] as const).map((caller) => (
-                <label key={caller}>
-                  <input
-                    type="checkbox"
-                    checked={callers.includes(caller)}
-                    onChange={(e) => {
-                      setCallers(
-                        e.target.checked
-                          ? [...callers, caller]
-                          : callers.filter((c) => c !== caller),
-                      )
-                      changed()
-                    }}
-                  />{' '}
-                  {t(caller)}
-                </label>
-              ))}
-            </fieldset>
-          </>
-        ) : null}
-        <Button type="button" disabled={!ready || !dirty} onClick={() => void save()}>
-          {t('save')}
-        </Button>
-        {document.body.formal_method && (
-          <Button type="button" variant="outline" onClick={() => void withdrawDraft()}>
-            {t('withdrawDraft')}
-          </Button>
-        )}
-      </fieldset>
-      <section className="space-y-3 rounded border p-4">
-        <h2 className="font-medium">{t('validation')}</h2>
-        <p className="text-muted-foreground text-sm">{t('validationHint')}</p>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            disabled={
-              working ||
-              executionActive ||
-              dirty ||
-              !ready ||
-              runtimeGaps.length > 0 ||
-              document.revision < 1
-            }
-            onClick={() => void validate(false)}
-          >
-            {t('validate')}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={working || executionActive || executionRun || dirty || !run}
-            onClick={() => void validate(true)}
-          >
-            {t('refresh')}
-          </Button>
-        </div>
-        {validation ? (
-          <div className="space-y-2 text-sm" role="status">
-            <p>{t(`status.${validation.status}`)}</p>
-            {validation.details.map((detail, i) => (
-              <p key={i}>{detail}</p>
-            ))}
-            {validation.missing_checks.length ? (
-              <p>
-                {t('missing')}:{' '}
-                {validation.missing_checks.map((check) => t(`checks.${check}`)).join('、')}
-              </p>
+              </div>
             ) : null}
-            {receipt?.uncovered.map((gap, i) => (
-              <p key={i}>
-                {gap.scenario} · {gap.reason} · {gap.scope}
-              </p>
-            ))}
-          </div>
-        ) : null}
-      </section>
-      <FormalMethodExecution
-        key={`${methodId}:${document.revision}`}
-        methodId={methodId}
-        requestId={initial.request_id}
-        revision={document.revision}
-        draft={draft}
-        disabled={working || dirty || !ready || runtimeGaps.length > 0 || document.revision < 1}
-        csrfToken={csrfToken}
-        resume={executionRun ? run : null}
-        onRun={executionStarted}
-        onResult={executionReceived}
-        onActiveChange={setExecutionActive}
-      />
-      <fieldset
-        disabled={working || executionActive || !validated}
-        className="space-y-3 rounded border p-4"
-      >
-        <legend className="px-1 font-medium">{t('freeze')}</legend>
-        <p className="text-muted-foreground text-sm">{t('freezeHint')}</p>
-        {definition?.procedure.kind === 'orchestration' ? (
-          <p>{t('orchestrationPublication')}</p>
-        ) : null}
-        <label className="block text-sm">
-          {t('version')}
-          <input
-            type="number"
-            className={input}
-            min={1}
-            max={999999}
-            value={version}
-            onChange={(e) => {
-              setVersion(Number(e.target.value))
-              setFrozen(null)
-            }}
-          />
-        </label>
-        <label className="block text-sm">
-          {t('visibility')}
-          <select
-            className={input}
-            value={visibility}
-            onChange={(e) => setVisibility(e.target.value as 'private' | 'public')}
-          >
-            <option value="private">{t('private')}</option>
-            <option value="public" disabled={!publicReady}>
-              {t('public')}
-            </option>
-          </select>
-        </label>
-        <Button
-          type="button"
-          disabled={
-            !!frozen ||
-            !Number.isInteger(version) ||
-            version < 1 ||
-            (visibility === 'public' && !publicReady)
-          }
-          onClick={() => void freeze()}
-        >
-          {t('confirmFreeze')}
-        </Button>
-      </fieldset>
-      {shownVersion ? (
-        <section className="space-y-2 rounded border p-4 text-sm">
-          {frozen ? (
-            <p role="status">{t('frozen', { version: frozen.version })}</p>
-          ) : (
-            <h2>{t('frozenVersion', { version: shownVersion.version })}</h2>
-          )}
-          <p>
-            {shownVersion.definition.capability_declaration.title} ·{' '}
-            {t(`kind.${shownVersion.provenance.method_kind}`)}
-          </p>
-          <SelfListing
-            key={[shownVersion.method_id, shownVersion.version, shownVersion.digest].join(':')}
-            version={shownVersion}
+          </section>
+          <FormalMethodExecution
+            key={`${methodId}:${document.revision}`}
+            methodId={methodId}
+            requestId={initial.request_id}
+            revision={document.revision}
+            draft={draft}
+            disabled={working || dirty || !ready || runtimeGaps.length > 0 || document.revision < 1}
             csrfToken={csrfToken}
+            resume={executionRun ? run : null}
+            onRun={executionStarted}
+            onResult={executionReceived}
+            onActiveChange={setExecutionActive}
           />
-          <FormalOrchestrationSummary definition={shownVersion.definition} />
-          <p>
-            {t('verifiedCallers')}:{' '}
-            {shownVersion.provenance.validation
-              ? validatedCallers(shownVersion.provenance.validation)
-                  .map((caller) => t(caller))
-                  .join(' · ')
-              : t('qualificationUnknown')}
-          </p>
-          <h3 className="font-medium">{t('generatedInterfaces')}</h3>
-          <p className="text-muted-foreground">{t('generatedHint')}</p>
-          <h4>{t('inputs')}</h4>
-          {Object.entries(shownVersion.provenance.interfaces.inputs).map(([name, entry]) => (
-            <p key={name}>
-              {name} · {entry.slot.description} ·{' '}
-              {t(entry.required_by.length ? 'required' : 'conditional')}
-            </p>
-          ))}
-          <h4>{t('outputs')}</h4>
-          {Object.entries(shownVersion.provenance.interfaces.outputs).map(([name, entry]) => (
-            <p key={name}>
-              {name} · {entry.slot.description} ·{' '}
-              {t(entry.always_present ? 'required' : 'conditional')}
-            </p>
-          ))}
-          <details>
-            <summary>{t('versionReference')}</summary>
-            <p className="break-all">
-              {shownVersion.method_id} · {shownVersion.version} · {shownVersion.digest}
-            </p>
-          </details>
-        </section>
-      ) : null}
+          <fieldset
+            disabled={working || executionActive || !validated}
+            className="space-y-3 rounded border p-4"
+          >
+            <legend className="px-1 font-medium">{t('freeze')}</legend>
+            <p className="text-muted-foreground text-sm">{t('freezeHint')}</p>
+            {definition?.procedure.kind === 'orchestration' ? (
+              <p>{t('orchestrationPublication')}</p>
+            ) : null}
+            <label className="block text-sm">
+              {t('version')}
+              <input
+                type="number"
+                className={input}
+                min={1}
+                max={999999}
+                value={version}
+                onChange={(e) => {
+                  setVersion(Number(e.target.value))
+                  setFrozen(null)
+                }}
+              />
+            </label>
+            <label className="block text-sm">
+              {t('visibility')}
+              <select
+                className={input}
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value as 'private' | 'public')}
+              >
+                <option value="private">{t('private')}</option>
+                <option value="public" disabled={!publicReady}>
+                  {t('public')}
+                </option>
+              </select>
+            </label>
+            <Button
+              type="button"
+              disabled={
+                !!frozen ||
+                !Number.isInteger(version) ||
+                version < 1 ||
+                (visibility === 'public' && !publicReady)
+              }
+              onClick={() => void freeze()}
+            >
+              {t('confirmFreeze')}
+            </Button>
+          </fieldset>
+          {shownVersion ? (
+            <section className="space-y-2 rounded border p-4 text-sm">
+              {frozen ? (
+                <p role="status">{t('frozen', { version: frozen.version })}</p>
+              ) : (
+                <h2>{t('frozenVersion', { version: shownVersion.version })}</h2>
+              )}
+              <p>
+                {shownVersion.definition.capability_declaration.title} ·{' '}
+                {t(`kind.${shownVersion.provenance.method_kind}`)}
+              </p>
+              <SelfListing
+                key={[shownVersion.method_id, shownVersion.version, shownVersion.digest].join(':')}
+                version={shownVersion}
+                csrfToken={csrfToken}
+              />
+              <FormalOrchestrationSummary definition={shownVersion.definition} />
+              <p>
+                {t('verifiedCallers')}:{' '}
+                {shownVersion.provenance.validation
+                  ? validatedCallers(shownVersion.provenance.validation)
+                      .map((caller) => t(caller))
+                      .join(' · ')
+                  : t('qualificationUnknown')}
+              </p>
+              <h3 className="font-medium">{t('generatedInterfaces')}</h3>
+              <p className="text-muted-foreground">{t('generatedHint')}</p>
+              <h4>{t('inputs')}</h4>
+              {Object.entries(shownVersion.provenance.interfaces.inputs).map(([name, entry]) => (
+                <p key={name}>
+                  {name} · {entry.slot.description} ·{' '}
+                  {t(entry.required_by.length ? 'required' : 'conditional')}
+                </p>
+              ))}
+              <h4>{t('outputs')}</h4>
+              {Object.entries(shownVersion.provenance.interfaces.outputs).map(([name, entry]) => (
+                <p key={name}>
+                  {name} · {entry.slot.description} ·{' '}
+                  {t(entry.always_present ? 'required' : 'conditional')}
+                </p>
+              ))}
+              <details>
+                <summary>{t('versionReference')}</summary>
+                <p className="break-all">
+                  {shownVersion.method_id} · {shownVersion.version} · {shownVersion.digest}
+                </p>
+              </details>
+            </section>
+          ) : null}
+        </div>
+      )}
       {notice ? <p role="status">{notice}</p> : null}
       {error ? (
         <p role="alert" className="text-destructive text-sm">

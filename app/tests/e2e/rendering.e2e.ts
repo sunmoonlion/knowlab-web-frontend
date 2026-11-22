@@ -114,3 +114,78 @@ test('sitemap uses the runtime application origin', async ({ request, baseURL })
   expect(response.status()).toBe(200)
   expect(await response.text()).toContain(`${baseURL}/en`)
 })
+
+test('author opts into technical controls for one incubation, including direct links', async ({
+  context,
+  page,
+}) => {
+  await context.addCookies([
+    {
+      name: 'sunmoonai_knowlab_web_sid',
+      value: 'e2e-session',
+      domain: '127.0.0.1',
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+  ])
+  const requestId = '81a7fd82-9c80-41ea-8e12-973e61fca614'
+  const other = '91a7fd82-9c80-41ea-8e12-973e61fca614'
+  await page.route('**/knowbot-requests/*/workdraft', (route) =>
+    route.fulfill({
+      json: {
+        contract_version: 1,
+        request_id: new URL(route.request().url()).pathname.split('/').at(-2),
+        title: '四行小计',
+        revision: 1,
+        body: {
+          name: '汇总表',
+          tagline: '',
+          scope: { does: '编制汇总表', does_not: '', elsewhere: '' },
+          data_picks: [],
+          steps: [],
+        },
+        sources: {},
+        origins: {},
+        data_formats: {},
+        updated_at: null,
+      },
+    }),
+  )
+  await page.route('**/workdraft/preview', (route) =>
+    route.fulfill({
+      json: {
+        contract_version: 1,
+        version: '1',
+        manifest: { schema: 'knowbot-manifest/v2' },
+        problems: [{ path: 'steps', message: 'add at least one step' }],
+      },
+    }),
+  )
+  await page.route('**/workdraft/incubations', (route) =>
+    route.fulfill({ json: { contract_version: 1, incubations: [] } }),
+  )
+  const path = (id: string) => '/zh-CN/names/' + id
+  const toggle = page.getByRole('switch', { name: '专业开发者模式' })
+  await page.goto(path(requestId) + '/workdraft')
+  await expect(toggle).not.toBeChecked()
+  await expect(page.getByRole('button', { name: '出一版', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: '正式方法定义与验证' })).toHaveCount(0)
+  await page.getByRole('button', { name: '预览清单' }).click()
+  await expect(page.getByRole('dialog').getByText('至少加一步。')).toBeVisible()
+  await expect(page.getByTestId('preview-manifest')).toHaveCount(0)
+  await toggle.check()
+  await expect(page.getByTestId('preview-manifest')).toContainText('knowbot-manifest/v2')
+  await page.getByRole('link', { name: '正式方法定义与验证' }).click()
+  await expect(toggle).toBeChecked()
+  await page.reload()
+  await expect(toggle).toBeChecked()
+  await toggle.uncheck()
+  await page.reload()
+  await expect(toggle).not.toBeChecked()
+  await expect(page.getByText(/选择一份完整的方法定义 JSON/)).toHaveCount(0)
+  await toggle.check()
+  await page.goto(path(other) + '/formal-method')
+  await expect(toggle).not.toBeChecked()
+  await expect(page.getByRole('link', { name: '工作稿', exact: true })).toBeVisible()
+})

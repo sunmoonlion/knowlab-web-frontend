@@ -39,6 +39,7 @@ import { diffEdits, freshId, newStep, placed, same, withoutStep } from '@/lib/kn
 import type { BindMethodCommand } from '@/contracts/author-methods'
 import { bindMethod } from '@/lib/knowbots/methods'
 
+import { AuthorModePanel, SavedMethodSummary, useDeveloperMode } from './author-mode'
 import { Card, KEY } from './shared'
 import { MethodPickerPanel } from './workdraft-method-picker'
 import { IdeaMethodsToAssemble } from './idea-methods'
@@ -47,7 +48,14 @@ import { MethodFreezePanel } from './workdraft-method-freeze'
 import { PlanningCard } from './workdraft-planning'
 import { CapabilityCard } from './workdraft-capabilities'
 import { GapsCard, RoundBar, RoundPanel, startFailure } from './workdraft-ai'
-import { Field, Group, INPUT, MarksContext, useProblemText } from './workdraft-cells'
+import {
+  Field,
+  Group,
+  INPUT,
+  MarksContext,
+  ProblemLocation,
+  useProblemText,
+} from './workdraft-cells'
 import { DataCard } from './workdraft-data'
 import { CopyPanel, ImportPanel, PreviewPanel } from './workdraft-panels'
 import { StepEditor } from './workdraft-step'
@@ -88,7 +96,15 @@ const codeOf = (error: unknown) =>
 const conflict = (error: unknown) =>
   error instanceof ApiClientError && error.problem.code === 'workdraft_revision'
 
-export function WorkdraftView({
+export function WorkdraftView(props: { requestId: string; csrfToken: string; saveDelay?: number }) {
+  return (
+    <AuthorModePanel key={props.requestId} scope={props.requestId}>
+      <WorkdraftContent {...props} />
+    </AuthorModePanel>
+  )
+}
+
+function WorkdraftContent({
   requestId,
   csrfToken,
   saveDelay = 800,
@@ -98,6 +114,7 @@ export function WorkdraftView({
   saveDelay?: number
 }) {
   const t = useTranslations('workdraft')
+  const developer = useDeveloperMode()
   const loaded = useQuery({
     queryKey: [...KEY, 'workdraft', requestId],
     queryFn: () => fetchWorkdraft(requestId),
@@ -114,9 +131,13 @@ export function WorkdraftView({
   if (!loaded.data) return <p className="text-muted-foreground mt-6 text-sm">{t('loading')}</p>
   if (loaded.data.body.formal_method)
     return (
-      <Link className="mt-6 block underline" href={`/names/${requestId}/formal-method`}>
-        {t('formalMethod')}
-      </Link>
+      <div className="mt-6 space-y-3">
+        <SavedMethodSummary draft={loaded.data.body.formal_method} />
+        <Link href={`/names/${requestId}`}>{t('backToName')}</Link>
+        <Link className="block underline" href={`/names/${requestId}/formal-method`}>
+          {t(developer ? 'formalMethod' : 'openSavedMethod')}
+        </Link>
+      </div>
     )
   return (
     <Editor
@@ -151,6 +172,7 @@ function Editor({
   onConflict: () => Promise<void>
 }) {
   const t = useTranslations('workdraft')
+  const developer = useDeveloperMode()
   const ta = useTranslations('workdraft.ai')
   const router = useRouter()
   const client = useQueryClient()
@@ -663,12 +685,14 @@ function Editor({
             </Link>
           </header>
           <div role="toolbar" aria-label={t('toolbar.label')} className="flex flex-wrap gap-2">
-            <Link
-              className="self-center text-sm underline"
-              href={`/names/${requestId}/formal-method`}
-            >
-              {t('formalMethod')}
-            </Link>
+            {developer && (
+              <Link
+                className="self-center text-sm underline"
+                href={`/names/${requestId}/formal-method`}
+              >
+                {t('formalMethod')}
+              </Link>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -775,6 +799,7 @@ function Editor({
             />
           ) : panel === 'preview' ? (
             <PreviewPanel
+              steps={body.steps}
               preview={preview.data}
               failed={preview.isError}
               onClose={() => setPanel(null)}
@@ -818,7 +843,7 @@ function Editor({
               >
                 {elsewhere.map((p, i) => (
                   <li key={i}>
-                    {p.path ? <code className="mr-1">{p.path}</code> : null}
+                    <ProblemLocation path={p.path} steps={body.steps} />
                     {problemText(p)}
                   </li>
                 ))}

@@ -29,6 +29,9 @@ import { composeIdeaTemplate } from '@/lib/knowbots/idea-template'
 import type { MethodVersion } from '@/contracts/author-methods'
 import type { MethodChoice } from '@/contracts/method-choice'
 
+import { AuthorModePanel } from './author-mode'
+import { RowConditionFields, selectedRowConditions, type RowConditions } from './row-conditions'
+
 const QUESTIONS = ['solves', 'not_solves', 'inputs', 'steps', 'outputs', 'correctness'] as const
 const FIELD = 'mt-1 w-full rounded-md border px-3 py-2 text-sm'
 
@@ -38,7 +41,7 @@ type ExpectationDraft = {
   kind: ExpectationIn['kind']
   value: string
   tolerance: string
-  rowWhere: string
+  rowWhere: RowConditions
   rowField: string
 }
 // answers：开步前提问预先给好的答案（改创意时照原样带上）
@@ -64,10 +67,11 @@ const emptyExpectation = (): ExpectationDraft => ({
 class RowSelectionError extends Error {}
 
 function rowOf(e: ExpectationDraft): Pick<ExpectationIn, 'row'> {
-  if (!e.rowWhere.trim() && !e.rowField.trim()) return {}
   try {
+    const where = selectedRowConditions(e.rowWhere)
+    if (where === undefined && !e.rowField.trim()) return {}
     return {
-      row: rowSelectionSchema.parse({ where: JSON.parse(e.rowWhere), field: e.rowField.trim() }),
+      row: rowSelectionSchema.parse({ where, field: e.rowField.trim() }),
     }
   } catch {
     throw new RowSelectionError()
@@ -157,7 +161,19 @@ const NO_ANSWERS: SixAnswers = {
 // 方法、你改定，专家孵化方案第四节），选运行方，给验收用例，同意数据用于
 // 测试。方法只来自用户（C-L1）；我们受理后孵化准专家、测试，测试通过即是专家，你同意、我们审过才上架。
 // 给了 revise 就是改创意：名称、运行方不变，从上一版带过来改，交了出一个新版本。
-export function RequestForm({
+export function RequestForm(props: {
+  csrfToken: string
+  revise?: { requestId: string; version: Version }
+}) {
+  const scope = props.revise?.requestId ?? 'new'
+  return (
+    <AuthorModePanel key={scope} scope={scope}>
+      <RequestFields {...props} />
+    </AuthorModePanel>
+  )
+}
+
+function RequestFields({
   csrfToken,
   revise,
 }: {
@@ -574,14 +590,10 @@ function CaseEditor({ index, value, onChange, onRemove }: CaseEditorProps) {
             />
           ) : null}
           <div className="col-span-full grid grid-cols-2 gap-2">
-            <label>
-              {t('form.rowWhere')}
-              <input
-                className={FIELD}
-                value={e.rowWhere}
-                onChange={(x) => setExpectation(j, { ...e, rowWhere: x.target.value })}
-              />
-            </label>
+            <RowConditionFields
+              value={e.rowWhere}
+              onChange={(rowWhere) => setExpectation(j, { ...e, rowWhere })}
+            />
             <label>
               {t('form.rowField')}
               <input

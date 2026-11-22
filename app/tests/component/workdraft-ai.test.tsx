@@ -415,6 +415,13 @@ describe('格子旁边的建议', () => {
     page()
     const pending = within(await screen.findByTestId('pending-step-s4'))
     expect(pending.getByText('待接受的新步：看趋势')).toBeInTheDocument()
+    expect(pending.getByText('看近三年收入')).toBeVisible()
+    expect(pending.queryByText(/"title"\s*:/)).not.toBeInTheDocument()
+    fireEvent.click(pending.getByRole('button', { name: a.edit }))
+    const does = pending.getByRole('textbox', { name: w.step.does })
+    fireEvent.change(does, { target: { value: '核对收入小计' } })
+    expect(does).toHaveValue('核对收入小计')
+    fireEvent.click(pending.getByRole('button', { name: a.cancelEdit }))
     // 一格的建议在那一格旁边
     const step = within(screen.getByTestId('step-s1'))
     expect(step.getByTestId('suggestion-s5')).toBeInTheDocument()
@@ -541,7 +548,7 @@ describe('缺口与导入 skill', () => {
     page()
     fireEvent.click(await screen.findByRole('button', { name: w.toolbar.import }))
     const dialog = within(await screen.findByRole('dialog', { name: w.import.title }))
-    fireEvent.click(dialog.getByLabelText(w.import.modeSkill))
+    expect(dialog.queryByLabelText(w.import.modePack)).not.toBeInTheDocument()
     fireEvent.change(dialog.getByLabelText(w.import.skillText), {
       target: { value: '# 我的 skill' },
     })

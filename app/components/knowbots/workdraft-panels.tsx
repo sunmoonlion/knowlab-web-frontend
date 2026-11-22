@@ -5,10 +5,11 @@ import { useTranslations } from 'next-intl'
 import { useId, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import type { Preview } from '@/contracts/workdraft'
+import type { Preview, Step } from '@/contracts/workdraft'
 import { fetchDetail } from '@/lib/knowbots/client'
 
-import { SELECT, useProblemText } from './workdraft-cells'
+import { SELECT, ProblemLocation, useProblemText } from './workdraft-cells'
+import { useDeveloperMode } from './author-mode'
 import { KEY } from './shared'
 
 // 工作稿顶上几个按钮弹出的面板（专家孵化方案第六、十节）：预览清单、导入专家包或 skill 当种子、从我的
@@ -51,15 +52,18 @@ export function Panel({
 
 /** 预览清单：编出的清单 JSON 与出不了版本的地方。 */
 export function PreviewPanel({
+  steps,
   preview,
   failed,
   onClose,
 }: {
+  steps: Step[]
   preview: Preview | undefined
   failed: boolean
   onClose: () => void
 }) {
   const t = useTranslations('workdraft.preview')
+  const developer = useDeveloperMode()
   const text = useProblemText()
   return (
     <Panel title={t('title')} onClose={onClose}>
@@ -72,6 +76,18 @@ export function PreviewPanel({
       ) : (
         <>
           <p>{t('version', { version: preview.version })}</p>
+          {!developer && (
+            <ol className="list-decimal pl-5">
+              {steps.map((step, i) => (
+                <li key={step.id}>
+                  <strong>{step.title || t('stepNumber', { n: i + 1 })}</strong> {step.does}
+                  {step.outputs.length > 0 && (
+                    <p>{t('returns', { items: step.outputs.map((o) => o.name).join(', ') })}</p>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
           {preview.problems.length ? (
             <div className="space-y-1">
               <p className="text-destructive font-medium">
@@ -80,7 +96,7 @@ export function PreviewPanel({
               <ul className="text-destructive list-disc space-y-0.5 pl-5 text-xs">
                 {preview.problems.map((p, i) => (
                   <li key={i}>
-                    {p.path ? <code className="mr-1">{p.path}</code> : null}
+                    <ProblemLocation path={p.path} steps={steps} />
                     {text(p)}
                   </li>
                 ))}
@@ -89,12 +105,14 @@ export function PreviewPanel({
           ) : (
             <p className="text-emerald-700 dark:text-emerald-400">{t('none')}</p>
           )}
-          <pre
-            className="bg-muted max-h-96 overflow-auto rounded-md p-2 text-xs"
-            data-testid="preview-manifest"
-          >
-            {JSON.stringify(preview.manifest, null, 2)}
-          </pre>
+          {developer && (
+            <pre
+              className="bg-muted max-h-96 overflow-auto rounded-md p-2 text-xs"
+              data-testid="preview-manifest"
+            >
+              {JSON.stringify(preview.manifest, null, 2)}
+            </pre>
+          )}
         </>
       )}
     </Panel>
@@ -118,9 +136,13 @@ export function ImportPanel({
   onSeedSkill: (skill: string) => void
   onClose: () => void
 }) {
+  const developer = useDeveloperMode()
   const t = useTranslations('workdraft.import')
-  const [mode, setMode] = useState<'pack' | 'skill'>('pack')
-  const [text, setText] = useState('')
+  const [requestedMode, setMode] = useState<'pack' | 'skill'>(developer ? 'pack' : 'skill')
+  const mode = developer ? requestedMode : 'skill'
+  const [drafts, setDrafts] = useState({ pack: '', skill: '' })
+  const text = drafts[mode]
+  const setText = (value: string) => setDrafts((prev) => ({ ...prev, [mode]: value }))
   const [bad, setBad] = useState(false)
   const submit = () => {
     if (mode === 'skill') return onSeedSkill(text)
@@ -136,22 +158,24 @@ export function ImportPanel({
   }
   return (
     <Panel title={t('title')} onClose={onClose}>
-      <div role="radiogroup" aria-label={t('mode')} className="flex gap-4 text-xs">
-        {(['pack', 'skill'] as const).map((m) => (
-          <label key={m}>
-            <input
-              type="radio"
-              name="import-mode"
-              checked={mode === m}
-              onChange={() => {
-                setMode(m)
-                setBad(false)
-              }}
-            />{' '}
-            {t(m === 'pack' ? 'modePack' : 'modeSkill')}
-          </label>
-        ))}
-      </div>
+      {developer && (
+        <div role="radiogroup" aria-label={t('mode')} className="flex gap-4 text-xs">
+          {(['pack', 'skill'] as const).map((m) => (
+            <label key={m}>
+              <input
+                type="radio"
+                name="import-mode"
+                checked={mode === m}
+                onChange={() => {
+                  setMode(m)
+                  setBad(false)
+                }}
+              />{' '}
+              {t(m === 'pack' ? 'modePack' : 'modeSkill')}
+            </label>
+          ))}
+        </div>
+      )}
       <p className="text-muted-foreground">{mode === 'pack' ? t('hint') : t('skillHint')}</p>
       <label className="block">
         <span className="text-xs">{t('file')}</span>
@@ -175,7 +199,7 @@ export function ImportPanel({
           onChange={(e) => setText(e.target.value)}
         />
       </label>
-      {bad ? (
+      {bad && mode === 'pack' ? (
         <p role="alert" className="text-destructive">
           {t('badJson')}
         </p>

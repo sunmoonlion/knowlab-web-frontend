@@ -95,7 +95,9 @@ export function Cases({ cases }: { cases: Record<string, unknown>[] }) {
                           {e.row ? (
                             <p>
                               {tForm('rowMatch', {
-                                where: JSON.stringify(e.row.where),
+                                where: Object.entries(e.row.where ?? {})
+                                  .map(([column, value]) => column + ' = ' + String(value))
+                                  .join(', '),
                                 field: String(e.row.field ?? ''),
                               })}
                             </p>
