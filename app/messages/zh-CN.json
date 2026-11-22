@@ -272,6 +272,9 @@
     },
     "category": "大类",
     "empty": "这一类没有。",
+    "suggestedPlan": "委托人提交的计划建议（待作者审定）",
+    "editFormalRevision": "编辑此方法的新修订",
+    "returnFormal": "返回原委托",
     "toName": "这个名称的全部记录",
     "columns": {
       "applications": "申请",
@@ -1368,6 +1371,17 @@
     }
   },
   "formalMethod": {
+    "runtimePatterns": "作者草图对应的运行能力",
+    "patternAvailable": "可试跑",
+    "patternDisabled": "运行器未启用",
+    "patternUnknown": "当前能力待核验，可继续编辑草图",
+    "patterns": {
+      "sequence": "P1 按顺序交接产物",
+      "join": "P2 汇合固定分支",
+      "independent_review": "P3 隔离后独立复核",
+      "object_batch": "P4 按确认的对象清单展开",
+      "conditional": "P5 按输入规则选路"
+    },
     "sampleEmpty": "请先在知识库把要核对的样本版本展示给 KnowLab。",
     "sampleCheck": "核对样本表头",
     "sampleVersion": "选择已向 KnowLab 展示的样本版本",

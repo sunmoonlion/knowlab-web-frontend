@@ -380,6 +380,22 @@ export const detailSchema = z.object({
       project_id: z.string().nullable().optional(),
       task_id: z.string().nullable().optional(),
       method_demand: methodDemandSchema.optional(),
+      next_version: z.number().int().positive().optional(),
+      suggested_plan: z
+        .object({
+          sketch_digest: z.string(),
+          methods: z.array(
+            z.object({ method_id: z.uuid(), version: z.number(), digest: z.string() }),
+          ),
+          outputs: z.array(z.string()),
+        })
+        .optional(),
+      handoff: z.enum(['new', 'author_revision', 'user_demand']).optional(),
+      gap: z.string().optional(),
+      method_reference: z
+        .object({ method_id: z.uuid(), version: z.number().int().positive(), digest: z.string() })
+        .nullable()
+        .optional(),
     })
     .nullable()
     .optional(),

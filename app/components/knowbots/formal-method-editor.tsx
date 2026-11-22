@@ -23,6 +23,7 @@ import { ApiClientError } from '@/lib/common/api-client'
 import { fetchWorkdraft, saveWorkdraftCells } from '@/lib/knowbots/client'
 import {
   formalSources,
+  planningCapabilities,
   submitSelfListing,
   listFormalMethods,
   getFormalVersion,
@@ -138,6 +139,12 @@ function FormalForm({
   const [working, setWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const runtime = useQuery({
+    queryKey: ['formal-planning-capabilities', initial.request_id],
+    queryFn: () => planningCapabilities(initial.request_id),
+    enabled: definition?.procedure.kind === 'orchestration',
+    retry: false,
+  })
   const sources = useQuery({
     queryKey: ['formal-method-sources', initial.request_id],
     queryFn: () => formalSources(initial.request_id),
@@ -317,6 +324,22 @@ function FormalForm({
         {t('backToName')}
       </Link>
       <p className="text-sm">{t('draftNotice')}</p>
+      {definition?.procedure.kind === 'orchestration' && (
+        <details>
+          <summary>{t('runtimePatterns')}</summary>
+          {runtime.data ? (
+            <ul>
+              {Object.entries(runtime.data.patterns).map(([key, enabled]) => (
+                <li key={key}>
+                  {t('patterns.' + key)} · {t(enabled ? 'patternAvailable' : 'patternDisabled')}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>{t('patternUnknown')}</p>
+          )}
+        </details>
+      )}
       {document.plan_adoption && (
         <p className="text-sm">
           {t('planLastAdoption', {

@@ -18,6 +18,11 @@ export const destinations = defineDestinations({
       'review_digest',
     ],
   },
+  'knowbench.request': {
+    target: 'knowbench',
+    segments: ['workbench', 'projects', ':project', 'expert', 'new'],
+    params: ['formal_match'],
+  },
   'knowbench.ask': { target: 'knowbench', segments: ['workbench'], params: ['knowbot', 'task'] },
   // 「去 knowbench 填模型 key」（SDD 0046 第三节：模型 key 没填不能发起测试、AI 一轮）
   'knowbench.settings': { target: 'knowbench', segments: ['workbench', 'settings'] },

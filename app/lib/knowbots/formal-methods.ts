@@ -147,6 +147,15 @@ export async function submitSelfListing(
 
 export type ValidationCommand = { request_id: string; revision: number; run_id: string }
 
+export async function planningCapabilities(requestId: string) {
+  return parseFormalReply(
+    z.object({ digest: z.string(), patterns: z.record(z.string(), z.boolean()) }),
+    await requestJson(
+      `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/planning-capabilities`,
+    ),
+  )
+}
+
 export async function formalSources(requestId: string) {
   return parseFormalReply(
     formalSourcesSchema,

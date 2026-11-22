@@ -272,6 +272,9 @@
     },
     "category": "Categories",
     "empty": "Nothing in this category.",
+    "suggestedPlan": "Plan proposed by the requester for author review",
+    "editFormalRevision": "Open this method revision",
+    "returnFormal": "Return to the original request",
     "toName": "Everything about this name",
     "columns": {
       "applications": "Applications",
@@ -1368,6 +1371,17 @@
     }
   },
   "formalMethod": {
+    "runtimePatterns": "Runtime capabilities for this draft",
+    "patternAvailable": "Available for trials",
+    "patternDisabled": "Disabled",
+    "patternUnknown": "Runtime capabilities unverified. You can continue editing.",
+    "patterns": {
+      "sequence": "P1 Ordered handoff",
+      "join": "P2 Join fixed branches",
+      "independent_review": "P3 Independent review",
+      "object_batch": "P4 Process an object list",
+      "conditional": "P5 Route by input"
+    },
     "sampleEmpty": "Share a versioned sample with KnowLab from your knowledge library to check its header.",
     "sampleCheck": "Check a sample header",
     "sampleVersion": "Sample version shared with KnowLab",

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
+import { CrossAppLink } from '@/components/common/cross-app-link'
 import { Button, buttonVariants } from '@/components/ui/button'
 import type { Application, Detail, Version } from '@/contracts/knowbots'
 import { Link } from '@/i18n/navigation'
@@ -94,6 +95,43 @@ function ApplicationProcess({ item, csrfToken }: { item: Application; csrfToken:
           </p>
         </header>
         <ConsentNotice item={item} csrfToken={csrfToken} />
+        {detail.data?.origin?.handoff && detail.data.origin.app === 'knowbench' && (
+          <div>
+            <p>{detail.data.origin.gap}</p>
+            {detail.data.origin.suggested_plan && (
+              <div>
+                <strong>{t('suggestedPlan')}</strong>
+                <ul>
+                  {detail.data.origin.suggested_plan.methods.map((m) => (
+                    <li key={m.method_id}>
+                      {m.method_id} · v{m.version}
+                    </li>
+                  ))}
+                  <li>{detail.data.origin.suggested_plan.outputs.join(', ')}</li>
+                </ul>
+              </div>
+            )}
+            {detail.data.origin.handoff === 'author_revision' &&
+              detail.data.origin.method_reference && (
+                <Link
+                  className="underline"
+                  href={`/names/${item.request_id}/formal-method?method=${detail.data.origin.method_reference.method_id}&version=${detail.data.origin.next_version ?? detail.data.origin.method_reference.version + 1}`}
+                >
+                  {t('editFormalRevision')}
+                </Link>
+              )}
+            <CrossAppLink
+              to="knowbench.request"
+              className="underline"
+              values={{
+                project: detail.data.origin.project_id,
+                formal_match: detail.data.origin.task_id,
+              }}
+            >
+              {t('returnFormal')}
+            </CrossAppLink>
+          </div>
+        )}
         <MethodDemandReference origin={detail.data?.origin} />
         {usable && detail.data ? (
           <Card title={t('applications.usable', { version: usable.version })}>
