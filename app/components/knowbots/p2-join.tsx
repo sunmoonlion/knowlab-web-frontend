@@ -58,7 +58,30 @@ export function P2Join(props: Props) {
   )
 }
 
-function JoinPreview({ target, ...props }: Props & { target: string }) {
+export function P3Review(props: Props) {
+  const t = useTranslations('formalMethod')
+  const graph = props.draft.procedure
+  if (graph.kind !== 'orchestration' || graph.steps.length !== 1 || graph.collaboration) return null
+  const [reviewer] = graph.steps
+  const eligible =
+    reviewer.always_required &&
+    reviewer.candidates.length === 1 &&
+    reviewer.depends_on.length === 0 &&
+    Object.keys(reviewer.inputs).length === 2 &&
+    callerPorts(reviewer).length === 2
+  return (
+    <fieldset className="space-y-2 rounded border p-3">
+      <legend>{t('p3Review')}</legend>
+      {eligible ? <JoinPreview {...props} target={reviewer.id} review /> : <p>{t('p3Start')}</p>}
+    </fieldset>
+  )
+}
+
+function JoinPreview({
+  target,
+  review = false,
+  ...props
+}: Props & { target: string; review?: boolean }) {
   const t = useTranslations('formalMethod')
   const [branches, setBranches] = useState<Branch[]>([])
   const [input, setInput] = useState('')
@@ -71,9 +94,22 @@ function JoinPreview({ target, ...props }: Props & { target: string }) {
   })
   if (!step) return null
   const ports = callerPorts(step)
+  let preview = draft
+  if (review && !ports.length && draft.procedure.kind === 'orchestration') {
+    const roles: NonNullable<Graph['collaboration']> = {}
+    for (const id of step.depends_on) roles[id] = { isolation_group: id, handoff_from: [] }
+    roles[target] = {
+      isolation_group: target,
+      handoff_from: step.depends_on,
+      review_requirements: Object.fromEntries(
+        step.depends_on.map((id) => [id, 'isolated_reviewer' as const]),
+      ),
+    }
+    preview = { ...draft, procedure: { ...draft.procedure, collaboration: roles } }
+  }
   return (
     <>
-      <p>{t('p2Help')}</p>
+      <p>{review ? t('p3Help', { reviewer: target }) : t('p2Help')}</p>
       {ports.length > 0 && (
         <label>
           {t('p2Input')}{' '}
@@ -90,6 +126,7 @@ function JoinPreview({ target, ...props }: Props & { target: string }) {
           key={input}
           {...props}
           draft={draft}
+          requireGuaranteedOutput={review}
           step={step}
           input={input}
           onAdd={(branch) => {
@@ -102,8 +139,8 @@ function JoinPreview({ target, ...props }: Props & { target: string }) {
       {branches.length > 0 && (
         <>
           <p>{t('p1PreviewRevision', { revision: props.revision })}</p>
-          <PlanChanges before={props.draft} after={draft} />
-          <FormalOrchestrationSummary definition={draft} />
+          <PlanChanges before={props.draft} after={preview} />
+          <FormalOrchestrationSummary definition={preview} />
           <Button
             type="button"
             variant="outline"
@@ -118,9 +155,9 @@ function JoinPreview({ target, ...props }: Props & { target: string }) {
           <Button
             type="button"
             disabled={branches.length < 2 || confirm.isPending}
-            onClick={() => confirm.mutate(undefined, { onSuccess: () => props.onAdopt(draft) })}
+            onClick={() => confirm.mutate(undefined, { onSuccess: () => props.onAdopt(preview) })}
           >
-            {t('p2Adopt')}
+            {t(review ? 'p3Adopt' : 'p2Adopt')}
           </Button>
           {confirm.isError && <p role="alert">{t('p2Stale')}</p>}
         </>
@@ -135,10 +172,12 @@ function BranchChoice({
   requestId,
   csrfToken,
   step,
+  requireGuaranteedOutput,
   input,
   onAdd,
 }: Props & {
   step: Step
+  requireGuaranteedOutput: boolean
   input: string
   onAdd: (branch: Branch) => void
 }) {
@@ -147,7 +186,8 @@ function BranchChoice({
   const [choice, setChoice] = useState('')
   const page = pages[pages.length - 1]
   const shared = typeof page !== 'number'
-  const slot = step.inputs[input].slot
+  const requiredSlot = step.inputs[input].slot
+  const slot = requireGuaranteedOutput ? { ...requiredSlot, required: true } : requiredSlot
   const lookup = () => matchingToolOutputs(requestId, methodId, slot, page, csrfToken)
   const matches = useQuery({
     queryKey: ['p1-output-matches', requestId, methodId, slot, page],
@@ -164,8 +204,17 @@ function BranchChoice({
     shared,
     csrfToken,
   )
+  const provider = proposed?.procedure
+  const outputAvailable =
+    !requireGuaranteedOutput ||
+    (selected &&
+      provider?.kind === 'orchestration' &&
+      provider.steps[0]?.outputs[selected.output]?.required)
   const plan =
-    selected && proposed && prependTool(draft, step.id, input, proposed, selected.output, 'branch')
+    selected &&
+    proposed &&
+    outputAvailable &&
+    prependTool(draft, step.id, input, proposed, selected.output, 'branch')
   const publicInputs = new Set(
     plan && plan.procedure.kind === 'orchestration'
       ? plan.procedure.steps.flatMap((s) =>

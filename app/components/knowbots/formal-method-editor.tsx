@@ -40,7 +40,7 @@ import { DeliveryPromises } from './delivery-promises'
 import { ToolSlotEditor } from './tool-slot-editor'
 import { P5Choice } from './p5-choice'
 import { P4Comparison } from './p4-comparison'
-import { P2Join } from './p2-join'
+import { P2Join, P3Review } from './p2-join'
 import { P1Predecessor } from './p1-predecessor'
 import { ReviewRequirements } from './review-requirements'
 import { FormalOrchestrationSummary } from './formal-orchestration-summary'
@@ -430,6 +430,7 @@ function FormalForm({
           collaboration={collaboration}
           onChange={(value) => {
             setCollaboration(value)
+            setReviewedPlan(null)
             changed()
           }}
         />
@@ -584,7 +585,7 @@ function FormalForm({
               </>
             ) : (
               <>
-                <FormalOrchestrationSummary definition={definition} />
+                <FormalOrchestrationSummary definition={definition} collaboration={collaboration} />
                 {runtimeGaps.map((gap) => (
                   <p role="status" key={gap.step + gap.primitive}>
                     {t(gap.primitive, { step: gap.step })}
@@ -646,6 +647,33 @@ function FormalForm({
                           editDefinition(next)
                         }}
                       />
+                      {!collaboration && (
+                        <P3Review
+                          key={JSON.stringify([
+                            initial.request_id,
+                            document.revision,
+                            methodId,
+                            definition,
+                          ])}
+                          draft={definition}
+                          methodId={methodId}
+                          requestId={initial.request_id}
+                          csrfToken={csrfToken}
+                          revision={document.revision}
+                          onAdopt={(next) => {
+                            if (
+                              next.procedure.kind !== 'orchestration' ||
+                              !next.procedure.collaboration
+                            )
+                              return
+                            const { collaboration: roles, ...procedure } = next.procedure
+                            const plan = { ...next, procedure }
+                            setCollaboration(roles)
+                            setReviewedPlan(plan)
+                            editDefinition(plan)
+                          }}
+                        />
+                      )}
                       <ExpertInputBinding
                         graph={definition.procedure}
                         onChange={(procedure) => editDefinition({ ...definition, procedure })}

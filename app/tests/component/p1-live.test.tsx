@@ -12,6 +12,7 @@ const modes = ['bridge', 'replace']
 if (process.env.LUNA_P1_SAMPLE) modes.push('internal')
 if (process.env.LUNA_P5_REQUEST) modes.push('choice')
 if (process.env.LUNA_P4_REQUEST) modes.push('comparison')
+if (process.env.LUNA_P3_REQUEST) modes.push('review')
 if (process.env.LUNA_P2_REQUEST) modes.push('join')
 it.skipIf(!url).each(modes)(
   'adopts, saves and reopens the indexed %s plan',
@@ -19,6 +20,7 @@ it.skipIf(!url).each(modes)(
     const base = new URL(url!)
     if (base.hostname !== '127.0.0.1') throw Error('Expected loopback integration fixture')
     const fetchLocal = globalThis.fetch
+    let replayAdoption: (() => Promise<Response>) | undefined
     let searches = 0
     vi.stubGlobal('fetch', async (path: string, init: RequestInit) => {
       if (/\/(scan|matching)-outputs$/.test(path)) searches++
@@ -28,6 +30,10 @@ it.skipIf(!url).each(modes)(
         'sunmoonai_knowlab_web_sid=' + (process.env.LUNA_P1_SHARED ? 'other' : 'author'),
       )
       headers.set('Origin', 'http://localhost:3000')
+      if (mode === 'review' && path.endsWith('/cells') && init.method === 'POST') {
+        const request = { method: 'POST', headers, body: init.body }
+        replayAdoption = () => fetchLocal(new URL(path, base), request)
+      }
       // The DOM component supplies a jsdom signal; Node's loopback fetch checks its realm.
       if (!init.signal) return fetchLocal(new URL(path, base), { ...init, headers })
       const controller = transferableAbortController()
@@ -52,6 +58,7 @@ it.skipIf(!url).each(modes)(
         choice: 'LUNA_P5',
         comparison: 'LUNA_P4',
         join: 'LUNA_P2',
+        review: 'LUNA_P3',
         bridge: 'LUNA_P1',
         internal: 'LUNA_P1_INTERNAL',
         replace: 'LUNA_P1_RESELECT',
@@ -69,7 +76,7 @@ it.skipIf(!url).each(modes)(
       const firstTool =
         mode === 'comparison'
           ? process.env.LUNA_P4_COLLECTOR!
-          : mode === 'join'
+          : mode === 'join' || mode === 'review'
             ? process.env.LUNA_P2_JOIN!
             : mode === 'replace'
               ? process.env.LUNA_P1_STRICT!
@@ -155,9 +162,14 @@ it.skipIf(!url).each(modes)(
         expect(screen.getByText(t.bounded_fanout.replace('{step}', 'per_object'))).toBeVisible()
         return
       }
-      if (mode === 'join') {
-        const panel = within(await screen.findByRole('group', { name: t.p2Join }))
-        fireEvent.change(panel.getByLabelText(t.p2Target), { target: { value: 'step_1' } })
+      if (mode === 'join' || mode === 'review') {
+        const review = mode === 'review'
+        const apply = review ? t.p3Adopt : t.p2Adopt
+        const panel = within(
+          await screen.findByRole('group', { name: review ? t.p3Review : t.p2Join }),
+        )
+        if (!review)
+          fireEvent.change(panel.getByLabelText(t.p2Target), { target: { value: 'step_1' } })
         for (const port of ['to', 'other']) {
           fireEvent.change(panel.getByLabelText(t.p2Input), { target: { value: port } })
           const picker = await panel.findByLabelText<HTMLSelectElement>(t.p1Provider)
@@ -166,11 +178,20 @@ it.skipIf(!url).each(modes)(
           const add = panel.getByRole('button', { name: t.p2Add })
           await waitFor(() => expect(add).toBeEnabled())
           fireEvent.click(add)
-          if (port === 'to') expect(panel.getByRole('button', { name: t.p2Adopt })).toBeDisabled()
+          if (port === 'to') expect(panel.getByRole('button', { name: apply })).toBeDisabled()
         }
         expect(panel.getByText(/other ← 前置步骤输出: branch_1.receipt/)).toBeVisible()
-        fireEvent.click(panel.getByRole('button', { name: t.p2Adopt }))
-        await waitFor(() => expect(screen.queryByRole('button', { name: t.p2Adopt })).toBeNull())
+        if (review) {
+          for (const id of ['branch', 'branch_1', 'step_1']) {
+            expect(panel.getByText(t.p3Group.replace('{group}', id))).toBeVisible()
+            expect(panel.getByText(id + '.collaboration')).toBeInTheDocument()
+          }
+          expect(
+            panel.getByText(t.p3Handoffs.replace('{sources}', 'branch, branch_1')),
+          ).toBeVisible()
+        }
+        fireEvent.click(panel.getByRole('button', { name: apply }))
+        await waitFor(() => expect(screen.queryByRole('button', { name: apply })).toBeNull())
         fireEvent.click(screen.getByRole('button', { name: t.save }))
         await screen.findByText(t.saved)
         view.unmount()
@@ -178,6 +199,16 @@ it.skipIf(!url).each(modes)(
         await screen.findByText(t.planLastAdoption.replace('{base}', '0').replace('{saved}', '1'))
         expect(screen.getByText(/to ← 前置步骤输出: branch.receipt/)).toBeVisible()
         expect(screen.getByText(/other ← 前置步骤输出: branch_1.receipt/)).toBeVisible()
+        if (review) {
+          const replay = await replayAdoption!()
+          expect(replay.status).toBe(200)
+          expect((await replay.json()).revision).toBe(1)
+          expect(
+            screen.getByText(t.p3Handoffs.replace('{sources}', 'branch, branch_1')),
+          ).toBeVisible()
+          for (const id of ['branch', 'branch_1', 'step_1'])
+            expect(screen.getByText(t.isolation_group.replace('{step}', id))).toBeVisible()
+        }
         return
       }
       if (mode === 'internal') {

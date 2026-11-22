@@ -29,6 +29,11 @@ export function PlanChanges({
       ...Object.keys(step.inputs),
     ]))
       compare(step.id + '.inputs.' + name, original?.inputs[name], step.inputs[name])
+    compare(
+      step.id + '.collaboration',
+      graph.collaboration?.[step.id],
+      next.collaboration?.[step.id],
+    )
     compare(step.id + '.outputs', original?.outputs, step.outputs)
   }
   compare(t('graphExports'), graph.exports, next.exports)
