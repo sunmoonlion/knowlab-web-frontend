@@ -1371,6 +1371,9 @@
     }
   },
   "formalMethod": {
+    "withdrawDraft": "Withdraw method draft",
+    "withdrawConfirm": "Withdraw the current method definition and role settings? Unsaved edits will be discarded. Frozen versions and run history remain available.",
+    "withdrawn": "Method draft withdrawn.",
     "runtimePatterns": "Runtime capabilities for this draft",
     "patternAvailable": "Available for trials",
     "patternDisabled": "Disabled",

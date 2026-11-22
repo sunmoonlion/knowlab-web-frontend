@@ -68,6 +68,7 @@ export function FormalMethodEditor({
   resume?: Resume
 }) {
   const t = useTranslations('formalMethod')
+  const [withdrawals, setWithdrawals] = useState(0)
   const loaded = useQuery({
     queryKey: [...KEY, 'workdraft', requestId],
     queryFn: () => fetchWorkdraft(requestId),
@@ -87,17 +88,30 @@ export function FormalMethodEditor({
         </Link>
       </div>
     )
-  return <FormalForm initial={loaded.data} csrfToken={csrfToken} resume={resume} />
+  return (
+    <FormalForm
+      key={requestId + '/' + withdrawals}
+      initial={loaded.data}
+      csrfToken={csrfToken}
+      resume={withdrawals ? {} : resume}
+      withdrawn={withdrawals > 0}
+      onWithdraw={() => setWithdrawals((n) => n + 1)}
+    />
+  )
 }
 
 function FormalForm({
   initial,
   csrfToken,
   resume,
+  withdrawn,
+  onWithdraw,
 }: {
   initial: Workdraft
   csrfToken: string
   resume: Resume
+  withdrawn: boolean
+  onWithdraw: () => void
 }) {
   const t = useTranslations('formalMethod')
   const client = useQueryClient()
@@ -138,7 +152,7 @@ function FormalForm({
   const [inspected, setInspected] = useState<FormalVersion | null>(null)
   const [working, setWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(withdrawn ? t('withdrawn') : null)
   const runtime = useQuery({
     queryKey: ['formal-planning-capabilities', initial.request_id],
     queryFn: () => planningCapabilities(initial.request_id),
@@ -266,6 +280,34 @@ function FormalForm({
         client.invalidateQueries({ queryKey: [...KEY, 'workdraft', initial.request_id] }),
         client.invalidateQueries({ queryKey: ['formal-methods', initial.request_id] }),
       ])
+    } catch (exc) {
+      setError(problem(exc))
+    } finally {
+      setWorking(false)
+    }
+  }
+  const withdrawDraft = async () => {
+    if (!window.confirm(t('withdrawConfirm'))) return
+    setWorking(true)
+    setError(null)
+    try {
+      const saved = await saveWorkdraftCells(
+        initial.request_id,
+        {
+          revision: document.revision,
+          cells: [
+            { path: 'formal_method', value: null },
+            { path: 'collaboration', value: null },
+          ],
+        },
+        csrfToken,
+      )
+      client.setQueryData([...KEY, 'workdraft', initial.request_id], saved)
+      const url = new URL(window.location.href)
+      for (const key of ['method', 'version', 'revision', 'run', 'execution'])
+        url.searchParams.delete(key)
+      window.history.replaceState(null, '', url.pathname + url.search)
+      onWithdraw()
     } catch (exc) {
       setError(problem(exc))
     } finally {
@@ -756,6 +798,11 @@ function FormalForm({
         <Button type="button" disabled={!ready || !dirty} onClick={() => void save()}>
           {t('save')}
         </Button>
+        {document.body.formal_method && (
+          <Button type="button" variant="outline" onClick={() => void withdrawDraft()}>
+            {t('withdrawDraft')}
+          </Button>
+        )}
       </fieldset>
       <section className="space-y-3 rounded border p-4">
         <h2 className="font-medium">{t('validation')}</h2>

@@ -179,6 +179,26 @@ const show = () =>
     />,
   )
 
+it('withdraws the saved method and collaboration together at the displayed revision', async () => {
+  vi.stubGlobal('confirm', vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true))
+  show()
+  const button = await screen.findByRole('button', { name: labels.withdrawDraft })
+  fireEvent.click(button)
+  expect(fetcher.mock.calls.filter(([url]) => url.endsWith('/cells'))).toHaveLength(0)
+  fireEvent.click(button)
+  expect(await screen.findByText(labels.withdrawn)).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: labels.withdrawDraft })).not.toBeInTheDocument()
+  const calls = fetcher.mock.calls.filter(([url]) => url.endsWith('/cells'))
+  expect(calls).toHaveLength(1)
+  expect(JSON.parse(calls[0][1].body as string)).toEqual({
+    revision: initial.revision,
+    cells: [
+      { path: 'formal_method', value: null },
+      { path: 'collaboration', value: null },
+    ],
+  })
+})
+
 it('preserves a legacy draft and never opens its technical binding or source picker', async () => {
   current = workdraftSchema.parse(fixture.workdraft)
   show()

@@ -1371,6 +1371,9 @@
     }
   },
   "formalMethod": {
+    "withdrawDraft": "撤回方法工作稿",
+    "withdrawConfirm": "撤回当前方法定义和角色配置？未保存的编辑将丢弃。已冻结版本和试跑记录仍可查看。",
+    "withdrawn": "已撤回当前方法工作稿。",
     "runtimePatterns": "作者草图对应的运行能力",
     "patternAvailable": "可试跑",
     "patternDisabled": "运行器未启用",
