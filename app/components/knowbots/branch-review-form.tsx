@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
+import { CrossAppLink } from '@/components/common/cross-app-link'
 import { Button } from '@/components/ui/button'
 import {
   reviewCriteriaSchema,
@@ -190,6 +191,23 @@ export function BranchReviewForm({
       {!dirty && saved.review && (
         <div role="status">
           <p>{t(saved.review.status === 'v0_failed' ? 'reviewFailed' : 'reviewWaiting')}</p>
+          {saved.review.status === 'awaiting_isolation' && (
+            <CrossAppLink
+              to="knowbench.review"
+              className="underline"
+              values={{
+                run_id: saved.run_id,
+                request_id: saved.request_id,
+                case_id: saved.case_id,
+                repetition: String(saved.repetition),
+                step: saved.step,
+                scope_digest: saved.scope_digest,
+                review_digest: saved.review.digest,
+              }}
+            >
+              {t('reviewChooseRoute')}
+            </CrossAppLink>
+          )}
           {Object.entries(saved.review.handoff).map(([name, digest]) => (
             <p key={name} className="break-all">
               {name} · {digest}

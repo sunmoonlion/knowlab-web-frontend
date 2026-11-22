@@ -5,6 +5,19 @@ export const destinations = defineDestinations({
   // 「去 knowbench 请它」（专家孵化方案第十三节第 5 条）：带 knowbot=<knowmart 上的专家>@<版本>，
   // knowbench 按用户自己的会话向 knowmart 核验、钉住。申请是在 knowbench 找专家没找到时建的，
   // 再带 task=那一轮找专家的编号：knowbench 取回当初的问题和项目，直接到那个项目的请专家页
+  'knowbench.review': {
+    target: 'knowbench',
+    segments: ['workbench', 'review'],
+    params: [
+      'run_id',
+      'request_id',
+      'case_id',
+      'repetition',
+      'step',
+      'scope_digest',
+      'review_digest',
+    ],
+  },
   'knowbench.ask': { target: 'knowbench', segments: ['workbench'], params: ['knowbot', 'task'] },
   // 「去 knowbench 填模型 key」（SDD 0046 第三节：模型 key 没填不能发起测试、AI 一轮）
   'knowbench.settings': { target: 'knowbench', segments: ['workbench', 'settings'] },

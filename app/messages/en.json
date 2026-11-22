@@ -1666,6 +1666,7 @@
     "branchDepends": "Depends on {steps}",
     "branchReceive": "Accept only the output of {step}",
     "branchOpen": "View accepted output of {step}",
+    "reviewChooseRoute": "Choose the reviewer and confirm the handoff in KnowBench",
     "reviewPrepare": "Prepare a directed review",
     "reviewOutput": "Output for the reviewer",
     "reviewStage": "Review rounds",
