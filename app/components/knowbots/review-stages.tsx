@@ -63,6 +63,7 @@ export function ReviewStages({
               ))}
             </select>
           </label>
+          {comparison.max_reworks > 0 && <p>{t('ordinaryReworkOutput')}</p>}
           <p>{t('reviewDisposition')}</p>
         </>
       )}

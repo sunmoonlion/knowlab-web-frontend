@@ -1676,6 +1676,7 @@
     "reviewFirst": "首轮只交接所选成果：{outputs}。",
     "reviewAssessment": "第二轮开放的作者自评输出",
     "reviewDeferred": "首轮发现封存后才开放 {output}",
+    "ordinaryReworkOutput": "普通专家图的对照步骤需输出布尔值 needs_rework。true 要求返工，false 表示通过；缺少结论时交委托人裁定。",
     "reviewDisposition": "未解决的分歧交由本次委托的所有者裁定。",
     "reviewReworks": "自动返工上限",
     "reviewExtraRound": "严格复核多一次对照。执行前须确认可用隔离环境、实际报价和总预算。",

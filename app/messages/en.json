@@ -1676,6 +1676,7 @@
     "reviewFirst": "First round receives only these outputs: {outputs}.",
     "reviewAssessment": "Author assessment output for the second round",
     "reviewDeferred": "Release {output} after independent findings are sealed",
+    "ordinaryReworkOutput": "In ordinary expert graphs the comparison returns a boolean needs_rework. True requests a revision and false accepts it. A missing decision goes to the owner.",
     "reviewDisposition": "The task owner decides any unresolved disagreements.",
     "reviewReworks": "Maximum automatic reworks",
     "reviewExtraRound": "Strict review adds a comparison round. Confirm isolation, the quoted price and the total budget before execution.",

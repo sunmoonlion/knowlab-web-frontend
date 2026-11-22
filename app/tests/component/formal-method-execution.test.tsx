@@ -729,6 +729,31 @@ it.each<[string, (graph: Graph) => void]>([
   expect(supportsOrchestrationExecution(graph)).toBe(false)
 })
 
+it('offers an author trial for a frozen candidate rule and a bounded object list', () => {
+  const chosen = orchestrationDraft(draft)
+  const graph = chosen.definition.procedure as Graph
+  const first = graph.steps[0]
+  const alternative = { ...first.candidates[0], version: 7 }
+  first.candidates.push(alternative)
+  first.candidate_choice = {
+    input: 'message',
+    cases: first.candidates.map((candidate, i) => ({ equals: String(i), candidate })),
+  }
+  expect(supportsOrchestrationExecution(chosen)).toBe(true)
+
+  const listed = orchestrationDraft(draft)
+  const batch = listed.definition.procedure as Graph
+  batch.object_batch = { max_objects: 2, on_missing: 'stop' }
+  batch.max_steps = 3
+  batch.max_expansions = 4
+  batch.steps[0].inputs.message.binding = { source: 'object_item', name: 'items' }
+  const [output] = Object.keys(batch.steps[0].outputs)
+  batch.steps[1].inputs.message.binding = { source: 'object_rows', step: 'first', output }
+  expect(supportsOrchestrationExecution(listed)).toBe(true)
+  batch.max_expansions = 3
+  expect(supportsOrchestrationExecution(listed)).toBe(false)
+})
+
 it('requires an author-selected case for each conditional delivery and submits its promise ID', async () => {
   const conditional = structuredClone(draft)
   conditional.definition.capability_declaration.conditions = {

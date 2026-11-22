@@ -15,8 +15,9 @@ export function supportsOrchestrationExecution(draft: FormalDraft | null): boole
     graph?.kind !== 'orchestration' ||
     draft.allowed_callers.length !== 1 ||
     draft.allowed_callers[0] !== 'host' ||
-    !!graph.object_batch ||
-    graph.steps.some((s) => !!s.candidate_choice) ||
+    (graph.object_batch &&
+      (graph.max_steps < graph.object_batch.max_objects + 1 ||
+        graph.max_expansions < graph.object_batch.max_objects + 2)) ||
     graph.max_replans !== 0 ||
     graph.max_depth < 2 ||
     graph.steps.length === 0 ||
@@ -43,15 +44,21 @@ export function supportsOrchestrationExecution(draft: FormalDraft | null): boole
     if (
       !step.always_required ||
       step.on_failure !== 'fail' ||
-      step.candidates.length !== 1 ||
+      (step.candidate_choice
+        ? step.candidate_choice.cases.length !== step.candidates.length ||
+          !step.candidates.every((ref) =>
+            step.candidate_choice?.cases.some((c) => same(c.candidate, ref)),
+          )
+        : step.candidates.length !== 1) ||
       new Set(step.depends_on).size !== step.depends_on.length ||
       !visit(step.id)
     )
       return false
-    const ref = step.candidates[0]
-    const key = `${ref.method_id}:${ref.version}`
-    if (references.has(key) && references.get(key) !== ref.digest) return false
-    references.set(key, ref.digest)
+    for (const ref of step.candidates) {
+      const key = `${ref.method_id}:${ref.version}`
+      if (references.has(key) && references.get(key) !== ref.digest) return false
+      references.set(key, ref.digest)
+    }
     for (const { binding } of Object.values(step.inputs)) {
       if (binding.source === 'resource') return false
       if (
