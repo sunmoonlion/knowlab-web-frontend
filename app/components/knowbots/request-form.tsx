@@ -29,7 +29,6 @@ import { composeIdeaTemplate } from '@/lib/knowbots/idea-template'
 import type { MethodVersion } from '@/contracts/author-methods'
 import type { MethodChoice } from '@/contracts/method-choice'
 
-import { AuthorModePanel } from './author-mode'
 import { RowConditionFields, selectedRowConditions, type RowConditions } from './row-conditions'
 
 const QUESTIONS = ['solves', 'not_solves', 'inputs', 'steps', 'outputs', 'correctness'] as const
@@ -166,11 +165,7 @@ export function RequestForm(props: {
   revise?: { requestId: string; version: Version }
 }) {
   const scope = props.revise?.requestId ?? 'new'
-  return (
-    <AuthorModePanel key={scope} scope={scope}>
-      <RequestFields {...props} />
-    </AuthorModePanel>
-  )
+  return <RequestFields key={scope} {...props} />
 }
 
 function RequestFields({
@@ -188,7 +183,9 @@ function RequestFields({
     queryFn: fetchRuntimes,
     enabled: !revise,
   })
+  const tt = useTranslations('methodTemplate')
   const before = revise?.version.idea
+  const [useFixedTemplate, setUseFixedTemplate] = useState(!!before?.method_template)
   const [methodChoices, setMethodChoices] = useState<MethodChoice[]>(before?.method_choices ?? [])
   const [templateBuilding, setTemplateBuilding] = useState(false)
   const [templateSources, setTemplateSources] = useState<MethodChoice[]>(
@@ -259,6 +256,7 @@ function RequestFields({
           : kind === 'question'
             ? { kind, question: question.trim() }
             : { kind, answers }
+      if (useFixedTemplate) idea.method_template = 'checked_delivery/v1'
       if (methodChoices.length) idea.method_choices = methodChoices
       if (templateSources.length) idea.template_sources = templateSources
       const revision = { idea, cases: toCases(cases), consent_test_data: true as const }
@@ -408,6 +406,14 @@ function RequestFields({
           )}
         </fieldset>
 
+        <label className="block text-sm">
+          <input
+            type="checkbox"
+            checked={useFixedTemplate}
+            onChange={(e) => setUseFixedTemplate(e.target.checked)}
+          />{' '}
+          {tt('start')}
+        </label>
         {templateSources.length ? (
           <section aria-label={templateText('templateSources')}>
             <p>{templateText('templateEditable')}</p>

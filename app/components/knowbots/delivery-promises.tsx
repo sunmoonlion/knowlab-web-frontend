@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button'
 
 export function DeliveryPromises({
   definition,
+  fixedTemplate = false,
   onChange,
 }: {
   definition: FormalDefinition
+  fixedTemplate?: boolean
   onChange: (value: FormalDefinition) => void
 }) {
   const t = useTranslations('formalMethod')
@@ -71,127 +73,129 @@ export function DeliveryPromises({
           />
         </label>
       ))}
-      {Object.entries(declaration.promises).map(([id, promise]) => {
-        const condition = declaration.conditions?.[id]
-        return (
-          <fieldset key={id} className="space-y-2 rounded border p-3 text-sm">
-            <legend>{id}</legend>
-            <label className="block">
-              {t('promiseText')}
-              <input
-                className="block w-full rounded border p-2"
-                value={promise}
-                onChange={(e) =>
-                  change({
-                    ...declaration,
-                    promises: { ...declaration.promises, [id]: e.target.value },
-                  })
-                }
-              />
-            </label>
-            <label className="block">
-              {t('promiseWhen')}
-              <input
-                className="block w-full rounded border p-2"
-                value={condition?.when ?? ''}
-                onChange={(e) => setCondition(id, e.target.value, condition?.input_slots ?? [])}
-              />
-            </label>
-            {condition && (
-              <fieldset>
-                <legend>{t('conditionInputs')}</legend>
-                {inputs.map((name) => (
-                  <label key={name} className="mr-3">
-                    <input
-                      type="checkbox"
-                      checked={condition.input_slots.includes(name)}
-                      onChange={(e) =>
-                        setCondition(
-                          id,
-                          condition.when,
-                          e.target.checked
-                            ? [...condition.input_slots, name]
-                            : condition.input_slots.filter((item) => item !== name),
-                        )
-                      }
-                    />{' '}
-                    {name}
-                  </label>
-                ))}
-              </fieldset>
-            )}
-            {rules.map(
-              (rule, index) =>
-                rule.promise_id === id && (
-                  <div key={index}>
-                    <fieldset>
-                      <legend>{t('promiseOutputs')}</legend>
-                      {outputs.map((name) => (
-                        <label key={name} className="mr-3">
-                          <input
-                            type="checkbox"
-                            checked={rule.outputs.includes(name)}
-                            onChange={(e) =>
-                              change(
-                                declaration,
-                                rules.map((r, i) =>
-                                  i === index
-                                    ? {
-                                        ...r,
-                                        outputs: e.target.checked
-                                          ? [...r.outputs, name]
-                                          : r.outputs.filter((item) => item !== name),
-                                      }
-                                    : r,
-                                ),
-                              )
-                            }
-                          />{' '}
-                          {name}
-                        </label>
-                      ))}
-                    </fieldset>
-                    <label className="block">
-                      {t('validationRules')}
-                      <textarea
-                        className="block w-full rounded border p-2"
-                        value={rule.check}
-                        onChange={(e) =>
-                          change(
-                            declaration,
-                            rules.map((r, i) =>
-                              i === index ? { ...r, check: e.target.value } : r,
-                            ),
-                          )
-                        }
-                      />
-                    </label>
-                    <label className="block">
-                      {t('promiseEvidence')}
+      {Object.entries(declaration.promises)
+        .filter(([id]) => !fixedTemplate || id !== 'template_delivery')
+        .map(([id, promise]) => {
+          const condition = declaration.conditions?.[id]
+          return (
+            <fieldset key={id} className="space-y-2 rounded border p-3 text-sm">
+              <legend>{id}</legend>
+              <label className="block">
+                {t('promiseText')}
+                <input
+                  className="block w-full rounded border p-2"
+                  value={promise}
+                  onChange={(e) =>
+                    change({
+                      ...declaration,
+                      promises: { ...declaration.promises, [id]: e.target.value },
+                    })
+                  }
+                />
+              </label>
+              <label className="block">
+                {t('promiseWhen')}
+                <input
+                  className="block w-full rounded border p-2"
+                  value={condition?.when ?? ''}
+                  onChange={(e) => setCondition(id, e.target.value, condition?.input_slots ?? [])}
+                />
+              </label>
+              {condition && (
+                <fieldset>
+                  <legend>{t('conditionInputs')}</legend>
+                  {inputs.map((name) => (
+                    <label key={name} className="mr-3">
                       <input
-                        className="block w-full rounded border p-2"
-                        value={rule.evidence}
+                        type="checkbox"
+                        checked={condition.input_slots.includes(name)}
                         onChange={(e) =>
-                          change(
-                            declaration,
-                            rules.map((r, i) =>
-                              i === index ? { ...r, evidence: e.target.value } : r,
-                            ),
+                          setCondition(
+                            id,
+                            condition.when,
+                            e.target.checked
+                              ? [...condition.input_slots, name]
+                              : condition.input_slots.filter((item) => item !== name),
                           )
                         }
-                      />
+                      />{' '}
+                      {name}
                     </label>
-                  </div>
-                ),
-            )}
-            {Object.keys(declaration.promises).length > 1 && (
-              <Button type="button" variant="outline" onClick={() => remove(id)}>
-                {t('removePromise')}
-              </Button>
-            )}
-          </fieldset>
-        )
-      })}
+                  ))}
+                </fieldset>
+              )}
+              {rules.map(
+                (rule, index) =>
+                  rule.promise_id === id && (
+                    <div key={index}>
+                      <fieldset>
+                        <legend>{t('promiseOutputs')}</legend>
+                        {outputs.map((name) => (
+                          <label key={name} className="mr-3">
+                            <input
+                              type="checkbox"
+                              checked={rule.outputs.includes(name)}
+                              onChange={(e) =>
+                                change(
+                                  declaration,
+                                  rules.map((r, i) =>
+                                    i === index
+                                      ? {
+                                          ...r,
+                                          outputs: e.target.checked
+                                            ? [...r.outputs, name]
+                                            : r.outputs.filter((item) => item !== name),
+                                        }
+                                      : r,
+                                  ),
+                                )
+                              }
+                            />{' '}
+                            {name}
+                          </label>
+                        ))}
+                      </fieldset>
+                      <label className="block">
+                        {t('validationRules')}
+                        <textarea
+                          className="block w-full rounded border p-2"
+                          value={rule.check}
+                          onChange={(e) =>
+                            change(
+                              declaration,
+                              rules.map((r, i) =>
+                                i === index ? { ...r, check: e.target.value } : r,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="block">
+                        {t('promiseEvidence')}
+                        <input
+                          className="block w-full rounded border p-2"
+                          value={rule.evidence}
+                          onChange={(e) =>
+                            change(
+                              declaration,
+                              rules.map((r, i) =>
+                                i === index ? { ...r, evidence: e.target.value } : r,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                    </div>
+                  ),
+              )}
+              {Object.keys(declaration.promises).length > 1 && (
+                <Button type="button" variant="outline" onClick={() => remove(id)}>
+                  {t('removePromise')}
+                </Button>
+              )}
+            </fieldset>
+          )
+        })}
       <Button
         type="button"
         variant="outline"

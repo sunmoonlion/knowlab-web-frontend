@@ -1,7 +1,6 @@
 'use client'
 
 import { StructuredValue } from './structured-value'
-import { useDeveloperMode } from './author-mode'
 
 import { useTranslations } from 'next-intl'
 import { createContext, useContext, useState } from 'react'
@@ -101,7 +100,6 @@ function shown(value: unknown): string {
 export function SuggestionBox({ suggestion: s }: { suggestion: Suggestion }) {
   const t = useTranslations('workdraft.ai')
   const { busy, decide } = useContext(SuggestionsContext)
-  const developer = useDeveloperMode()
   const w = useTranslations('workdraft')
   const labels: Record<string, string> = {
     title: w('step.title'),
@@ -144,12 +142,8 @@ export function SuggestionBox({ suggestion: s }: { suggestion: Suggestion }) {
       </p>
       {s.op === 'move' ? (
         <p>{t('moveTo', { n: Number(s.value) + 1 })}</p>
-      ) : s.op === 'remove' ? null : structured && !developer ? (
+      ) : s.op === 'remove' ? null : structured ? (
         <StructuredValue labels={labels} value={s.value} label={t('label')} />
-      ) : structured ? (
-        <pre className="bg-background/60 max-h-48 overflow-auto rounded p-1.5 whitespace-pre-wrap">
-          {shown(s.value)}
-        </pre>
       ) : (
         <p className="whitespace-pre-wrap">{shown(s.value)}</p>
       )}
@@ -162,7 +156,7 @@ export function SuggestionBox({ suggestion: s }: { suggestion: Suggestion }) {
       ) : null}
       {editing ? (
         <div className="space-y-1">
-          {needsValue && structured && !developer ? (
+          {needsValue && structured ? (
             valid ? (
               <StructuredValue
                 labels={labels}
@@ -191,13 +185,11 @@ export function SuggestionBox({ suggestion: s }: { suggestion: Suggestion }) {
               onChange={(e) => setText(e.target.value)}
             />
           ) : null}
-          {developer && bad ? <p className="text-destructive">{t('badJson')}</p> : null}
+          {bad ? <p className="text-destructive">{t('badJson')}</p> : null}
           <div className="flex gap-2">
             <Button
               size="sm"
-              disabled={
-                busy || (needsValue && (!text.trim() || (structured && !developer && !valid)))
-              }
+              disabled={busy || (needsValue && (!text.trim() || (structured && !valid)))}
               onClick={submit}
             >
               {t('acceptEdited')}
@@ -276,14 +268,12 @@ export function PendingSteps() {
 export function OtherSuggestions() {
   const t = useTranslations('workdraft.ai')
   const { at } = useContext(SuggestionsContext)
-  const developer = useDeveloperMode()
   const found = at('elsewhere')
   if (found.length === 0) return null
   return (
     <Card title={t('elsewhere')}>
       {found.map((s) => (
         <div key={s.id} className="space-y-1">
-          {developer && <code className="text-xs">{s.path}</code>}
           <SuggestionBox suggestion={s} />
         </div>
       ))}

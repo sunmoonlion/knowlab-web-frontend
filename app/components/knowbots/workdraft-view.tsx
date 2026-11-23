@@ -39,7 +39,9 @@ import { diffEdits, freshId, newStep, placed, same, withoutStep } from '@/lib/kn
 import type { BindMethodCommand } from '@/contracts/author-methods'
 import { bindMethod } from '@/lib/knowbots/methods'
 
-import { AuthorModePanel, SavedMethodSummary, useDeveloperMode } from './author-mode'
+import { MethodTemplateForm } from './method-template'
+import type { MethodTemplate } from '@/contracts/workdraft'
+import { FormalMethodEditor } from './formal-method-editor'
 import { Card, KEY } from './shared'
 import { MethodPickerPanel } from './workdraft-method-picker'
 import { IdeaMethodsToAssemble } from './idea-methods'
@@ -97,11 +99,7 @@ const conflict = (error: unknown) =>
   error instanceof ApiClientError && error.problem.code === 'workdraft_revision'
 
 export function WorkdraftView(props: { requestId: string; csrfToken: string; saveDelay?: number }) {
-  return (
-    <AuthorModePanel key={props.requestId} scope={props.requestId}>
-      <WorkdraftContent {...props} />
-    </AuthorModePanel>
-  )
+  return <WorkdraftContent key={props.requestId} {...props} />
 }
 
 function WorkdraftContent({
@@ -114,7 +112,6 @@ function WorkdraftContent({
   saveDelay?: number
 }) {
   const t = useTranslations('workdraft')
-  const developer = useDeveloperMode()
   const loaded = useQuery({
     queryKey: [...KEY, 'workdraft', requestId],
     queryFn: () => fetchWorkdraft(requestId),
@@ -130,15 +127,7 @@ function WorkdraftContent({
     )
   if (!loaded.data) return <p className="text-muted-foreground mt-6 text-sm">{t('loading')}</p>
   if (loaded.data.body.formal_method)
-    return (
-      <div className="mt-6 space-y-3">
-        <SavedMethodSummary draft={loaded.data.body.formal_method} />
-        <Link href={`/names/${requestId}`}>{t('backToName')}</Link>
-        <Link className="block underline" href={`/names/${requestId}/formal-method`}>
-          {t(developer ? 'formalMethod' : 'openSavedMethod')}
-        </Link>
-      </div>
-    )
+    return <FormalMethodEditor requestId={requestId} csrfToken={csrfToken} />
   return (
     <Editor
       key={generation}
@@ -172,7 +161,7 @@ function Editor({
   onConflict: () => Promise<void>
 }) {
   const t = useTranslations('workdraft')
-  const developer = useDeveloperMode()
+  const tt = useTranslations('methodTemplate')
   const ta = useTranslations('workdraft.ai')
   const router = useRouter()
   const client = useQueryClient()
@@ -216,6 +205,7 @@ function Editor({
     queryKey: [...KEY, 'workdraft-preview', requestId, doc.revision],
     queryFn: () => previewWorkdraft(requestId),
     placeholderData: keepPreviousData,
+    enabled: !doc.body.method_template,
   })
   const problems = preview.data?.problems ?? []
 
@@ -305,6 +295,7 @@ function Editor({
   }
 
   const edit = (change: (body: WorkdraftBody) => WorkdraftBody) => {
+    if (busy || dead.current) return
     commit({ ...docRef.current, body: change(docRef.current.body) })
     setStatus({ kind: 'pending' })
     if (timer.current) clearTimeout(timer.current)
@@ -340,6 +331,39 @@ function Editor({
         return
       }
       setPanelError(failed(codeOf(error)))
+    } finally {
+      if (!dead.current) setBusy(false)
+    }
+  }
+
+  const openDesign = async (binding?: MethodTemplate | null) => {
+    setBusy(true)
+    try {
+      await flush()
+      if (dead.current) return
+      if (!same(docRef.current.body, docRef.current.saved)) {
+        setMessage({ tone: 'bad', text: t('publish.unsaved') })
+        return
+      }
+      if (binding !== undefined && !same(binding, docRef.current.body.method_template ?? null)) {
+        const saved = await saveWorkdraftCells(
+          requestId,
+          {
+            revision: docRef.current.revision,
+            cells: [{ path: 'method_template', value: binding }],
+          },
+          csrfToken,
+        )
+        commit(docOf(saved))
+        client.setQueryData([...KEY, 'workdraft', requestId], { ...initial, ...saved })
+      }
+      if (binding !== null) router.push(`/names/${requestId}/formal-method`)
+    } catch (exc) {
+      if (conflict(exc)) {
+        await onConflict()
+        return
+      }
+      setMessage({ tone: 'bad', text: t('publish.failed', { code: codeOf(exc) }) })
     } finally {
       if (!dead.current) setBusy(false)
     }
@@ -685,14 +709,14 @@ function Editor({
             </Link>
           </header>
           <div role="toolbar" aria-label={t('toolbar.label')} className="flex flex-wrap gap-2">
-            {developer && (
-              <Link
-                className="self-center text-sm underline"
-                href={`/names/${requestId}/formal-method`}
-              >
-                {t('formalMethod')}
-              </Link>
-            )}
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy || running}
+              onClick={() => void openDesign()}
+            >
+              {tt('design')}
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -740,6 +764,7 @@ function Editor({
               variant="outline"
               aria-expanded={panel === 'preview'}
               onClick={async () => {
+                if (body.method_template) return openDesign()
                 if (panel === 'preview') return setPanel(null)
                 setPanel('preview')
                 await flush()
@@ -748,7 +773,11 @@ function Editor({
             >
               {t('toolbar.preview')}
             </Button>
-            <Button size="sm" disabled={busy} onClick={() => void publish()}>
+            <Button
+              size="sm"
+              disabled={busy}
+              onClick={() => (body.method_template ? void openDesign() : void publish())}
+            >
               {publishing ? t('toolbar.publishing') : t('toolbar.publish')}
             </Button>
           </div>
@@ -850,6 +879,13 @@ function Editor({
               </ul>
             </Card>
           ) : null}
+          <MethodTemplateForm
+            body={body}
+            title={initial.idea_goal || initial.title}
+            preferred={!!initial.preferred_template}
+            disabled={busy || running || deciding}
+            onAdopt={openDesign}
+          />
           <Card title={t('expert.title')}>
             <Field label={t('expert.name')} path="name" filled={Boolean(body.name.trim())}>
               {(a11y) => (

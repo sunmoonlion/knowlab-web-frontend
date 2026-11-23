@@ -854,10 +854,7 @@
     }
   },
   "workdraft": {
-    "openSavedMethod": "View method draft",
     "restoreSuggestion": "Restore the suggested values",
-    "developerMode": "Professional developer mode",
-    "formalModeHint": "Open developer mode to edit the formal method definition and run its technical tests.",
     "valueYes": "Yes",
     "valueNo": "No",
     "formalMethod": "Formal method definition and validation",
@@ -1072,7 +1069,8 @@
       "none": "Everything holds; you can publish a version.",
       "close": "Close",
       "loading": "Compiling…",
-      "failed": "Could not compile; try again."
+      "failed": "Could not compile; try again.",
+      "source": "View original manifest"
     },
     "publish": {
       "done": "Published draft expert {label}.",
@@ -1696,7 +1694,8 @@
       "step": "Predecessor output",
       "literal": "Literal value",
       "resource": "Resource binding (tests not supported yet)"
-    }
+    },
+    "slotDetails": "View field structure"
   },
   "formalExecution": {
     "verifiedSteps": "Verified step artifacts",
@@ -1826,6 +1825,37 @@
     "toolCall": "Model tool call",
     "methodCall": "Formal method call",
     "tracePending": "No confirmed model call references yet.",
-    "orchestrationHint": "Fixed-flow tests support host calls only: every step is required, each has one exact dependency, and failure stops the run. Qualified expert methods can be nested within every level’s declared limits, with at most 100 actual tool calls across the tree. Replanning, model steps and automatic resource bindings remain unsupported. Each external action needs its own approval; approving one step does not approve descendants or later steps. Reloading resumes the same run without replaying completed or unknown calls."
+    "orchestrationHint": "Fixed-flow tests support host calls only: every step is required, each has one exact dependency, and failure stops the run. Qualified expert methods can be nested within every level’s declared limits, with at most 100 actual tool calls across the tree. Replanning, model steps and automatic resource bindings remain unsupported. Each external action needs its own approval; approving one step does not approve descendants or later steps. Reloading resumes the same run without replaying completed or unknown calls.",
+    "templateExample": "Select a passing example that verifies the template delivery, with an expectation for every exported field."
+  },
+  "methodTemplate": {
+    "overall": "Overall method template",
+    "title": "Verifiable delivery · version 1",
+    "start": "Start with the fixed verifiable-delivery template",
+    "goal": "What problem will this solve?",
+    "deliverable": "What will it deliver?",
+    "check": "How will you check the result?",
+    "evidence": "What evidence will you check?",
+    "fixed": "Each delivery needs supporting evidence. Failed checks stop the method. Freezing requires a successful trial.",
+    "adopt": "Confirm and arrange steps",
+    "remove": "Remove template",
+    "design": "Arrange steps and validate",
+    "originalSteps": "Steps and rules in the original draft",
+    "how": "How to do the work",
+    "all": "Show available patterns",
+    "P1": "P1 Sequential handoff",
+    "P2": "P2 Branch and join",
+    "P3": "P3 Independent review",
+    "P4": "P4 Compare objects",
+    "P5": "P5 Choose by condition",
+    "instruction": "Use an authorized instruction",
+    "pickInstruction": "Select an instruction source",
+    "instructionScope": "This method takes text and returns a text result. You can also compose steps from available tools below.",
+    "example": "Enter an example",
+    "sampleInput": "Input",
+    "sampleOutput": "Output",
+    "confirmBrief": "I reviewed the original brief. The formal steps below will be executed.",
+    "editTemplate": "Edit the overall template",
+    "noInstruction": "No eligible instructions are available. Your confirmed template is saved. Choose an available tool below or return after adding an authorized source."
   }
 }

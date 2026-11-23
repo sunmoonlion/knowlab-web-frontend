@@ -145,7 +145,6 @@ describe('工作稿：格子与自动保存（专家孵化方案第六节）', (
   it('成稿文件随工作稿保存，重新载入保留，清空恢复仅对话交回', async () => {
     server = workdraft({ body: { ...emptyBody(), steps: [step('s1')] } })
     const view = page()
-    fireEvent.click(screen.getByRole('switch', { name: w.developerMode }))
     fireEvent.change(await screen.findByLabelText(w.step.outputFile), {
       target: { value: '财务分析报告.md' },
     })
@@ -485,8 +484,7 @@ describe('工作稿：格子与自动保存（专家孵化方案第六节）', (
     expect(screen.getByLabelText(w.expert.does)).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByLabelText(w.expert.name)).not.toHaveAttribute('aria-invalid')
     expect(screen.getByTestId('problems-elsewhere')).toHaveTextContent(w.problems.reviewField)
-    fireEvent.click(screen.getByRole('switch', { name: w.developerMode }))
-    expect(screen.getByTestId('problems-elsewhere')).toHaveTextContent('a knowbot cannot use these')
+    expect(screen.queryByRole('switch', { name: '专业开发者模式' })).toBeNull()
   })
 })
 
@@ -506,10 +504,9 @@ describe('工作稿：顶上的按钮', () => {
     const dialog = within(await screen.findByRole('dialog', { name: w.preview.title }))
     expect(dialog.getByText('出不了版本的地方：1 处')).toBeInTheDocument()
     expect(dialog.getByText(w.problems.noSteps)).toBeInTheDocument()
-    expect(dialog.queryByTestId('preview-manifest')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: w.formalMethod })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('switch', { name: w.developerMode }))
-    expect(screen.getByRole('link', { name: w.formalMethod })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: messages.methodTemplate.design })).toBeEnabled()
+    expect(dialog.getByText(w.preview.source).closest('details')).not.toHaveAttribute('open')
+    fireEvent.click(dialog.getByText(w.preview.source))
     expect(dialog.getByTestId('preview-manifest')).toHaveTextContent('knowbot-manifest/v2')
   })
 
@@ -583,9 +580,9 @@ describe('工作稿：顶上的按钮', () => {
       }),
     )
     page()
-    fireEvent.click(screen.getByRole('switch', { name: w.developerMode }))
     fireEvent.click(await screen.findByRole('button', { name: w.toolbar.import }))
     const dialog = within(screen.getByRole('dialog', { name: w.import.title }))
+    fireEvent.click(dialog.getByLabelText(w.import.modePack))
     fireEvent.change(dialog.getByLabelText(w.import.text), { target: { value: '{不是 JSON' } })
     fireEvent.click(dialog.getByRole('button', { name: w.import.submit }))
     expect(dialog.getByText(w.import.badJson)).toBeInTheDocument()
@@ -604,9 +601,9 @@ describe('工作稿：顶上的按钮', () => {
   it('导入不进来：说只认清单 v2', async () => {
     vi.mocked(importWorkdraft).mockRejectedValue(refused('manifest_invalid'))
     page()
-    fireEvent.click(screen.getByRole('switch', { name: w.developerMode }))
     fireEvent.click(await screen.findByRole('button', { name: w.toolbar.import }))
     const dialog = within(screen.getByRole('dialog', { name: w.import.title }))
+    fireEvent.click(dialog.getByLabelText(w.import.modePack))
     fireEvent.change(dialog.getByLabelText(w.import.text), { target: { value: '{"schema": "x"}' } })
     fireEvent.click(dialog.getByRole('button', { name: w.import.submit }))
     expect(
@@ -718,4 +715,26 @@ describe('平台人员的提议（专家孵化方案第十二节）', () => {
     )
     await waitFor(() => expect(screen.queryByText(w.ai.fromOperator)).toBeNull())
   })
+})
+
+it('keeps confirmed template bindings on the same ordinary working draft', async () => {
+  const t = messages.methodTemplate
+  server = workdraft({
+    preferred_template: 'checked_delivery/v1',
+    body: { ...emptyBody(), steps: [step('read')] },
+  })
+  page()
+  expect(await screen.findByRole('button', { name: t.adopt })).toBeDisabled()
+  for (const [key, value] of [
+    [t.goal, '汇总四行明细'],
+    [t.deliverable, '逐行金额与合计'],
+    [t.check, '冲减计负，按分勾稽'],
+    [t.evidence, '四行原始明细'],
+  ]) {
+    fireEvent.change(screen.getByLabelText(key), { target: { value } })
+  }
+  fireEvent.click(screen.getByRole('button', { name: t.adopt }))
+  await waitFor(() => expect(server.body.method_template?.check).toBe('冲减计负，按分勾稽'))
+  expect(server.body.steps[0].id).toBe('read')
+  expect(server.body.method_template?.template).toBe('checked_delivery/v1')
 })

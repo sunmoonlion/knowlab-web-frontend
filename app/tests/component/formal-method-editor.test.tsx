@@ -147,7 +147,6 @@ const fetcher = vi.fn()
 const respond = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status })
 let current = initial
 beforeEach(() => {
-  sessionStorage.setItem('knowlab.author-mode.' + REQUEST, 'developer')
   current = structuredClone(initial)
   fetcher.mockReset()
   vi.stubGlobal('fetch', fetcher)
@@ -181,7 +180,6 @@ const show = () =>
   )
 
 it('withdraws the saved method and collaboration together at the displayed revision', async () => {
-  sessionStorage.removeItem('knowlab.author-mode.' + REQUEST)
   vi.stubGlobal('confirm', vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true))
   show()
   const button = await screen.findByRole('button', { name: labels.withdrawDraft })
@@ -1528,3 +1526,44 @@ it.each(['join', 'review'])(
     expect(panel.getByRole('button', { name: apply })).toBeDisabled()
   },
 )
+
+it('turns the confirmed template and selected instruction into the saved method', async () => {
+  const template = {
+    template: 'checked_delivery/v1' as const,
+    goal: '核对四行',
+    deliverable: '交付汇总表',
+    check: '核对有符号合计',
+    evidence: '原始四行',
+  }
+  current = {
+    ...current,
+    body: { ...current.body, method_template: template, formal_method: null },
+  }
+  const previous = fetcher.getMockImplementation()!
+  const registered = {
+    ...source,
+    kind: 'registered_instruction',
+    asset_id: METHOD,
+    asset_revision: 1,
+    entry: 'run',
+  }
+  fetcher.mockImplementation((url, options) =>
+    url.endsWith('/formal-method-sources')
+      ? respond({ items: [registered] })
+      : previous(url, options),
+  )
+  show()
+  const option = await screen.findByRole('option', { name: /synthetic.check · run/ })
+  fireEvent.change(option.closest('select')!, { target: { value: option.getAttribute('value') } })
+  fireEvent.click(screen.getByRole('button', { name: labels.save }))
+  await waitFor(() => expect(current.body.formal_method?.source).toEqual(registered))
+  const definition = current.body.formal_method!.definition
+  expect(definition.capability_declaration.purpose).toBe(template.goal)
+  expect(definition.how_to_validate).toContainEqual({
+    promise_id: 'template_delivery',
+    outputs: ['result'],
+    check: template.check,
+    evidence: template.evidence,
+    on_failure: 'fail',
+  })
+})

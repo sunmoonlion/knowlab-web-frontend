@@ -22,6 +22,7 @@ import {
   type FormalExecutionCommand,
 } from '@/lib/knowbots/formal-method-execution'
 import type { ValidationCommand } from '@/lib/knowbots/formal-methods'
+import { TrialExample } from './trial-example'
 import { supportsOrchestrationExecution } from '@/lib/knowbots/formal-orchestration'
 
 const input = 'mt-1 w-full rounded border bg-background p-2 text-sm'
@@ -57,6 +58,7 @@ export function FormalMethodExecution({
   requestId,
   revision,
   draft,
+  checkedDelivery = false,
   disabled,
   csrfToken,
   resume,
@@ -68,6 +70,7 @@ export function FormalMethodExecution({
   requestId: string
   revision: number
   draft: FormalDraft | null
+  checkedDelivery?: boolean
   disabled: boolean
   csrfToken: string
   resume?: ValidationCommand | null
@@ -200,6 +203,10 @@ export function FormalMethodExecution({
       }
       const declaration = draft.definition.capability_declaration
       const covered = new Set(execution.suite.cases.flatMap((c) => c.covers_promises ?? []))
+      if (checkedDelivery && !covered.has('template_delivery')) {
+        setError('method_template_examples')
+        return
+      }
       if (
         declaration.conditions &&
         Object.keys(declaration.promises).some((id) => !covered.has(id))
@@ -302,15 +309,27 @@ export function FormalMethodExecution({
                   <span className="text-muted-foreground text-sm">{t('modelPromptHint')}</span>
                 </label>
               ) : null}
-              <label className="block">
-                {t('values')}
-                <textarea
-                  className={input}
-                  rows={4}
-                  value={c.values}
-                  onChange={(e) => update(i, { values: e.target.value })}
+              {draft && (
+                <TrialExample
+                  definition={draft.definition}
+                  values={c.values}
+                  assertions={c.assertions}
+                  success={c.outcome === 'succeeded'}
+                  onChange={(delta) => update(i, delta)}
                 />
-              </label>
+              )}
+              <details>
+                <summary>{t('values')}</summary>
+                <label className="block">
+                  {t('values')}
+                  <textarea
+                    className={input}
+                    rows={4}
+                    value={c.values}
+                    onChange={(e) => update(i, { values: e.target.value })}
+                  />
+                </label>
+              </details>
               <label className="block">
                 {t('outcome')}
                 <select
@@ -322,40 +341,45 @@ export function FormalMethodExecution({
                   {!instruction && <option value="rejected">{t('rejected')}</option>}
                 </select>
               </label>
-              {draft?.definition.capability_declaration.conditions && c.outcome === 'succeeded' && (
-                <fieldset>
-                  <legend>{t('coversPromises')}</legend>
-                  {Object.entries(draft.definition.capability_declaration.promises).map(
-                    ([id, label]) => (
-                      <label key={id} className="block">
-                        <input
-                          type="checkbox"
-                          checked={c.covers.includes(id)}
-                          onChange={(e) =>
-                            update(i, {
-                              covers: e.target.checked
-                                ? [...c.covers, id]
-                                : c.covers.filter((key) => key !== id),
-                            })
-                          }
-                        />{' '}
-                        {label}
-                      </label>
-                    ),
-                  )}
-                </fieldset>
-              )}
+              {(draft?.definition.capability_declaration.conditions ||
+                (draft && checkedDelivery)) &&
+                c.outcome === 'succeeded' && (
+                  <fieldset>
+                    <legend>{t('coversPromises')}</legend>
+                    {Object.entries(draft.definition.capability_declaration.promises).map(
+                      ([id, label]) => (
+                        <label key={id} className="block">
+                          <input
+                            type="checkbox"
+                            checked={c.covers.includes(id)}
+                            onChange={(e) =>
+                              update(i, {
+                                covers: e.target.checked
+                                  ? [...c.covers, id]
+                                  : c.covers.filter((key) => key !== id),
+                              })
+                            }
+                          />{' '}
+                          {label}
+                        </label>
+                      ),
+                    )}
+                  </fieldset>
+                )}
               {c.outcome === 'succeeded' ? (
-                <label className="block">
-                  {t('assertions')}
-                  <textarea
-                    className={input}
-                    rows={4}
-                    value={c.assertions}
-                    onChange={(e) => update(i, { assertions: e.target.value })}
-                  />
-                  <span className="text-muted-foreground text-sm">{t('assertionHint')}</span>
-                </label>
+                <details>
+                  <summary>{t('assertions')}</summary>{' '}
+                  <label className="block">
+                    {t('assertions')}
+                    <textarea
+                      className={input}
+                      rows={4}
+                      value={c.assertions}
+                      onChange={(e) => update(i, { assertions: e.target.value })}
+                    />
+                    <span className="text-muted-foreground text-sm">{t('assertionHint')}</span>
+                  </label>
+                </details>
               ) : (
                 <label className="block">
                   {t('rejection')}
@@ -633,11 +657,13 @@ export function FormalMethodExecution({
         <p role="alert">
           {error === 'caller_coverage'
             ? t('callerCoverage')
-            : error === 'promise_coverage'
-              ? t('missingPromiseCase')
-              : error === 'suite_invalid'
-                ? t('invalid')
-                : t('failed', { code: error ?? problem(run.error) })}
+            : error === 'method_template_examples'
+              ? t('templateExample')
+              : error === 'promise_coverage'
+                ? t('missingPromiseCase')
+                : error === 'suite_invalid'
+                  ? t('invalid')
+                  : t('failed', { code: error ?? problem(run.error) })}
         </p>
       ) : null}
     </section>

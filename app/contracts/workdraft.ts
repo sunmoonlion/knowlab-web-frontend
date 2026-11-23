@@ -194,7 +194,16 @@ export const methodReferenceSchema = z.object({
 export type Planning = z.infer<typeof planningSchema>
 export type MethodReference = z.infer<typeof methodReferenceSchema>
 
+export const methodTemplateSchema = z.object({
+  template: z.literal('checked_delivery/v1'),
+  goal: z.string().min(1).regex(/\S/).max(2000),
+  deliverable: z.string().min(1).regex(/\S/).max(2000),
+  check: z.string().min(1).regex(/\S/).max(2000),
+  evidence: z.string().min(1).regex(/\S/).max(2000),
+})
+export type MethodTemplate = z.infer<typeof methodTemplateSchema>
 export const bodySchema = z.object({
+  method_template: methodTemplateSchema.nullable().optional(),
   formal_method: formalDraftSchema.nullable().optional(),
   collaboration: collaborationSchema,
   name: z.string(),
@@ -237,6 +246,8 @@ export const workdraftSchema = z.object({
   title: z.string(),
   revision: z.number().int().min(0),
   body: bodySchema,
+  idea_goal: z.string().max(2000).optional(),
+  preferred_template: z.literal('checked_delivery/v1').optional(),
   plan_adoption: z
     .object({
       base_revision: z.number().int().nonnegative(),

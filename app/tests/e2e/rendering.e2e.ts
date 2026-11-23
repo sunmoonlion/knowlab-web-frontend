@@ -115,7 +115,7 @@ test('sitemap uses the runtime application origin', async ({ request, baseURL })
   expect(await response.text()).toContain(`${baseURL}/en`)
 })
 
-test('author opts into technical controls for one incubation, including direct links', async ({
+test('author can adopt a fixed template and open the same design without a mode switch', async ({
   context,
   page,
 }) => {
@@ -130,7 +130,7 @@ test('author opts into technical controls for one incubation, including direct l
     },
   ])
   const requestId = '81a7fd82-9c80-41ea-8e12-973e61fca614'
-  const other = '91a7fd82-9c80-41ea-8e12-973e61fca614'
+  let binding: Record<string, string> | undefined
   await page.route('**/knowbot-requests/*/workdraft', (route) =>
     route.fulfill({
       json: {
@@ -139,6 +139,7 @@ test('author opts into technical controls for one incubation, including direct l
         title: '四行小计',
         revision: 1,
         body: {
+          method_template: binding,
           name: '汇总表',
           tagline: '',
           scope: { does: '编制汇总表', does_not: '', elsewhere: '' },
@@ -166,26 +167,37 @@ test('author opts into technical controls for one incubation, including direct l
     route.fulfill({ json: { contract_version: 1, incubations: [] } }),
   )
   const path = (id: string) => '/zh-CN/names/' + id
-  const toggle = page.getByRole('switch', { name: '专业开发者模式' })
+  await page.route('**/workdraft/cells', async (route) => {
+    binding = route.request().postDataJSON().cells[0].value
+    await route.fulfill({
+      json: {
+        contract_version: 1,
+        request_id: requestId,
+        title: '四行小计',
+        revision: 2,
+        body: {
+          name: '汇总表',
+          tagline: '',
+          scope: { does: '编制汇总表', does_not: '', elsewhere: '' },
+          steps: [],
+          data_picks: [],
+          method_template: binding,
+        },
+        sources: {},
+        origins: {},
+        updated_at: null,
+      },
+    })
+  })
   await page.goto(path(requestId) + '/workdraft')
-  await expect(toggle).not.toBeChecked()
-  await expect(page.getByRole('button', { name: '出一版', exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: '正式方法定义与验证' })).toHaveCount(0)
-  await page.getByRole('button', { name: '预览清单' }).click()
-  await expect(page.getByRole('dialog').getByText('至少加一步。')).toBeVisible()
-  await expect(page.getByTestId('preview-manifest')).toHaveCount(0)
-  await toggle.check()
-  await expect(page.getByTestId('preview-manifest')).toContainText('knowbot-manifest/v2')
-  await page.getByRole('link', { name: '正式方法定义与验证' }).click()
-  await expect(toggle).toBeChecked()
+  await expect(page.getByRole('switch', { name: '专业开发者模式' })).toHaveCount(0)
+  await page.getByRole('button', { name: '可核对交付 · 第 1 版' }).click()
+  await page.getByLabel('承诺交付什么').fill('逐行列出金额及合计')
+  await page.getByLabel('如何判断交付正确').fill('合计等于四行有符号金额之和')
+  await page.getByLabel('核对时使用什么依据').fill('原始样表')
+  await page.getByRole('button', { name: '确认口径，编排做法' }).click()
+  await expect(page).toHaveURL(/formal-method$/)
+  await expect(page.getByText('合计等于四行有符号金额之和', { exact: true })).toBeVisible()
   await page.reload()
-  await expect(toggle).toBeChecked()
-  await toggle.uncheck()
-  await page.reload()
-  await expect(toggle).not.toBeChecked()
-  await expect(page.getByText(/选择一份完整的方法定义 JSON/)).toHaveCount(0)
-  await toggle.check()
-  await page.goto(path(other) + '/formal-method')
-  await expect(toggle).not.toBeChecked()
-  await expect(page.getByRole('link', { name: '工作稿', exact: true })).toBeVisible()
+  await expect(page.getByText('原始样表', { exact: true })).toBeVisible()
 })

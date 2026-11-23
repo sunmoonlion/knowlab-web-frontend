@@ -9,7 +9,6 @@ import type { Preview, Step } from '@/contracts/workdraft'
 import { fetchDetail } from '@/lib/knowbots/client'
 
 import { SELECT, ProblemLocation, useProblemText } from './workdraft-cells'
-import { useDeveloperMode } from './author-mode'
 import { KEY } from './shared'
 
 // 工作稿顶上几个按钮弹出的面板（专家孵化方案第六、十节）：预览清单、导入专家包或 skill 当种子、从我的
@@ -63,7 +62,6 @@ export function PreviewPanel({
   onClose: () => void
 }) {
   const t = useTranslations('workdraft.preview')
-  const developer = useDeveloperMode()
   const text = useProblemText()
   return (
     <Panel title={t('title')} onClose={onClose}>
@@ -76,18 +74,16 @@ export function PreviewPanel({
       ) : (
         <>
           <p>{t('version', { version: preview.version })}</p>
-          {!developer && (
-            <ol className="list-decimal pl-5">
-              {steps.map((step, i) => (
-                <li key={step.id}>
-                  <strong>{step.title || t('stepNumber', { n: i + 1 })}</strong> {step.does}
-                  {step.outputs.length > 0 && (
-                    <p>{t('returns', { items: step.outputs.map((o) => o.name).join(', ') })}</p>
-                  )}
-                </li>
-              ))}
-            </ol>
-          )}
+          <ol className="list-decimal pl-5">
+            {steps.map((step, i) => (
+              <li key={step.id}>
+                <strong>{step.title || t('stepNumber', { n: i + 1 })}</strong> {step.does}
+                {step.outputs.length > 0 && (
+                  <p>{t('returns', { items: step.outputs.map((o) => o.name).join(', ') })}</p>
+                )}
+              </li>
+            ))}
+          </ol>
           {preview.problems.length ? (
             <div className="space-y-1">
               <p className="text-destructive font-medium">
@@ -105,14 +101,15 @@ export function PreviewPanel({
           ) : (
             <p className="text-emerald-700 dark:text-emerald-400">{t('none')}</p>
           )}
-          {developer && (
+          <details>
+            <summary>{t('source')}</summary>
             <pre
               className="bg-muted max-h-96 overflow-auto rounded-md p-2 text-xs"
               data-testid="preview-manifest"
             >
               {JSON.stringify(preview.manifest, null, 2)}
             </pre>
-          )}
+          </details>
         </>
       )}
     </Panel>
@@ -136,10 +133,8 @@ export function ImportPanel({
   onSeedSkill: (skill: string) => void
   onClose: () => void
 }) {
-  const developer = useDeveloperMode()
   const t = useTranslations('workdraft.import')
-  const [requestedMode, setMode] = useState<'pack' | 'skill'>(developer ? 'pack' : 'skill')
-  const mode = developer ? requestedMode : 'skill'
+  const [mode, setMode] = useState<'pack' | 'skill'>('skill')
   const [drafts, setDrafts] = useState({ pack: '', skill: '' })
   const text = drafts[mode]
   const setText = (value: string) => setDrafts((prev) => ({ ...prev, [mode]: value }))
@@ -158,24 +153,22 @@ export function ImportPanel({
   }
   return (
     <Panel title={t('title')} onClose={onClose}>
-      {developer && (
-        <div role="radiogroup" aria-label={t('mode')} className="flex gap-4 text-xs">
-          {(['pack', 'skill'] as const).map((m) => (
-            <label key={m}>
-              <input
-                type="radio"
-                name="import-mode"
-                checked={mode === m}
-                onChange={() => {
-                  setMode(m)
-                  setBad(false)
-                }}
-              />{' '}
-              {t(m === 'pack' ? 'modePack' : 'modeSkill')}
-            </label>
-          ))}
-        </div>
-      )}
+      <div role="radiogroup" aria-label={t('mode')} className="flex gap-4 text-xs">
+        {(['pack', 'skill'] as const).map((m) => (
+          <label key={m}>
+            <input
+              type="radio"
+              name="import-mode"
+              checked={mode === m}
+              onChange={() => {
+                setMode(m)
+                setBad(false)
+              }}
+            />{' '}
+            {t(m === 'pack' ? 'modePack' : 'modeSkill')}
+          </label>
+        ))}
+      </div>
       <p className="text-muted-foreground">{mode === 'pack' ? t('hint') : t('skillHint')}</p>
       <label className="block">
         <span className="text-xs">{t('file')}</span>

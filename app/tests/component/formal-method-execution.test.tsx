@@ -343,6 +343,29 @@ it('restores with GET only, answers the exact approval and cancels through the r
   expect(posts[1].body).toEqual({ request_id: REQUEST })
   await screen.findByRole('button', { name: t.nextVersion })
 })
+it('enters a multiline input and boolean expected output through the sample form', async () => {
+  const current = structuredClone(draft)
+  const procedure = current.definition.procedure
+  if (procedure.kind !== 'direct') throw new Error('Expected the direct fixture')
+  procedure.inputs.message = { ...procedure.outputs.ok, schema: { type: 'string' } }
+  page(false, ['host'], current)
+  await screen.findByText('Local test computer')
+  fireEvent.change(screen.getByLabelText(messages.methodTemplate.sampleInput + ' · message'), {
+    target: { value: '甲=3\n乙=-1' },
+  })
+  fireEvent.change(screen.getByLabelText(messages.methodTemplate.sampleOutput + ' · ok'), {
+    target: { value: 'false' },
+  })
+  expect(JSON.parse((screen.getByLabelText(t.values) as HTMLTextAreaElement).value)).toEqual({
+    message: '甲=3\n乙=-1',
+  })
+  expect(
+    JSON.parse(
+      (screen.getByLabelText(t.assertions, { exact: false }) as HTMLTextAreaElement).value,
+    ),
+  ).toContainEqual({ kind: 'equals', pointer: '/ok', value: false })
+})
+
 it('does not submit malformed assertions or negative-only suites', async () => {
   page()
   await fill()

@@ -76,23 +76,18 @@ describe('表格行测试条件', () => {
     expect(previous.cases).toEqual(cases)
   })
 
-  it.each(['not json', '{}', '{"year":[]}', '{"year":2024,"other":null}'])(
-    '无效条件阻止提交：%s',
-    async (where) => {
-      renderWith(
-        <RequestForm
-          csrfToken={CSRF}
-          revise={{ requestId: REQUEST, version: version({ cases }) }}
-        />,
-      )
-      fireEvent.click(screen.getByRole('switch'))
-      fireEvent.change(screen.getByLabelText(labels.rowWhere), { target: { value: where } })
-      fireEvent.click(screen.getByLabelText(/我同意/))
-      fireEvent.click(screen.getByRole('button', { name: labels.submitRevision }))
-      expect(await screen.findByText(labels.rowInvalid)).toBeInTheDocument()
-      expect(reviseRequest).not.toHaveBeenCalled()
-    },
-  )
+  it('blocks a repeated column in the visible row-condition form', async () => {
+    renderWith(
+      <RequestForm csrfToken={CSRF} revise={{ requestId: REQUEST, version: version({ cases }) }} />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: labels.addRule }))
+    const columns = screen.getAllByLabelText(labels.rowColumn)
+    fireEvent.change(columns.at(-1)!, { target: { value: 'year' } })
+    fireEvent.click(screen.getByLabelText(/我同意/))
+    fireEvent.click(screen.getByRole('button', { name: labels.submitRevision }))
+    expect(await screen.findByText(labels.rowInvalid)).toBeInTheDocument()
+    expect(reviseRequest).not.toHaveBeenCalled()
+  })
 
   it('查看测试时显示选行条件与唯一性要求', () => {
     renderWith(<Cases cases={cases} />)

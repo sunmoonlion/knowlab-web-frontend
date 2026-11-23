@@ -1,7 +1,6 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useDeveloperMode } from './author-mode'
 
 type Rule = { column: string; type: 'text' | 'number' | 'boolean'; value: string }
 export type RowConditions = string | Rule[]
@@ -31,12 +30,9 @@ export function RowConditionFields({
   onChange: (v: RowConditions) => void
 }) {
   const t = useTranslations('knowbotRequests.form')
-  const developer = useDeveloperMode()
   let rules: Rule[] = []
-  let raw: string | undefined
   try {
     if (typeof value === 'string') {
-      raw = value
       const parsed: unknown = selectedRowConditions(value)
       if (parsed !== undefined) {
         if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw Error()
@@ -52,10 +48,9 @@ export function RowConditionFields({
       }
     } else {
       rules = value
-      raw = JSON.stringify(selectedRowConditions(value)) ?? ''
     }
   } catch {
-    if (typeof value === 'string' && !developer)
+    if (typeof value === 'string')
       return (
         <div>
           <p>{t('rowInvalid')}</p>
@@ -66,13 +61,6 @@ export function RowConditionFields({
       )
   }
   const field = 'rounded border p-1'
-  if (developer && raw !== undefined)
-    return (
-      <label>
-        {t('rowWhere')}
-        <input className={field} value={raw} onChange={(e) => onChange(e.target.value)} />
-      </label>
-    )
   const update = (i: number, rule: Rule) => onChange(rules.map((r, j) => (j === i ? rule : r)))
   return (
     <fieldset className="space-y-2">

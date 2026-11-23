@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl'
 import { createContext, useContext, useId, useState } from 'react'
 
-import { useDeveloperMode } from './author-mode'
 import type { Problem, Step } from '@/contracts/workdraft'
 import { problemKey, same } from '@/lib/knowbots/workdraft'
 import { cn } from '@/lib/utils'
@@ -33,13 +32,12 @@ export function useProblems(path: string | undefined): Problem[] {
 
 /** 后端问题的话：认得的换成用户的话，认不得的照原文。 */
 export function useProblemText() {
-  const developer = useDeveloperMode()
   const t = useTranslations('workdraft.problems')
   // 键是按后端的话挑的（problemKey），这里按字符串查
   const say = t as unknown as (key: string, values: Record<string, string>) => string
   return (problem: Problem) => {
     const key = problemKey(problem)
-    if (!developer) {
+    {
       if (!key) return t('reviewField')
       if (key === 'checkNeeds' || key === 'checkPath')
         return t(key === 'checkNeeds' ? 'missingCheck' : 'chooseOutput')
@@ -49,9 +47,7 @@ export function useProblemText() {
 }
 
 export function ProblemLocation({ path, steps }: { path: string; steps: Step[] }) {
-  const developer = useDeveloperMode()
   const t = useTranslations('workdraft')
-  if (developer) return path ? <code className="mr-1">{path}</code> : null
   const [area, id] = path.split('/')
   const index = area === 'steps' ? steps.findIndex((step) => step.id === id) : -1
   if (index < 0) return null

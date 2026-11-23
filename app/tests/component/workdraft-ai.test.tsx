@@ -548,7 +548,7 @@ describe('缺口与导入 skill', () => {
     page()
     fireEvent.click(await screen.findByRole('button', { name: w.toolbar.import }))
     const dialog = within(await screen.findByRole('dialog', { name: w.import.title }))
-    expect(dialog.queryByLabelText(w.import.modePack)).not.toBeInTheDocument()
+    expect(dialog.getByLabelText(w.import.modeSkill)).toBeChecked()
     fireEvent.change(dialog.getByLabelText(w.import.skillText), {
       target: { value: '# 我的 skill' },
     })

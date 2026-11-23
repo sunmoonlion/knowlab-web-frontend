@@ -108,12 +108,16 @@ function SlotFields({
           ))}
         </select>
       </label>
-      <label>
-        JSON Schema <textarea value={schema} onChange={(e) => setSchema(e.target.value)} />
-      </label>
-      <label>
-        {t('slotMeaning')} <textarea value={meaning} onChange={(e) => setMeaning(e.target.value)} />
-      </label>
+      <details>
+        <summary>{t('slotDetails')}</summary>
+        <label>
+          JSON Schema <textarea value={schema} onChange={(e) => setSchema(e.target.value)} />
+        </label>
+        <label>
+          {t('slotMeaning')}{' '}
+          <textarea value={meaning} onChange={(e) => setMeaning(e.target.value)} />
+        </label>
+      </details>
       <label>
         <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} />{' '}
         {t('slotRequired')}

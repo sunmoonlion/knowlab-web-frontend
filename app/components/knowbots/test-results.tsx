@@ -1,6 +1,5 @@
 'use client'
 
-import { AuthorModePanel, useDeveloperMode } from './author-mode'
 import { StructuredValue } from './structured-value'
 
 import { useQuery } from '@tanstack/react-query'
@@ -54,35 +53,33 @@ export function TestResults({
   const finished = when(report.finished_at)
   const consentNeeded = Boolean(outputs.data?.consent_needed)
   return (
-    <AuthorModePanel scope={test.test_id}>
-      <section className="space-y-3" aria-label={t('results.title')}>
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="font-medium">{t('results.title')}</h3>
-          {finished ? (
-            <p className="text-muted-foreground text-xs">
-              {t('results.finishedAt', { at: finished })}
-            </p>
-          ) : null}
-        </div>
-        {consentNeeded ? (
-          <p className="text-sm text-amber-800 dark:text-amber-300" role="status">
-            {t('consent.hidden')}
+    <section className="space-y-3" aria-label={t('results.title')}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="font-medium">{t('results.title')}</h3>
+        {finished ? (
+          <p className="text-muted-foreground text-xs">
+            {t('results.finishedAt', { at: finished })}
           </p>
         ) : null}
-        {report.cases.map((c) => {
-          const found = outputs.data?.cases.find((o) => o.case_id === c.case_id)
-          return (
-            <CaseBlock
-              key={c.case_id}
-              result={c}
-              cases={cases}
-              outputs={found?.outputs ?? null}
-              state={outputs.isPending ? 'loading' : outputs.isError ? 'failed' : 'ready'}
-            />
-          )
-        })}
-      </section>
-    </AuthorModePanel>
+      </div>
+      {consentNeeded ? (
+        <p className="text-sm text-amber-800 dark:text-amber-300" role="status">
+          {t('consent.hidden')}
+        </p>
+      ) : null}
+      {report.cases.map((c) => {
+        const found = outputs.data?.cases.find((o) => o.case_id === c.case_id)
+        return (
+          <CaseBlock
+            key={c.case_id}
+            result={c}
+            cases={cases}
+            outputs={found?.outputs ?? null}
+            state={outputs.isPending ? 'loading' : outputs.isError ? 'failed' : 'ready'}
+          />
+        )
+      })}
+    </section>
   )
 }
 
@@ -294,21 +291,15 @@ export function Deliverable({
 }
 
 function Artifact({ value }: { value: unknown }) {
-  const developer = useDeveloperMode()
   return (
     <div className="max-h-96 overflow-auto text-sm">
-      {developer ? (
-        <pre>{JSON.stringify(value, null, 2)}</pre>
-      ) : (
-        <StructuredValue label="" value={value} />
-      )}
+      <StructuredValue label="" value={value} />
     </div>
   )
 }
 
 export function StepBlock({ step, n }: { step: StepOutput; n: number }) {
   const t = useTranslations('knowbots')
-  const developer = useDeveloperMode()
   const checks = step.checks ?? []
   return (
     <div className="space-y-1">
@@ -337,12 +328,14 @@ export function StepBlock({ step, n }: { step: StepOutput; n: number }) {
       ) : step.artifact != null ? (
         <Artifact value={step.artifact} />
       ) : null}
-      {developer && step.outcome === 'rejected' && step.returned_raw ? (
+      {step.outcome === 'rejected' && step.returned_raw ? (
         <div>
-          <p className="text-muted-foreground text-xs">{t('outputs.raw')}</p>
-          <pre className="bg-muted max-h-96 overflow-auto rounded-md p-2 text-xs whitespace-pre-wrap">
-            {step.returned_raw}
-          </pre>
+          <details>
+            <summary>{t('outputs.raw')}</summary>
+            <pre className="bg-muted max-h-96 overflow-auto rounded-md p-2 text-xs whitespace-pre-wrap">
+              {step.returned_raw}
+            </pre>
+          </details>
         </div>
       ) : null}
     </div>

@@ -16,7 +16,6 @@ import {
 import { freshId, nameProblem, outputsValid } from '@/lib/knowbots/workdraft'
 
 import { Checks } from './workdraft-checks'
-import { useDeveloperMode } from './author-mode'
 import { ManagedCapabilitiesEditor } from './workdraft-managed-capabilities'
 import { SelectionEditor } from './workdraft-planning'
 import { InputRequirements } from './workdraft-inputs'
@@ -63,7 +62,6 @@ export function StepEditor({
   onRemove: () => void
 }) {
   const t = useTranslations('workdraft')
-  const developer = useDeveloperMode()
   const [confirming, setConfirming] = useState(false)
   const base = `steps/${step.id}`
   const set = <K extends keyof Step>(key: K, value: Step[K]) => onChange({ ...step, [key]: value })
@@ -199,14 +197,12 @@ export function StepEditor({
         onChange={(checks) => set('checks', checks)}
       />
       <OnFailCell step={step} earlier={earlier} base={base} onChange={(v) => set('on_fail', v)} />
-      {developer && (
-        <AdvancedCell
-          requestId={requestId}
-          step={step}
-          base={base}
-          onChange={(v) => set('advanced', v)}
-        />
-      )}
+      <AdvancedCell
+        requestId={requestId}
+        step={step}
+        base={base}
+        onChange={(v) => set('advanced', v)}
+      />
     </section>
   )
 }
