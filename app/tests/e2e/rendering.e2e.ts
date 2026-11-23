@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { instructionFromTemplate } from '../../lib/knowbots/delivery-template'
 
 test('runtime health endpoint is dynamic and non-cacheable', async ({ request }) => {
   const response = await request.get('/healthz')
@@ -200,4 +201,137 @@ test('author can adopt a fixed template and open the same design without a mode 
   await expect(page.getByText('合计等于四行有符号金额之和', { exact: true })).toBeVisible()
   await page.reload()
   await expect(page.getByText('原始样表', { exact: true })).toBeVisible()
+})
+
+test('author reviews an AI proposal, checks routing and confirms an edited step', async ({
+  context,
+  page,
+}) => {
+  const id = '81a7fd82-9c80-41ea-8e12-973e61fca614'
+  const roundId = '348e33aa-70a1-443c-aae2-1a79329659dd'
+  await context.addCookies([
+    {
+      name: 'sunmoonai_knowlab_web_sid',
+      value: 'e2e-session',
+      domain: '127.0.0.1',
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+  ])
+  const template = {
+    template: 'checked_delivery/v1' as const,
+    goal: '核对汇总',
+    deliverable: '四行汇总结果',
+    check: '逐行核对',
+    evidence: '原表',
+  }
+  const source = {
+    asset_id: null,
+    asset_revision: null,
+    kind: 'registered_instruction' as const,
+    source: id,
+    version: '1',
+    digest: 'sha256:' + 'a'.repeat(64),
+    entry: 'instruction',
+    license_basis: 'author_owned',
+  }
+  const body = {
+    method_template: template,
+    name: '汇总',
+    tagline: '',
+    scope: { does: '核对表格', does_not: '', elsewhere: '' },
+    data_picks: [],
+    steps: [],
+  }
+  const initial = {
+    contract_version: 1,
+    request_id: id,
+    title: '四行小计',
+    revision: 1,
+    body,
+    sources: {},
+    origins: {},
+    data_formats: {},
+    updated_at: null,
+  }
+  const round = {
+    incubation_id: roundId,
+    round: 1,
+    action: 'draft',
+    instruction: null,
+    step_id: null,
+    status: 'succeeded',
+    budget_limit: '20',
+    spent: '0.12',
+    currency: 'CNY',
+    waiting_for: null,
+    error: null,
+    started_at: null,
+    finished_at: null,
+    selection_round: true,
+    workdraft_revision: 1,
+  }
+  const choice = {
+    status: 'ready',
+    reason: '已有核对指令',
+    patterns: [],
+    routing_required: false,
+    steps: [{ id: 'check', method: 'i1', task: '核对数据', inputs: {}, cases: {}, reviews: [] }],
+  }
+  const method = {
+    definition: instructionFromTemplate(template, '四行小计', source),
+    allowed_callers: ['host'],
+    source,
+  }
+  const saved = { ...initial, revision: 2, body: { ...body, formal_method: method } }
+  let confirmations = 0
+  await page.route('**/knowbot-requests/*/workdraft', (r) =>
+    r.fulfill({ json: confirmations ? saved : initial }),
+  )
+  await page.route('**/workdraft/incubations', (r) =>
+    r.fulfill({ json: { contract_version: 1, incubations: [round] } }),
+  )
+  await page.route('**/workdraft/incubations/' + roundId, (r) =>
+    r.fulfill({
+      json: {
+        contract_version: 1,
+        incubation: { ...round, selection: choice, method_titles: { i1: '核对四行' } },
+      },
+    }),
+  )
+  await page.route('**/formal-method-sources', (r) => r.fulfill({ json: { items: [source] } }))
+  await page.route('**/confirm-selection', async (r) => {
+    expect(r.request().postDataJSON()).toMatchObject({
+      revision: 1,
+      cases: {},
+      confirmed: true,
+      template,
+      step_text: { check: '逐行核对并留下依据' },
+    })
+    confirmations++
+    await r.fulfill({ json: saved })
+  })
+  await page.goto('/zh-CN/names/' + id + '/formal-method')
+  const confirm = page.getByRole('button', { name: '确认并存为正式工作稿' })
+  await expect(page.getByText('采用方法：核对四行')).toBeVisible()
+  await expect(confirm).toBeDisabled()
+  await page.getByLabel('第 1 步').fill('逐行核对并留下依据')
+  const routing = page.getByLabel(
+    '除了现成方法内部已完成的工作，这份草图是否还需要按输入选择不同的方法？',
+  )
+  await routing.selectOption('yes')
+  await page.getByLabel('我已核对业务步骤、分派和交付口径。').check()
+  await expect(page.getByText('草图中的分派与要求不同，请补充要求并重拟。')).toBeVisible()
+  await expect(confirm).toBeDisabled()
+  await routing.selectOption('no')
+  await expect(confirm).toBeDisabled()
+  expect(confirmations).toBe(0)
+  await page.getByLabel('我已核对业务步骤、分派和交付口径。').check()
+  await confirm.click()
+  await expect(confirm).toHaveCount(0)
+  await expect(page).toHaveURL(/method=[\da-f-]{36}/)
+  await page.reload()
+  await expect(page.getByText('原表', { exact: true })).toBeVisible()
+  expect(confirmations).toBe(1)
 })

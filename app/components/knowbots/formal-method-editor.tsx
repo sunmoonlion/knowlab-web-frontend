@@ -33,6 +33,7 @@ import {
   type ValidationCommand,
 } from '@/lib/knowbots/formal-methods'
 import { StructuredValue } from './structured-value'
+import { SelectionPanel } from './selection-panel'
 import { TemplateSummary } from './method-template'
 import { withDeliveryTemplate, instructionFromTemplate } from '@/lib/knowbots/delivery-template'
 import { ExpertInputBinding } from './expert-input-binding'
@@ -71,6 +72,9 @@ export function FormalMethodEditor({
   resume?: Resume
 }) {
   const t = useTranslations('formalMethod')
+  const client = useQueryClient()
+  const [adoptedMethod, setAdoptedMethod] = useState<string>()
+  const [legacyTarget] = useState(() => crypto.randomUUID())
   const [withdrawals, setWithdrawals] = useState(0)
   const loaded = useQuery({
     queryKey: [...KEY, 'workdraft', requestId],
@@ -86,6 +90,16 @@ export function FormalMethodEditor({
   )
     return (
       <div className="mt-5 space-y-3">
+        <SelectionPanel
+          document={loaded.data}
+          methodId={legacyTarget}
+          csrfToken={csrfToken}
+          hasBrief
+          onConfirmed={(saved) => {
+            setAdoptedMethod(legacyTarget)
+            client.setQueryData([...KEY, 'workdraft', requestId], saved)
+          }}
+        />
         <p role="status">{t('existingDraft')}</p>
         <Link className="underline" href={`/names/${requestId}/workdraft`}>
           {t('back')}
@@ -97,7 +111,7 @@ export function FormalMethodEditor({
       key={requestId + '/' + withdrawals}
       initial={loaded.data}
       csrfToken={csrfToken}
-      resume={withdrawals ? {} : resume}
+      resume={withdrawals ? {} : { ...resume, method: adoptedMethod ?? resume.method }}
       withdrawn={withdrawals > 0}
       onWithdraw={() => setWithdrawals((n) => n + 1)}
     />
@@ -394,6 +408,29 @@ function FormalForm({
       <Link className="text-sm underline" href={`/names/${initial.request_id}`}>
         {t('backToName')}
       </Link>
+      {!definition && (
+        <SelectionPanel
+          key={document.revision}
+          document={document}
+          methodId={methodId}
+          csrfToken={csrfToken}
+          hasBrief={hasBrief}
+          onConfirmed={(saved) => {
+            const method = saved.body.formal_method
+            if (!method) return
+            setDocument(saved)
+            setDefinition(method.definition)
+            setSource(method.source)
+            setCallers(method.allowed_callers)
+            setCollaboration(saved.body.collaboration ?? null)
+            setValidation(null)
+            setRun(null)
+            setFrozen(null)
+            setNotice(t('saved'))
+            client.setQueryData([...KEY, 'workdraft', initial.request_id], saved)
+          }}
+        />
+      )}
       {template && <TemplateSummary template={template} />}
       {template && !document.body.formal_method && (
         <Link className="text-sm underline" href={`/names/${initial.request_id}/workdraft`}>

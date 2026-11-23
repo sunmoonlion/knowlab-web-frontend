@@ -584,3 +584,27 @@ export async function decideProposal(
   )
   return { workdraft: { ...got.workdraft, contract_version: 1 }, proposal: got.proposal }
 }
+
+export async function confirmSelection(
+  requestId: string,
+  roundId: string,
+  body: {
+    revision: number
+    method_id: string
+    confirmed: true
+    confirm_brief: boolean
+    cases: Record<string, string[]>
+    template: import('@/contracts/workdraft').MethodTemplate
+    step_text: Record<string, string>
+  },
+  csrfToken: string,
+) {
+  return parse(
+    workdraftSchema,
+    await requestJson(`${roundsOf(requestId)}/${enc(roundId)}/confirm-selection`, {
+      method: 'POST',
+      csrfToken,
+      body,
+    }),
+  )
+}

@@ -47,6 +47,7 @@ export function RoundPanel({
   busy,
   error,
   initialInstruction = '',
+  selection = false,
   onStart,
   onClose,
 }: {
@@ -56,10 +57,12 @@ export function RoundPanel({
   busy: boolean
   error: string | null
   initialInstruction?: string
+  selection?: boolean
   onStart: (body: RoundStart) => void
   onClose: () => void
 }) {
   const t = useTranslations('workdraft.ai')
+  const ts = useTranslations('selection')
   const computers = useQuery({
     queryKey: [...KEY, 'round-computers', requestId],
     queryFn: () => fetchRoundComputers(requestId),
@@ -72,7 +75,7 @@ export function RoundPanel({
   const detail = useQuery({
     queryKey: [...KEY, 'detail', requestId],
     queryFn: () => fetchDetail(requestId),
-    enabled: action === 'revise',
+    enabled: action === 'revise' && !selection,
   })
   const finished = (detail.data?.tests ?? []).filter(
     (x) => x.status === 'passed' || x.status === 'failed',
@@ -82,7 +85,8 @@ export function RoundPanel({
     null,
   )
   const [withTest, setWithTest] = useState<boolean | null>(null)
-  const carryTest = latestTest !== null && (withTest ?? latestTest.status === 'failed')
+  const carryTest =
+    !selection && latestTest !== null && (withTest ?? latestTest.status === 'failed')
   const noKey = computers.data?.model_key === false
   const list = computers.data?.computers ?? []
   const last = computers.data?.last ?? null
@@ -104,7 +108,7 @@ export function RoundPanel({
   return (
     <Panel title={action === 'draft' ? t('draftTitle') : t('reviseTitle')} onClose={onClose}>
       <p className="text-muted-foreground">
-        {action === 'draft' ? t('draftHint') : t('reviseHint')}
+        {selection ? ts('roundHint') : action === 'draft' ? t('draftHint') : t('reviseHint')}
       </p>
       {action === 'revise' ? (
         <>
@@ -118,23 +122,25 @@ export function RoundPanel({
               onChange={(e) => setInstruction(e.target.value)}
             />
           </label>
-          <label className="block">
-            <span className="text-xs">{t('whichStep')}</span>
-            <select
-              aria-label={t('whichStep')}
-              className={`${SELECT} ml-2`}
-              value={stepId}
-              onChange={(e) => setStepId(e.target.value)}
-            >
-              <option value="">{t('anyStep')}</option>
-              {steps.map((s, i) => (
-                <option key={s.id} value={s.id}>
-                  {t('stepN', { n: i + 1, title: s.title || s.id })}
-                </option>
-              ))}
-            </select>
-          </label>
-          {latestTest ? (
+          {!selection && (
+            <label className="block">
+              <span className="text-xs">{t('whichStep')}</span>
+              <select
+                aria-label={t('whichStep')}
+                className={`${SELECT} ml-2`}
+                value={stepId}
+                onChange={(e) => setStepId(e.target.value)}
+              >
+                <option value="">{t('anyStep')}</option>
+                {steps.map((s, i) => (
+                  <option key={s.id} value={s.id}>
+                    {t('stepN', { n: i + 1, title: s.title || s.id })}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {!selection && latestTest ? (
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"

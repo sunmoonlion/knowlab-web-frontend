@@ -365,7 +365,44 @@ export const gapSchema = z.object({
   answered: z.boolean(),
   answer: z.record(z.string(), z.unknown()).nullable(),
 })
+export const authorSelectionSchema = z.object({
+  status: z.enum(['ready', 'clarify', 'gap']),
+  reason: z.string(),
+  patterns: z.array(z.enum(['P1', 'P2', 'P3', 'P4', 'P5'])),
+  routing_required: z.boolean(),
+  steps: z.array(
+    z.object({
+      id: z.string(),
+      task: z.string(),
+      method: z.string(),
+      inputs: z.record(
+        z.string(),
+        z
+          .object({
+            source: z.string(),
+            name: z.string().optional(),
+            step: z.string().optional(),
+            output: z.string().optional(),
+          })
+          .loose(),
+      ),
+      route_input: z.string().nullish(),
+      cases: z.record(z.string(), z.string()).default({}),
+      reviews: z.array(z.string()).default([]),
+    }),
+  ),
+  object_batch: z.object({ max_objects: z.number(), on_missing: z.string() }).nullish(),
+})
+
 export const roundSchema = z.object({
+  selection_issue: z.string().nullish(),
+  selection_round: z.boolean().optional(),
+  workdraft_revision: z.number().optional(),
+  catalog_partial: z.boolean().optional(),
+  selection: authorSelectionSchema.nullish(),
+  routing_alternatives: z.array(z.string()).optional(),
+  method_purposes: z.record(z.string(), z.string()).optional(),
+  method_titles: z.record(z.string(), z.string()).optional(),
   incubation_id: z.string().uuid(),
   round: z.number().int().min(1),
   action: z.enum(['draft', 'revise']),
@@ -405,6 +442,7 @@ export type Suggestion = z.infer<typeof suggestionSchema>
 export type Gap = z.infer<typeof gapSchema>
 export type Round = z.infer<typeof roundSchema>
 export type RoundStart = {
+  selection_revision?: number
   action: 'draft' | 'revise'
   instruction?: string
   step_id?: string
