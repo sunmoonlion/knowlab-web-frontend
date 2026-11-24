@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 
 import { Button } from '@/components/ui/button'
 import type {
@@ -160,18 +160,43 @@ const NO_ANSWERS: SixAnswers = {
 // 方法、你改定，专家孵化方案第四节），选运行方，给验收用例，同意数据用于
 // 测试。方法只来自用户（C-L1）；我们受理后孵化准专家、测试，测试通过即是专家，你同意、我们审过才上架。
 // 给了 revise 就是改创意：名称、运行方不变，从上一版带过来改，交了出一个新版本。
+function subscribeToGapNavigation(change: () => void) {
+  window.addEventListener('hashchange', change)
+  return () => window.removeEventListener('hashchange', change)
+}
+
+function readGapIdea() {
+  if (window.location.hash !== '#from-planning') return ''
+  try {
+    const gap = JSON.parse(sessionStorage.getItem('planning-gap') ?? 'null')
+    return typeof gap?.goal === 'string' && typeof gap.reason === 'string'
+      ? [gap.goal, gap.reason].join('\n')
+      : ''
+  } catch {
+    return ''
+  }
+}
+
 export function RequestForm(props: {
   csrfToken: string
   revise?: { requestId: string; version: Version }
 }) {
-  const scope = props.revise?.requestId ?? 'new'
-  return <RequestFields key={scope} {...props} />
+  const gap = useSyncExternalStore(subscribeToGapNavigation, readGapIdea, () => '')
+  return (
+    <RequestFields
+      key={props.revise?.requestId ?? gap}
+      gapIdea={props.revise ? '' : gap}
+      {...props}
+    />
+  )
 }
 
 function RequestFields({
+  gapIdea,
   csrfToken,
   revise,
 }: {
+  gapIdea: string
   csrfToken: string
   revise?: { requestId: string; version: Version }
 }) {
@@ -195,12 +220,14 @@ function RequestFields({
   const templateChecks = useTranslations('workdraft.templates')
   const [title, setTitle] = useState('')
   const [runtime, setRuntime] = useState('')
-  const [kind, setKind] = useState<IdeaIn['kind']>(before?.kind ?? 'six_questions')
+  const [kind, setKind] = useState<IdeaIn['kind']>(
+    before?.kind ?? (gapIdea ? 'question' : 'six_questions'),
+  )
   const [answers, setAnswers] = useState<SixAnswers>(
     before?.kind === 'six_questions' ? before.answers : NO_ANSWERS,
   )
   const [skill, setSkill] = useState(before?.kind === 'skill' ? before.skill : '')
-  const [question, setQuestion] = useState(before?.kind === 'question' ? before.question : '')
+  const [question, setQuestion] = useState(before?.kind === 'question' ? before.question : gapIdea)
   const [cases, setCases] = useState<CaseDraft[]>(
     revise ? fromVersion(revise.version) : [emptyCase()],
   )

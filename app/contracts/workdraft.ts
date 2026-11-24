@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { collaborationSchema, formalDraftSchema } from './formal-methods'
+import { collaborationSchema, formalDraftSchema, formalMethodRefSchema } from './formal-methods'
 
 // 工作稿（专家孵化方案第五至十一节，decisions ⑮）：后端 app/domain/knowbots/workdraft.py 的
 // WorkdraftBody 与 knowbot_routes.py 的工作稿接口。作者只写方法层的格子；清单由后端按格子编。
@@ -366,6 +366,22 @@ export const gapSchema = z.object({
   answer: z.record(z.string(), z.unknown()).nullable(),
 })
 export const authorSelectionSchema = z.object({
+  tree: z
+    .object({
+      nodes: z.array(
+        z.object({
+          id: z.string(),
+          parent: z.string().nullable(),
+          goal: z.string(),
+          reason: z.string(),
+          status: z.enum(['pending', 'hit', 'split', 'gap', 'clarify']),
+          operator: z
+            .enum(['leaf', 'sequence', 'parallel_join', 'branch', 'bounded_loop'])
+            .nullable(),
+        }),
+      ),
+    })
+    .nullish(),
   status: z.enum(['ready', 'clarify', 'gap']),
   reason: z.string(),
   patterns: z.array(z.enum(['P1', 'P2', 'P3', 'P4', 'P5'])),
@@ -402,6 +418,7 @@ export const roundSchema = z.object({
   selection: authorSelectionSchema.nullish(),
   routing_alternatives: z.array(z.string()).optional(),
   method_purposes: z.record(z.string(), z.string()).optional(),
+  method_pins: z.record(z.string(), formalMethodRefSchema).optional(),
   method_titles: z.record(z.string(), z.string()).optional(),
   incubation_id: z.string().uuid(),
   round: z.number().int().min(1),
@@ -443,6 +460,11 @@ export type Gap = z.infer<typeof gapSchema>
 export type Round = z.infer<typeof roundSchema>
 export type RoundStart = {
   selection_revision?: number
+  node_edit?: {
+    node: string
+    mode: 'revise' | 'split' | 'method'
+    method?: z.infer<typeof formalMethodRefSchema>
+  }
   action: 'draft' | 'revise'
   instruction?: string
   step_id?: string

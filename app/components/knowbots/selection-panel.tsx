@@ -19,6 +19,7 @@ import {
   cancelRound,
   confirmSelection,
 } from '@/lib/knowbots/client'
+import { Link } from '@/i18n/navigation'
 import { Button } from '@/components/ui/button'
 import { RoundPanel } from './workdraft-ai'
 
@@ -35,6 +36,9 @@ export function SelectionPanel(props: Props) {
   const t = useTranslations('selection'),
     w = useTranslations('workdraft.ai'),
     cache = useQueryClient()
+  const [focus, setFocus] = useState('')
+  const [approach, setApproach] = useState('revise')
+  const method = approach !== 'revise' && approach !== 'split' ? approach : ''
   const [open, setOpen] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('')
@@ -74,7 +78,23 @@ export function SelectionPanel(props: Props) {
     void act(async () => {
       const started = await startRound(
         rid,
-        { ...body, selection_revision: document.revision },
+        {
+          ...body,
+          ...(focus
+            ? {
+                node_edit: {
+                  node: focus,
+                  mode: method
+                    ? ('method' as const)
+                    : approach === 'split'
+                      ? ('split' as const)
+                      : ('revise' as const),
+                  ...(method ? { method: current?.method_pins?.[method] } : {}),
+                },
+              }
+            : {}),
+          selection_revision: document.revision,
+        },
         csrfToken,
       )
       cache.setQueryData<Round[]>(key, (old) => [
@@ -82,6 +102,8 @@ export function SelectionPanel(props: Props) {
         started,
       ])
       setOpen(false)
+      setFocus('')
+      setApproach('revise')
     })
   return (
     <section className="space-y-3 rounded border p-4">
@@ -126,6 +148,80 @@ export function SelectionPanel(props: Props) {
             : t('error', { code: current.selection_issue })}
         </p>
       )}
+      {current?.selection?.tree && (
+        <section className="space-y-2">
+          <h3>{t('treeTitle')}</h3>
+          <ul>
+            {current.selection.tree.nodes.map((n) => (
+              <li key={n.id} style={{ marginInlineStart: (n.id.split('_').length - 1) * 16 }}>
+                <strong>{n.goal}</strong> · {t('nodeState.' + n.status)}
+                {n.operator && ' · ' + t('operator.' + n.operator)}
+                {n.reason && <p>{n.reason}</p>}
+                {n.status === 'gap' && (
+                  <Link
+                    href="/applications/new#from-planning"
+                    onClick={() => {
+                      try {
+                        sessionStorage.setItem(
+                          'planning-gap',
+                          JSON.stringify({ goal: n.goal, reason: n.reason }),
+                        )
+                      } catch {
+                        // The author can enter the goal on the new application page.
+                      }
+                    }}
+                  >
+                    {t('newTool')}
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+          {!active && (
+            <label>
+              {t('focus')}{' '}
+              <select
+                value={focus}
+                onChange={(e) => {
+                  setFocus(e.target.value)
+                  setApproach('revise')
+                  setOpen(false)
+                }}
+              >
+                <option value="">{t('whole')}</option>
+                {current.selection.tree.nodes.map((n) => (
+                  <option key={n.id} value={n.id}>
+                    {n.goal}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {!active && focus && (
+            <label>
+              {t('editGoal')}{' '}
+              <select
+                value={approach}
+                onChange={(e) => {
+                  setApproach(e.target.value)
+                  setOpen(false)
+                }}
+              >
+                <option value="revise">{t('editScope')}</option>
+                <option value="split">{t('splitGoal')}</option>
+                {Object.keys(current.method_pins ?? {}).map((alias) => (
+                  <option key={alias} value={alias}>
+                    {t('chooseMethod', {
+                      title: current.method_titles?.[alias] ?? alias,
+                      version: current.method_pins![alias]!.version,
+                    })}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </section>
+      )}
       {current?.selection && !current.selection_issue && (
         <Review key={current.incubation_id} {...props} round={current} busy={busy} act={act} />
       )}
@@ -138,6 +234,16 @@ export function SelectionPanel(props: Props) {
         <RoundPanel
           requestId={rid}
           selection
+          initialInstruction={
+            focus && method
+              ? t('chooseMethod', {
+                  title: current?.method_titles?.[method] ?? method,
+                  version: current?.method_pins?.[method]?.version ?? 1,
+                })
+              : focus && approach === 'split'
+                ? t('splitGoal')
+                : ''
+          }
           action={current?.selection ? 'revise' : 'draft'}
           steps={[]}
           busy={busy}

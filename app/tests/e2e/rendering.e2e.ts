@@ -277,7 +277,19 @@ test('author reviews an AI proposal, checks routing and confirms an edited step'
     reason: '已有核对指令',
     patterns: [],
     routing_required: false,
-    steps: [{ id: 'check', method: 'i1', task: '核对数据', inputs: {}, cases: {}, reviews: [] }],
+    tree: {
+      nodes: [
+        {
+          id: 'n1',
+          parent: null,
+          status: 'hit',
+          operator: 'leaf',
+          goal: '逐行核对小计',
+          reason: '目录有现成方法',
+        },
+      ],
+    },
+    steps: [{ id: 'n1', method: 'i1', task: '核对数据', inputs: {}, cases: {}, reviews: [] }],
   }
   const method = {
     definition: instructionFromTemplate(template, '四行小计', source),
@@ -296,7 +308,12 @@ test('author reviews an AI proposal, checks routing and confirms an edited step'
     r.fulfill({
       json: {
         contract_version: 1,
-        incubation: { ...round, selection: choice, method_titles: { i1: '核对四行' } },
+        incubation: {
+          ...round,
+          selection: choice,
+          method_titles: { i1: '核对四行', m2: '标准小计' },
+          method_pins: { m2: { method_id: id, version: 1, digest: 'sha256:' + '1'.repeat(64) } },
+        },
       },
     }),
   )
@@ -307,7 +324,7 @@ test('author reviews an AI proposal, checks routing and confirms an edited step'
       cases: {},
       confirmed: true,
       template,
-      step_text: { check: '逐行核对并留下依据' },
+      step_text: { n1: '逐行核对并留下依据' },
     })
     confirmations++
     await r.fulfill({ json: saved })
@@ -315,6 +332,15 @@ test('author reviews an AI proposal, checks routing and confirms an edited step'
   await page.goto('/zh-CN/names/' + id + '/formal-method')
   const confirm = page.getByRole('button', { name: '确认并存为正式工作稿' })
   await expect(page.getByText('采用方法：核对四行')).toBeVisible()
+  await expect(page.getByText('逐行核对小计', { exact: true }).first()).toBeVisible()
+  const focus = page.getByLabel('本轮重拟范围')
+  await focus.selectOption('n1')
+  const action = page.getByLabel('这一步怎么改')
+  await action.selectOption('split')
+  await expect(action).toHaveValue('split')
+  await action.selectOption({ label: '使用《标准小计》第 1 版' })
+  await expect(action).toHaveValue('m2')
+  await focus.selectOption('')
   await expect(confirm).toBeDisabled()
   await page.getByLabel('第 1 步').fill('逐行核对并留下依据')
   const routing = page.getByLabel(
