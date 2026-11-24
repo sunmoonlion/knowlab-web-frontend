@@ -1,4 +1,13 @@
 {
+  "directoryFacets": {
+    "kind": "Method type",
+    "all": "All",
+    "tool": "Tool methods",
+    "expert": "Expert methods",
+    "group": "Category",
+    "category": "Subcategory",
+    "count": "{count} methods"
+  },
   "meta": {
     "title": "SunmoonAI Web",
     "description": "A production-oriented Next.js frontend paired with a dedicated Nest Web Backend.",

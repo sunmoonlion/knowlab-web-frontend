@@ -101,6 +101,33 @@ test('opens the method directory from the signed-in sidebar before an incubation
   await expect(page).toHaveURL(/\/en\/methods$/)
   await expect(page.getByRole('heading', { name: 'Methods and skills', exact: true })).toBeVisible()
   await expect(page.getByText('Opening balance check', { exact: true })).toBeVisible()
+  const categoriesSeen: (string | null)[] = []
+  await page.route('**/api/web/v1/method-directory/browse/owned?**', (route) => {
+    categoriesSeen.push(new URL(route.request().url()).searchParams.get('category'))
+    return route.fulfill({
+      json: {
+        items: [],
+        next: null,
+        total: 0,
+        categories: [
+          {
+            code: 'financial.reconciliation',
+            group: 'financial',
+            group_name: '财务核验',
+            name: '报表勾稽',
+            count: 0,
+          },
+        ],
+      },
+    })
+  })
+  await page.getByRole('combobox', { name: 'Method type', exact: true }).selectOption('tool')
+  await page.getByRole('combobox', { name: 'Category', exact: true }).selectOption('financial')
+  await page
+    .getByRole('combobox', { name: 'Subcategory', exact: true })
+    .selectOption('financial.reconciliation')
+  await expect.poll(() => categoriesSeen.at(-1)).toBe('financial.reconciliation')
+  await expect(page.getByText('0 methods', { exact: true })).toBeVisible()
 })
 
 test('paired unified Backend contract streams, cites, reconciles and accepts HITL', async ({

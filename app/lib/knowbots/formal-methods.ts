@@ -1,5 +1,6 @@
 import type { FormalDefinition } from '@/contracts/formal-methods'
 import { z } from 'zod'
+import { directoryBrowseSchema, type Facet } from '@/lib/directory-facets'
 import {
   sharedToolInterfaceSchema,
   formalSourcesSchema,
@@ -28,6 +29,21 @@ export async function listFormalMethods(offset = 0, requestId?: string) {
       `/api/web/v1/method-units?formal=true&limit=30&offset=${offset}${requestId ? '&request_id=' + encodeURIComponent(requestId) : ''}`,
     ),
   ).items
+}
+
+export async function browseIncubationDirectory(
+  scene: 'owned' | 'shared',
+  facet: Facet,
+  offset: number,
+  requestId?: string,
+) {
+  const params = new URLSearchParams({ kind: facet.kind, offset: String(offset) })
+  if (facet.group) params.set('category', facet.category || facet.group)
+  if (requestId) params.set('request_id', requestId)
+  return parseFormalReply(
+    directoryBrowseSchema,
+    await requestJson(`/api/web/v1/method-directory/browse/${scene}?${params}`),
+  )
 }
 
 const sharedToolsPage = z.object({

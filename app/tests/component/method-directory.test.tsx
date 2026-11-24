@@ -21,10 +21,54 @@ it('browses the same version on the homepage and in a draft and requires an expl
       created_at: '2026-11-24',
     },
   ])
+  const facets = [
+    {
+      code: 'financial.reconciliation',
+      name: '报表勾稽',
+      group: 'financial',
+      group_name: '财务核验',
+      count: 1,
+    },
+  ]
+  const response = {
+    categories: facets,
+    total: 1,
+    next: null,
+    items: [
+      {
+        method_id: reference.method_id,
+        latest_version: reference.version,
+        digest: reference.digest,
+        method_kind: 'tool' as const,
+        title,
+        summary: '核对',
+        category: 'financial.reconciliation',
+        usable: true,
+      },
+    ],
+  }
+  const browse = vi.spyOn(api, 'browseIncubationDirectory').mockResolvedValue(response)
   const home = renderWith(<MethodDirectory />)
   expect(await screen.findByText(title)).toBeVisible()
   expect(list).toHaveBeenCalledWith(0, undefined)
   expect(screen.queryByText(zh.methodDirectory.pick)).toBeNull()
+
+  fireEvent.change(screen.getByLabelText(zh.directoryFacets.kind), { target: { value: 'tool' } })
+  await screen.findByRole('option', { name: '财务核验' })
+  fireEvent.change(screen.getByLabelText(zh.directoryFacets.group), {
+    target: { value: 'financial' },
+  })
+  await screen.findByRole('option', { name: '报表勾稽' })
+  fireEvent.change(screen.getByLabelText(zh.directoryFacets.category), {
+    target: { value: 'financial.reconciliation' },
+  })
+  expect(await screen.findByText('共 1 项')).toBeVisible()
+  expect(browse).toHaveBeenLastCalledWith(
+    'owned',
+    { kind: 'tool', group: 'financial', category: 'financial.reconciliation' },
+    0,
+    undefined,
+  )
   home.unmount()
   const pick = vi.fn()
   renderWith(<DraftMethodDirectory requestId={REQUEST} revision={3} onPick={pick} />)
