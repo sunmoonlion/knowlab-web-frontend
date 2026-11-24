@@ -1866,6 +1866,7 @@
     "treeTitle": "规划分解",
     "focus": "本轮重拟范围",
     "whole": "完整问题",
+    "newExpert": "将这一步单独孵化为可复用专家",
     "newTool": "用这个缺口起草工具方法",
     "nodeState": {
       "pending": "待规划",

@@ -1866,6 +1866,7 @@
     "treeTitle": "Goal decomposition",
     "focus": "Revise this part",
     "whole": "Whole request",
+    "newExpert": "Incubate this goal as a reusable expert",
     "newTool": "Draft a tool for this gap",
     "nodeState": {
       "pending": "Pending",

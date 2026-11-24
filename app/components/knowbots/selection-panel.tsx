@@ -157,21 +157,37 @@ export function SelectionPanel(props: Props) {
                 <strong>{n.goal}</strong> · {t('nodeState.' + n.status)}
                 {n.operator && ' · ' + t('operator.' + n.operator)}
                 {n.reason && <p>{n.reason}</p>}
-                {n.status === 'gap' && (
+                {(n.status === 'gap' || n.status === 'split') && (
                   <Link
                     href="/applications/new#from-planning"
                     onClick={() => {
                       try {
+                        const steps =
+                          n.status === 'split'
+                            ? current
+                                .selection!.steps.filter(
+                                  (s) => s.id === n.id || s.id.startsWith(n.id + '_'),
+                                )
+                                .map(
+                                  (s) =>
+                                    s.task +
+                                    ' · ' +
+                                    (current.method_titles?.[s.method] ?? s.method),
+                                )
+                            : []
                         sessionStorage.setItem(
                           'planning-gap',
-                          JSON.stringify({ goal: n.goal, reason: n.reason }),
+                          JSON.stringify({
+                            goal: n.goal,
+                            reason: [n.reason, ...steps].join('\n').slice(0, 6000),
+                          }),
                         )
                       } catch {
                         // The author can enter the goal on the new application page.
                       }
                     }}
                   >
-                    {t('newTool')}
+                    {t(n.status === 'split' ? 'newExpert' : 'newTool')}
                   </Link>
                 )}
               </li>
