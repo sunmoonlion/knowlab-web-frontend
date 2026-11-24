@@ -39,6 +39,7 @@ describe('web端外壳', () => {
       '/delivery',
       '/review',
       '/experts',
+      '/methods',
       '/knowledge',
     ])
     expect(links.map((a) => a.textContent?.replace(/\d+$/, ''))).toEqual([
@@ -49,6 +50,7 @@ describe('web端外壳', () => {
       '交付',
       '待办',
       '专家',
+      '方法与技能',
       '知识库',
     ])
     expect(within(screen.getByTestId('nav-group-process')).getByText('过程')).toBeInTheDocument()
@@ -56,7 +58,7 @@ describe('web端外壳', () => {
       within(screen.getByTestId('nav-group-results'))
         .getAllByRole('link')
         .map((a) => a.getAttribute('href')),
-    ).toEqual(['/experts', '/knowledge'])
+    ).toEqual(['/experts', '/methods', '/knowledge'])
     // 不叫「我的专家」
     expect(screen.queryByText('我的专家')).toBeNull()
     expect(within(nav).getByRole('link', { name: /申请/ })).toHaveAttribute('aria-current', 'page')

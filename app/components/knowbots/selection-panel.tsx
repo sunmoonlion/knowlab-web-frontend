@@ -21,6 +21,7 @@ import {
 } from '@/lib/knowbots/client'
 import { Link } from '@/i18n/navigation'
 import { Button } from '@/components/ui/button'
+import { DraftMethodDirectory, type DirectoryPick } from './method-directory'
 import { RoundPanel } from './workdraft-ai'
 
 type Props = {
@@ -38,6 +39,7 @@ export function SelectionPanel(props: Props) {
     cache = useQueryClient()
   const [focus, setFocus] = useState('')
   const [approach, setApproach] = useState('revise')
+  const [picked, setPicked] = useState<DirectoryPick | null>(null)
   const method = approach !== 'revise' && approach !== 'split' ? approach : ''
   const [open, setOpen] = useState(false),
     [busy, setBusy] = useState(false),
@@ -89,7 +91,14 @@ export function SelectionPanel(props: Props) {
                     : approach === 'split'
                       ? ('split' as const)
                       : ('revise' as const),
-                  ...(method ? { method: current?.method_pins?.[method] } : {}),
+                  ...(method
+                    ? {
+                        method:
+                          approach === 'directory'
+                            ? picked?.reference
+                            : current?.method_pins?.[method],
+                      }
+                    : {}),
                 },
               }
             : {}),
@@ -109,6 +118,19 @@ export function SelectionPanel(props: Props) {
     <section className="space-y-3 rounded border p-4">
       <h2 className="font-medium">{t('title')}</h2>
       <p>{t('intro')}</p>
+      <DraftMethodDirectory
+        requestId={rid}
+        revision={document.revision}
+        onPick={
+          focus && !active
+            ? (row) => {
+                setPicked(row)
+                setApproach('directory')
+                setOpen(false)
+              }
+            : undefined
+        }
+      />
       {current && (
         <p role="status">
           {w('round', { n: current.round })} · {w('status.' + current.status)}
@@ -199,6 +221,7 @@ export function SelectionPanel(props: Props) {
               <select
                 value={focus}
                 onChange={(e) => {
+                  setPicked(null)
                   setFocus(e.target.value)
                   setApproach('revise')
                   setOpen(false)
@@ -223,6 +246,11 @@ export function SelectionPanel(props: Props) {
                   setOpen(false)
                 }}
               >
+                {picked && (
+                  <option value="directory">
+                    {picked.title} · v{picked.reference.version}
+                  </option>
+                )}
                 <option value="revise">{t('editScope')}</option>
                 <option value="split">{t('splitGoal')}</option>
                 {Object.keys(current.method_pins ?? {}).map((alias) => (
@@ -253,8 +281,14 @@ export function SelectionPanel(props: Props) {
           initialInstruction={
             focus && method
               ? t('chooseMethod', {
-                  title: current?.method_titles?.[method] ?? method,
-                  version: current?.method_pins?.[method]?.version ?? 1,
+                  title:
+                    approach === 'directory' && picked
+                      ? picked.title
+                      : (current?.method_titles?.[method] ?? method),
+                  version:
+                    approach === 'directory' && picked
+                      ? picked.reference.version
+                      : (current?.method_pins?.[method]?.version ?? 1),
                 })
               : focus && approach === 'split'
                 ? t('splitGoal')

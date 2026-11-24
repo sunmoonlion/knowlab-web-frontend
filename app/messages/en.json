@@ -73,7 +73,8 @@
     "groups": {
       "process": "Process",
       "results": "Results"
-    }
+    },
+    "methods": "Methods and skills"
   },
   "interaction": {
     "loading": "Loading the reference run...",
@@ -1588,7 +1589,7 @@
     "chooseSource": "Choose a source",
     "pinnedSource": "Pinned: {source} · {version}",
     "sourceFailed": "Could not load sources. Refresh to retry.",
-    "noSources": "No sources are available. Register a script or configure an installation in the method and skill center.",
+    "noSources": "No sources are available. Register a script or configure an installation in Methods and skills.",
     "sourceHint": "Choose a registered version or an installed entry. The trial checks its version and permissions. Each script run requires approval.",
     "license": "Execution rights",
     "licensePending": "Pending review",
@@ -1917,5 +1918,23 @@
       "selection_graph": "The steps cannot be connected as proposed. Request a revision.",
       "selection_input": "A required input is missing. Specify its source and request a revision."
     }
+  },
+  "methodDirectory": {
+    "title": "Methods and skills",
+    "owned": "My registered methods",
+    "shared": "Shared tools",
+    "sources": "Implementation sources",
+    "needsInstallation": "Choose an installation before using this tool in incubation.",
+    "failed": "Could not load the directory.",
+    "retry": "Retry",
+    "loading": "Loading…",
+    "pending": "Eligibility pending",
+    "empty": "No entries on this page.",
+    "manageSources": "Manage implementation sources in KnowBench",
+    "version": "View exact version",
+    "pick": "Use for this step",
+    "previous": "Previous",
+    "next": "Next",
+    "pickSource": "Use this implementation"
   }
 }

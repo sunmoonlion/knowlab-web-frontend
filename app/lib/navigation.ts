@@ -7,6 +7,7 @@ import {
   Library,
   PackageCheck,
   Sprout,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -22,6 +23,7 @@ export type WebNavigationKey =
   | 'delivery'
   | 'review'
   | 'experts'
+  | 'methods'
   | 'knowledge'
 
 export type WebNavigationGroup = 'home' | 'process' | 'results'
@@ -41,6 +43,7 @@ export const webNavigation: readonly WebNavigationItem[] = [
   { key: 'delivery', path: '/delivery', icon: PackageCheck, group: 'process' },
   { key: 'review', path: '/review', icon: ClipboardList, group: 'process' },
   { key: 'experts', path: '/experts', icon: BadgeCheck, group: 'results' },
+  { key: 'methods', path: '/methods', icon: Wrench, group: 'results' },
   { key: 'knowledge', path: '/knowledge', icon: Library, group: 'results' },
 ]
 

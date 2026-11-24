@@ -65,6 +65,44 @@ test('workspace route renders only after the paired backend validates its opaque
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/)
 })
 
+test('opens the method directory from the signed-in sidebar before an incubation exists', async ({
+  context,
+  page,
+}) => {
+  await context.addCookies([
+    {
+      name: 'sunmoonai_knowlab_web_sid',
+      value: 'e2e-session',
+      domain: '127.0.0.1',
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+  ])
+  await page.route('**/api/web/v1/method-units?**', (route) =>
+    route.fulfill({
+      json: {
+        items: [
+          {
+            method_id: 'b5ae2229-dfbc-46ac-9c30-895e75571c01',
+            latest_version: 2,
+            digest: 'sha256:' + 'a'.repeat(64),
+            method_kind: 'tool',
+            title: 'Opening balance check',
+            summary: 'Compare the two periods.',
+            created_at: '2026-11-24',
+          },
+        ],
+      },
+    }),
+  )
+  await page.goto('/en/dashboard')
+  await page.getByRole('link', { name: 'Methods and skills', exact: true }).click()
+  await expect(page).toHaveURL(/\/en\/methods$/)
+  await expect(page.getByRole('heading', { name: 'Methods and skills', exact: true })).toBeVisible()
+  await expect(page.getByText('Opening balance check', { exact: true })).toBeVisible()
+})
+
 test('paired unified Backend contract streams, cites, reconciles and accepts HITL', async ({
   context,
   page,

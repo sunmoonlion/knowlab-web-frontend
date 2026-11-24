@@ -33,6 +33,7 @@ import {
   type ValidationCommand,
 } from '@/lib/knowbots/formal-methods'
 import { StructuredValue } from './structured-value'
+import { DraftMethodDirectory } from './method-directory'
 import { SelectionPanel } from './selection-panel'
 import { TemplateSummary } from './method-template'
 import { withDeliveryTemplate, instructionFromTemplate } from '@/lib/knowbots/delivery-template'
@@ -254,6 +255,29 @@ function FormalForm({
     setFrozen(null)
     setNotice(null)
   }
+  const chooseSource = (selected: FormalSource | null) => {
+    setSource(selected)
+    changed()
+    if (selected && definition?.procedure.kind === 'direct') {
+      setDefinition({
+        ...definition,
+        procedure: {
+          ...definition.procedure,
+          max_model_turns: ['registered_instruction', 'skill_instruction'].includes(selected.kind)
+            ? Math.max(1, definition.procedure.max_model_turns)
+            : 0,
+          implementation: {
+            kind: selected.kind,
+            source: selected.source,
+            version: selected.version,
+            digest: selected.digest,
+            entry: selected.entry,
+            requirement_ids: definition.procedure.implementation.requirement_ids,
+          },
+        },
+      })
+    }
+  }
   const editDefinition = (next: FormalDefinition) => {
     setDefinition(next)
     changed()
@@ -429,6 +453,13 @@ function FormalForm({
             setNotice(t('saved'))
             client.setQueryData([...KEY, 'workdraft', initial.request_id], saved)
           }}
+        />
+      )}
+      {definition && (
+        <DraftMethodDirectory
+          requestId={initial.request_id}
+          revision={document.revision}
+          onSource={definition.procedure.kind === 'direct' ? chooseSource : undefined}
         />
       )}
       {template && <TemplateSummary template={template} />}
@@ -740,30 +771,7 @@ function FormalForm({
                     onChange={(e) => {
                       const selected =
                         sources.data?.find((item) => sourceKey(item) === e.target.value) ?? null
-                      setSource(selected)
-                      changed()
-                      if (selected && definition.procedure.kind === 'direct') {
-                        setDefinition({
-                          ...definition,
-                          procedure: {
-                            ...definition.procedure,
-                            max_model_turns: [
-                              'registered_instruction',
-                              'skill_instruction',
-                            ].includes(selected.kind)
-                              ? Math.max(1, definition.procedure.max_model_turns)
-                              : 0,
-                            implementation: {
-                              kind: selected.kind,
-                              source: selected.source,
-                              version: selected.version,
-                              digest: selected.digest,
-                              entry: selected.entry,
-                              requirement_ids: definition.procedure.implementation.requirement_ids,
-                            },
-                          },
-                        })
-                      }
+                      chooseSource(selected)
                     }}
                   >
                     <option value="">{t('chooseSource')}</option>

@@ -53,11 +53,13 @@ const sharedToolsPage = z.object({
   next: z.uuid().nullable(),
 })
 export async function sharedIncubationTools(
-  requestId: string,
-  after: string | null,
-  ref?: z.infer<typeof formalMethodRefSchema>,
+  ...[requestId, after, ref]:
+    | [requestId: string | undefined, after: string | null]
+    | [requestId: string, after: null, ref: z.infer<typeof formalMethodRefSchema>]
 ) {
-  const base = `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/incubation-tools`
+  const base = requestId
+    ? `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/incubation-tools`
+    : '/api/web/v1/method-directory/shared-tools'
   const suffix = ref
     ? `/${encodeURIComponent(ref.method_id)}/versions/${ref.version}?digest=${encodeURIComponent(ref.digest)}`
     : after
@@ -156,11 +158,13 @@ export async function planningCapabilities(requestId: string) {
   )
 }
 
-export async function formalSources(requestId: string) {
+export async function formalSources(requestId?: string) {
   return parseFormalReply(
     formalSourcesSchema,
     await requestJson(
-      `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/formal-method-sources`,
+      requestId
+        ? `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/formal-method-sources`
+        : '/api/web/v1/method-directory/sources',
     ),
   ).items
 }

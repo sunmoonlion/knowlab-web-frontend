@@ -25,6 +25,7 @@ export const destinations = defineDestinations({
   },
   'knowbench.ask': { target: 'knowbench', segments: ['workbench'], params: ['knowbot', 'task'] },
   // 「去 knowbench 填模型 key」（SDD 0046 第三节：模型 key 没填不能发起测试、AI 一轮）
+  'knowbench.methods': { target: 'knowbench', segments: ['workbench', 'methods'] },
   'knowbench.settings': { target: 'knowbench', segments: ['workbench', 'settings'] },
   // 「去 knowbench 接入电脑」（SDD 0046 第三节「怎么选电脑」）
   'knowbench.machines': { target: 'knowbench', segments: ['workbench', 'machines'] },

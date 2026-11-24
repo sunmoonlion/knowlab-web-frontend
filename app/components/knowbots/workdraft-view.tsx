@@ -41,6 +41,7 @@ import { bindMethod } from '@/lib/knowbots/methods'
 
 import { MethodTemplateForm } from './method-template'
 import type { MethodTemplate } from '@/contracts/workdraft'
+import { DraftMethodDirectory } from './method-directory'
 import { FormalMethodEditor } from './formal-method-editor'
 import { Card, KEY } from './shared'
 import { MethodPickerPanel } from './workdraft-method-picker'
@@ -708,6 +709,7 @@ function Editor({
               {t('backToName')}
             </Link>
           </header>
+          <DraftMethodDirectory requestId={requestId} revision={doc.revision} />
           <div role="toolbar" aria-label={t('toolbar.label')} className="flex flex-wrap gap-2">
             <Button
               size="sm"
