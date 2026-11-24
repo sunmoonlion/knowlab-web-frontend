@@ -135,11 +135,7 @@ function ApplicationProcess({ item, csrfToken }: { item: Application; csrfToken:
         <MethodDemandReference origin={detail.data?.origin} />
         {usable && detail.data ? (
           <Card title={t('applications.usable', { version: usable.version })}>
-            <AskInKnowbench
-              expert={usable}
-              origin={detail.data.origin}
-              name={usable.name ?? item.title}
-            />
+            <AskInKnowbench expert={usable} name={usable.name ?? item.title} />
           </Card>
         ) : null}
         <Card title={t('applications.now')}>

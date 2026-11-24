@@ -50,7 +50,7 @@ beforeEach(() => vi.resetAllMocks())
 afterEach(() => vi.unstubAllGlobals())
 
 describe('去 knowbench 请它', () => {
-  it('从 knowbench 找专家来的：带这一版和那一轮找专家的编号，新标签页打开', async () => {
+  it('从 knowbench 找专家来的：只带新安装的版本，新标签页打开', async () => {
     links({ knowbench: { web_base_url: 'https://knowbench.example.test' } })
     vi.mocked(fetchExperts).mockResolvedValue([expertItem({ category: 'usable', ...listed })])
     vi.mocked(fetchDetail).mockResolvedValue(
@@ -60,12 +60,11 @@ describe('去 knowbench 请它', () => {
       }),
     )
     renderWith(<ExpertsView csrfToken={CSRF} />)
-    const link = await screen.findByRole('link', { name: '带着当初那句问题去 knowbench 请它' })
+    const link = await screen.findByRole('link', { name: '去 knowbench 请它' })
     const href = new URL(link.getAttribute('href')!)
     expect(href.origin + href.pathname).toBe('https://knowbench.example.test/zh-CN/workbench')
     expect(Object.fromEntries(href.searchParams)).toEqual({
       knowbot: `${KNOWBOT}@2`,
-      task: TASK,
       from: 'knowlab',
       ref: EXPERT,
     })

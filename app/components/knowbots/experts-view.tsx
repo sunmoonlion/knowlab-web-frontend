@@ -139,11 +139,7 @@ function ExpertPage({
           ) : null}
           {item.stage === 'listed' ? (
             <>
-              <AskInKnowbench
-                expert={item}
-                origin={detail.data?.origin}
-                name={item.name ?? item.title}
-              />
+              <AskInKnowbench expert={item} name={item.name ?? item.title} />
               <label className="block">
                 {t('experts.stopReason')}
                 <input
