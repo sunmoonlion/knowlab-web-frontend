@@ -409,12 +409,6 @@ function Review({
             ))}
           </ol>
           {proposal.object_batch && <p>{t('batch', { n: proposal.object_batch.max_objects })}</p>}
-          <details>
-            <summary>{t('patterns')}</summary>
-            {proposal.patterns.length
-              ? proposal.patterns.map((p) => mt(p)).join('、')
-              : t('direct')}
-          </details>
           {!document.body.method_template && (
             <fieldset>
               <legend>{mt('overall')}</legend>

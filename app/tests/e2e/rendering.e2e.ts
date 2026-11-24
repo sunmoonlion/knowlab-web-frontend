@@ -340,7 +340,6 @@ test('author reviews an AI proposal, checks routing and confirms an edited step'
   const choice = {
     status: 'ready',
     reason: '已有核对指令',
-    patterns: [],
     routing_required: false,
     tree: {
       nodes: [
@@ -397,6 +396,7 @@ test('author reviews an AI proposal, checks routing and confirms an edited step'
   await page.goto('/zh-CN/names/' + id + '/formal-method')
   const confirm = page.getByRole('button', { name: '确认并存为正式工作稿' })
   await expect(page.getByText('采用方法：核对四行')).toBeVisible()
+  await expect(page.getByText('查看使用的步骤模板')).toHaveCount(0)
   await expect(page.getByText('逐行核对小计', { exact: true }).first()).toBeVisible()
   const focus = page.getByLabel('本轮重拟范围')
   await focus.selectOption('n1')

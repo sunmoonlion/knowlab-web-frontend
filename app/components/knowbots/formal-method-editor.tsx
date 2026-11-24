@@ -136,7 +136,6 @@ function FormalForm({
   const client = useQueryClient()
   const tt = useTranslations('methodTemplate')
   const [confirmedBrief, setConfirmedBrief] = useState(false)
-  const [pattern, setPattern] = useState('all')
   const [document, setDocument] = useState(initial)
   const [reviewedPlan, setReviewedPlan] = useState<FormalDefinition | null>(null)
   const [definition, setDefinition] = useState<FormalDefinition | null>(
@@ -194,8 +193,6 @@ function FormalForm({
       ['registered_instruction', 'skill_instruction'].includes(s.kind) &&
       s.license_basis !== 'pending',
   )
-  const graph = definition?.procedure.kind === 'orchestration' ? definition.procedure : null
-  const hasChoice = graph?.steps.some((step) => !!step.candidate_choice)
   const hasBrief = !!(
     document.body.steps.length ||
     document.body.planning ||
@@ -811,94 +808,63 @@ function FormalForm({
                     {t(gap.primitive, { step: gap.step })}
                   </p>
                 ))}
-                <label className="block">
-                  {tt('how')}
-                  <select
-                    value={pattern}
-                    className={input}
-                    onChange={(e) => setPattern(e.target.value)}
-                  >
-                    {(['all', 'P1', 'P2', 'P3', 'P4', 'P5'] as const).map((key) => (
-                      <option
-                        key={key}
-                        value={key}
-                        disabled={
-                          (key === 'P4' && hasChoice) ||
-                          (['P1', 'P2', 'P3'].includes(key) &&
-                            (!!graph?.object_batch ||
-                              hasChoice ||
-                              (key === 'P3' && !!collaboration)))
-                        }
-                      >
-                        {tt(key)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {(pattern === 'all' || pattern === 'P5') && (
-                  <P5Choice
+                <P5Choice
+                  draft={definition}
+                  requestId={initial.request_id}
+                  methodId={methodId}
+                  csrfToken={csrfToken}
+                  revision={document.revision}
+                  key={JSON.stringify([
+                    initial.request_id,
+                    methodId,
+                    document.revision,
+                    definition,
+                  ])}
+                  onAdopt={(next) => {
+                    setReviewedPlan(next)
+                    editDefinition(next)
+                  }}
+                />
+                {!definition.procedure.steps.some((s) => !!s.candidate_choice) && (
+                  <P4Comparison
                     draft={definition}
                     requestId={initial.request_id}
                     methodId={methodId}
                     csrfToken={csrfToken}
-                    revision={document.revision}
-                    key={JSON.stringify([
-                      initial.request_id,
-                      methodId,
-                      document.revision,
-                      definition,
-                    ])}
+                    key={JSON.stringify([document.revision, definition])}
                     onAdopt={(next) => {
                       setReviewedPlan(next)
                       editDefinition(next)
                     }}
                   />
                 )}
-                {(pattern === 'all' || pattern === 'P4') &&
-                  !definition.procedure.steps.some((s) => !!s.candidate_choice) && (
-                    <P4Comparison
-                      draft={definition}
-                      requestId={initial.request_id}
-                      methodId={methodId}
-                      csrfToken={csrfToken}
-                      key={JSON.stringify([document.revision, definition])}
-                      onAdopt={(next) => {
-                        setReviewedPlan(next)
-                        editDefinition(next)
-                      }}
-                    />
-                  )}
                 {!definition.procedure.object_batch &&
                   !definition.procedure.steps.some((s) => !!s.candidate_choice) && (
                     <>
-                      {(pattern === 'all' || pattern === 'P1') && (
-                        <P1Predecessor
-                          draft={definition}
-                          methodId={methodId}
-                          requestId={initial.request_id}
-                          csrfToken={csrfToken}
-                          revision={document.revision}
-                          onAdopt={(next) => {
-                            setReviewedPlan(next)
-                            editDefinition(next)
-                          }}
-                        />
-                      )}
-                      {(pattern === 'all' || pattern === 'P2') && (
-                        <P2Join
-                          key={JSON.stringify([document.revision, methodId, definition])}
-                          draft={definition}
-                          methodId={methodId}
-                          requestId={initial.request_id}
-                          csrfToken={csrfToken}
-                          revision={document.revision}
-                          onAdopt={(next) => {
-                            setReviewedPlan(next)
-                            editDefinition(next)
-                          }}
-                        />
-                      )}
-                      {(pattern === 'all' || pattern === 'P3') && !collaboration && (
+                      <P1Predecessor
+                        draft={definition}
+                        methodId={methodId}
+                        requestId={initial.request_id}
+                        csrfToken={csrfToken}
+                        revision={document.revision}
+                        onAdopt={(next) => {
+                          setReviewedPlan(next)
+                          editDefinition(next)
+                        }}
+                      />
+                      <P2Join
+                        key={JSON.stringify([document.revision, methodId, definition])}
+                        draft={definition}
+                        methodId={methodId}
+                        requestId={initial.request_id}
+                        csrfToken={csrfToken}
+                        revision={document.revision}
+                        onAdopt={(next) => {
+                          setReviewedPlan(next)
+                          editDefinition(next)
+                        }}
+                      />
+                      {!collaboration && (
                         <P3Review
                           key={JSON.stringify([
                             initial.request_id,
@@ -920,7 +886,6 @@ function FormalForm({
                             const { collaboration: roles, ...procedure } = next.procedure
                             const plan = { ...next, procedure }
                             setCollaboration(roles)
-                            setPattern('all')
                             setReviewedPlan(plan)
                             editDefinition(plan)
                           }}

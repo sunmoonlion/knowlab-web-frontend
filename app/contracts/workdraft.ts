@@ -384,7 +384,6 @@ export const authorSelectionSchema = z.object({
     .nullish(),
   status: z.enum(['ready', 'clarify', 'gap']),
   reason: z.string(),
-  patterns: z.array(z.enum(['P1', 'P2', 'P3', 'P4', 'P5'])),
   routing_required: z.boolean(),
   steps: z.array(
     z.object({
