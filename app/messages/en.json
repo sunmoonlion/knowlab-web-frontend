@@ -426,7 +426,7 @@
       "summary": "Latest of each process",
       "backfilled": "Earlier tests left no record.",
       "incubation": "Incubation",
-      "incubationHint": "Write your method step by step in cells; it saves itself. When it is ready, publish a draft expert and test it.",
+      "incubationHint": "Describe the delivery in your workdraft, then open method design to test it.",
       "openWorkdraft": "Open the workdraft",
       "published": "Published draft expert {label}: you can test it yourself under “Testing” below."
     },
@@ -623,7 +623,7 @@
       "intro": "Each name with its current mode. On your own you write the method in the workdraft; with the platform you see the progress and what it waits for from you. Switching stays on the page.",
       "empty": "No names yet: write an idea under Applications first.",
       "workdraft": "Workdraft",
-      "workdraftHint": "Write your method step by step; AI can draft it or revise it as you say. When it is ready, publish a draft expert and test it.",
+      "workdraftHint": "Describe the delivery in your workdraft, then open method design to test it.",
       "open": "Open the workdraft"
     },
     "testsColumn": {
@@ -637,7 +637,7 @@
       "testSetNone": "No test set yet: on the first test the expert asks for data per case; once you confirm, it is pinned as the test set.",
       "testSetHint": "Retests start with the test set, so results of the same test set compare directly; to change data, make a new test set version.",
       "start": "Start",
-      "nothingToTest": "No draft expert to test now: publish one from the workdraft first.",
+      "nothingToTest": "Describe the delivery in your workdraft, then open method design to test it.",
       "history": "Past tests",
       "historyNone": "Not tested yet.",
       "mode": {
@@ -869,7 +869,7 @@
     "valueNo": "No",
     "formalMethod": "Formal method definition and validation",
     "title": "Workdraft",
-    "intro": "Write your method step by step in cells. It saves itself; press “Publish a version” to make a draft expert you can test.",
+    "intro": "Your workdraft saves automatically. Describe the delivery, then open AI proposal and method design to review, test and freeze the method.",
     "backToName": "Back to the name",
     "loading": "Loading…",
     "loadFailed": "Could not load; refresh and try again.",
@@ -1086,7 +1086,7 @@
       "done": "Published draft expert {label}.",
       "refused": "Cannot publish: some cells need fixing and are marked red.",
       "failed": "Not published ({code}); try again.",
-      "unsaved": "Some changes are not saved yet: publish once they are saved."
+      "unsaved": "Save your changes before continuing."
     },
     "import": {
       "title": "Import an expert pack",
@@ -1900,6 +1900,7 @@
     "stale": "This draft has changed. Request a proposal for the new revision.",
     "step": "Step {n}",
     "method": "Selected method: {name}",
+    "deliverOutput": "Return {output} as {name} to the requester",
     "reviews": "This step reviews independent findings from: {steps}",
     "batch": "Process up to {n} objects individually.",
     "direct": "Use the complete method directly",

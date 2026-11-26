@@ -202,13 +202,14 @@ function Editor({
     }
   }, [requestId, csrfToken])
 
+  const dynamicDraft = !!doc.body.planning && !doc.body.method_template
   const preview = useQuery({
     queryKey: [...KEY, 'workdraft-preview', requestId, doc.revision],
     queryFn: () => previewWorkdraft(requestId),
     placeholderData: keepPreviousData,
-    enabled: !doc.body.method_template,
+    enabled: dynamicDraft,
   })
-  const problems = preview.data?.problems ?? []
+  const problems = dynamicDraft ? (preview.data?.problems ?? []) : []
 
   // AI 孵化的各轮：最后一轮在跑就每 10 秒刷新一次（问运行方）；格子旁边是最近一轮成了的建议
   const roundsKey = [...KEY, 'rounds', requestId]
@@ -761,27 +762,26 @@ function Editor({
             >
               {t('toolbar.copy')}
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              aria-expanded={panel === 'preview'}
-              onClick={async () => {
-                if (body.method_template) return openDesign()
-                if (panel === 'preview') return setPanel(null)
-                setPanel('preview')
-                await flush()
-                void preview.refetch()
-              }}
-            >
-              {t('toolbar.preview')}
-            </Button>
-            <Button
-              size="sm"
-              disabled={busy}
-              onClick={() => (body.method_template ? void openDesign() : void publish())}
-            >
-              {publishing ? t('toolbar.publishing') : t('toolbar.publish')}
-            </Button>
+            {dynamicDraft && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  aria-expanded={panel === 'preview'}
+                  onClick={async () => {
+                    if (panel === 'preview') return setPanel(null)
+                    setPanel('preview')
+                    await flush()
+                    void preview.refetch()
+                  }}
+                >
+                  {t('toolbar.preview')}
+                </Button>
+                <Button size="sm" disabled={busy} onClick={() => void publish()}>
+                  {publishing ? t('toolbar.publishing') : t('toolbar.publish')}
+                </Button>
+              </>
+            )}
           </div>
           <RoundBar
             rounds={list}
@@ -828,7 +828,7 @@ function Editor({
               onStart={(round) => void start(round)}
               onClose={() => setPanel(null)}
             />
-          ) : panel === 'preview' ? (
+          ) : dynamicDraft && panel === 'preview' ? (
             <PreviewPanel
               steps={body.steps}
               preview={preview.data}

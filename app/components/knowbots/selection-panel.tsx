@@ -395,6 +395,9 @@ function Review({
                     {n} ← {v.step ? (edits[v.step] ?? v.step) + ' / ' + v.output : (v.name ?? n)}
                   </p>
                 ))}
+                {Object.entries(s.deliver_as ?? {}).map(([output, name]) => (
+                  <p key={`delivery-${name}`}>{t('deliverOutput', { output, name })}</p>
+                ))}
                 {s.reviews.length > 0 && (
                   <p>
                     {t('reviews', { steps: s.reviews.map((id) => edits[id] ?? id).join('、') })}

@@ -341,31 +341,29 @@ export function FormalMethodExecution({
                   {!instruction && <option value="rejected">{t('rejected')}</option>}
                 </select>
               </label>
-              {(draft?.definition.capability_declaration.conditions ||
-                (draft && checkedDelivery)) &&
-                c.outcome === 'succeeded' && (
-                  <fieldset>
-                    <legend>{t('coversPromises')}</legend>
-                    {Object.entries(draft.definition.capability_declaration.promises).map(
-                      ([id, label]) => (
-                        <label key={id} className="block">
-                          <input
-                            type="checkbox"
-                            checked={c.covers.includes(id)}
-                            onChange={(e) =>
-                              update(i, {
-                                covers: e.target.checked
-                                  ? [...c.covers, id]
-                                  : c.covers.filter((key) => key !== id),
-                              })
-                            }
-                          />{' '}
-                          {label}
-                        </label>
-                      ),
-                    )}
-                  </fieldset>
-                )}
+              {draft && c.outcome === 'succeeded' && (
+                <fieldset>
+                  <legend>{t('coversPromises')}</legend>
+                  {Object.entries(draft.definition.capability_declaration.promises).map(
+                    ([id, label]) => (
+                      <label key={id} className="block">
+                        <input
+                          type="checkbox"
+                          checked={c.covers.includes(id)}
+                          onChange={(e) =>
+                            update(i, {
+                              covers: e.target.checked
+                                ? [...c.covers, id]
+                                : c.covers.filter((key) => key !== id),
+                            })
+                          }
+                        />{' '}
+                        {label}
+                      </label>
+                    ),
+                  )}
+                </fieldset>
+              )}
               {c.outcome === 'succeeded' ? (
                 <details>
                   <summary>{t('assertions')}</summary>{' '}

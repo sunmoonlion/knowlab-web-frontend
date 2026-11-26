@@ -403,6 +403,7 @@ export const authorSelectionSchema = z.object({
       ),
       route_input: z.string().nullish(),
       cases: z.record(z.string(), z.string()).default({}),
+      deliver_as: z.record(z.string(), z.string()).optional(),
       reviews: z.array(z.string()).default([]),
     }),
   ),
