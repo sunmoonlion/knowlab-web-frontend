@@ -28,6 +28,7 @@ import {
 import {
   bindGapResolution,
   createMethodDraft,
+  deleteMethodDraft,
   ensureMethodDraftRuntimeAnchor,
   fetchMethodDraft,
   fetchSlotVocabulary,
@@ -36,9 +37,11 @@ import {
   spawnGapChild,
   type ArchetypeId,
   type MethodDraftDetail,
+  type MethodDraftSummary,
 } from '@/lib/knowbots/method-drafts'
 import { FormalMethodExecution } from './formal-method-execution'
 import { DraftMethodDirectory } from './method-directory'
+import { useWhen } from './shared'
 
 const ARCHETYPES: readonly ArchetypeId[] = ['S1', 'S2', 'S3', 'S4']
 const V0_KINDS = [
@@ -71,6 +74,7 @@ export function MethodStudioHome({
   initial?: StudioInitialParams
 }) {
   const t = useTranslations('studio')
+  const when = useWhen()
   const router = useRouter()
   const client = useQueryClient()
   const [archetype, setArchetype] = useState<ArchetypeId>(
@@ -88,6 +92,20 @@ export function MethodStudioHome({
     queryKey: ['method-drafts'],
     queryFn: listMethodDrafts,
     retry: false,
+  })
+
+  const remove = useMutation({
+    mutationFn: (draft: MethodDraftSummary) =>
+      deleteMethodDraft(draft.method_id, draft.revision, csrfToken),
+    onSuccess: async (_, draft) => {
+      await client.cancelQueries({ queryKey: ['method-drafts'] })
+      client.setQueryData<MethodDraftSummary[]>(['method-drafts'], (items) =>
+        items?.filter((item) => item.method_id !== draft.method_id),
+      )
+      client.removeQueries({ queryKey: ['method-draft', draft.method_id] })
+      await client.invalidateQueries({ queryKey: ['method-drafts'] })
+    },
+    onError: () => client.invalidateQueries({ queryKey: ['method-drafts'] }),
   })
 
   const create = useMutation({
@@ -200,6 +218,13 @@ export function MethodStudioHome({
 
       <section className="space-y-3" aria-label={t('draftsTitle')}>
         <h2 className="text-lg font-semibold">{t('draftsTitle')}</h2>
+        {remove.isError && (
+          <p role="alert" className="text-destructive text-sm">
+            {t(errorCode(remove.error) === 'workdraft_revision' ? 'deleteChanged' : 'deleteFailed', {
+              name: remove.variables.title,
+            })}
+          </p>
+        )}
         {drafts.isPending ? (
           <p className="text-muted-foreground text-sm">{t('loading')}</p>
         ) : drafts.isError ? (
@@ -223,6 +248,24 @@ export function MethodStudioHome({
                   </span>
                 </div>
                 <p className="text-muted-foreground line-clamp-2 text-xs">{d.purpose}</p>
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="text-muted-foreground">
+                    {t('draftNumber', { id: d.method_id.slice(0, 8) })}
+                    {d.updated_at && <> · {when(d.updated_at)}</>}
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={remove.isPending}
+                    onClick={() => {
+                      const prompt = t('confirmDelete', { name: d.title, id: d.method_id.slice(0, 8) })
+                      if (window.confirm(prompt)) remove.mutate(d)
+                    }}
+                  >
+                    {t('deleteDraft')}
+                  </Button>
+                </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <span
                     className={

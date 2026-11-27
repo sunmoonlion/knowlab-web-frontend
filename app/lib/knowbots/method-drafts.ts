@@ -137,6 +137,13 @@ export async function createMethodDraft(
   )
 }
 
+export async function deleteMethodDraft(methodId: string, revision: number, csrfToken: string) {
+  await requestJson<void>(`/api/web/v1/method-drafts/${encodeURIComponent(methodId)}?revision=${revision}`, {
+    method: 'DELETE',
+    csrfToken,
+  })
+}
+
 export async function fetchMethodDraft(methodId: string) {
   return parseFormalReply(
     methodDraftDetailSchema,
