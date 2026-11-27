@@ -26,7 +26,7 @@ export function TrialExample({
       : Object.fromEntries(
           p.steps.flatMap((step) =>
             Object.values(step.inputs).flatMap(({ binding, slot }) =>
-              binding.source === 'caller' ? [[binding.name, slot]] : [],
+              binding.source === 'caller' ? [[binding.name, binding.caller_slot ?? slot]] : [],
             ),
           ),
         )

@@ -3,13 +3,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
+import { z } from 'zod'
 
 import { CrossAppLink } from '@/components/common/cross-app-link'
 import { Button } from '@/components/ui/button'
 import {
-  formalDraftSchema,
+  formalChecksSchema,
   receiptCoversCallers,
-  type FormalDraft,
   type FormalSource,
   type FormalValidation,
   type FormalVersion,
@@ -55,6 +55,8 @@ function errorCode(exc: unknown) {
 }
 
 export type StudioInitialParams = {
+  title?: string
+  purpose?: string
   archetype?: string
   method_kind?: string
   source_kind?: string
@@ -81,8 +83,8 @@ export function MethodStudioHome({
   const [methodKind, setMethodKind] = useState<'tool' | 'expert'>(
     initial.method_kind === 'tool' ? 'tool' : 'expert',
   )
-  const [title, setTitle] = useState(initial.source_name ? `${initial.source_name}` : '')
-  const [purpose, setPurpose] = useState('')
+  const [title, setTitle] = useState(initial.title ?? initial.source_name ?? '')
+  const [purpose, setPurpose] = useState(initial.purpose ?? '')
 
   const drafts = useQuery({
     queryKey: ['method-drafts'],
@@ -126,7 +128,9 @@ export function MethodStudioHome({
                 if (id === 'S2' || id === 'S3') setMethodKind('expert')
               }}
               className={`rounded-lg border p-3 text-left text-sm transition-colors ${
-                archetype === id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'
+                archetype === id
+                  ? 'border-primary bg-primary/5 ring-primary ring-1'
+                  : 'hover:bg-muted/50'
               }`}
             >
               <strong className="block">{t(`archetypes.${id}.title`)}</strong>
@@ -218,7 +222,7 @@ export function MethodStudioHome({
                   <Link href={`/studio/${d.method_id}`} className="font-semibold hover:underline">
                     {d.title}
                   </Link>
-                  <span className="rounded bg-muted px-2 py-0.5 text-xs">
+                  <span className="bg-muted rounded px-2 py-0.5 text-xs">
                     {d.archetype} · {t(`kind.${d.method_kind}`)} · rev {d.revision}
                   </span>
                 </div>
@@ -248,17 +252,29 @@ export function MethodStudioHome({
   )
 }
 
+export type StudioResume = {
+  method?: string
+  run?: string
+  revision?: string
+  version?: string
+  execution?: string
+}
+
 export function MethodStudioEditor({
+  resume = {},
   methodId,
   csrfToken,
 }: {
   methodId: string
+  resume?: StudioResume
   csrfToken: string
 }) {
   const t = useTranslations('studio')
   const client = useQueryClient()
   const router = useRouter()
-  const [stepTab, setStepTab] = useState<'contract' | 'procedure' | 'trial' | 'freeze'>('contract')
+  const [stepTab, setStepTab] = useState<'contract' | 'procedure' | 'trial' | 'freeze'>(
+    resume.run ? 'trial' : 'contract',
+  )
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -285,6 +301,7 @@ export function MethodStudioEditor({
     <StudioForm
       key={`${loaded.data.method_id}:${loaded.data.revision}`}
       detail={loaded.data}
+      resume={resume}
       domains={vocab.data?.domains ?? [{ domain_id: 'core.record.object', label: '结构化记录' }]}
       csrfToken={csrfToken}
       stepTab={stepTab}
@@ -302,7 +319,79 @@ export function MethodStudioEditor({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RawObj = Record<string, any>
 
+function ValidationChecksField({
+  rule,
+  onEdit,
+}: {
+  rule: RawObj
+  onEdit: (checks: RawObj[] | null) => void
+}) {
+  const t = useTranslations('studio')
+  const [text, setText] = useState(() => JSON.stringify(rule.v0_checks ?? [], null, 2))
+  const [kind, setKind] = useState<string>(rule.v0_checks?.[0]?.kind ?? '')
+  const [invalid, setInvalid] = useState(false)
+  const update = (raw: string) => {
+    setText(raw)
+    try {
+      const checks = formalChecksSchema.parse(JSON.parse(raw))
+      setKind(checks[0]?.kind ?? '')
+      setInvalid(false)
+      onEdit(checks)
+    } catch {
+      setInvalid(true)
+      onEdit(null)
+    }
+  }
+  const select = (selected: string) => {
+    const pointer = '/' + (rule.outputs?.[0] ?? rule.promise_id)
+    const operands =
+      selected === 'numeric_identity'
+        ? { lhs_pointer: pointer, rhs_pointer: null }
+        : selected === 'collection_coverage'
+          ? { items_pointer: pointer, key_field: '', expected_keys_input_slot: '' }
+          : { pointer }
+    setKind(selected)
+    update(
+      JSON.stringify(
+        [
+          ...(selected ? [{ kind: selected, ...operands }] : []),
+          ...(rule.v0_checks ?? []).slice(1),
+        ],
+        null,
+        2,
+      ),
+    )
+  }
+  return (
+    <div className="space-y-2 text-xs">
+      <label className="block">
+        {t('v0Operator')}
+        <select className={inputCls} value={kind} onChange={(e) => select(e.target.value)}>
+          <option value="">{t('v0None')}</option>
+          {V0_KINDS.map((k) => (
+            <option key={k} value={k}>
+              {t(`v0.${k}`)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block">
+        {t('v0Operands')}
+        <textarea
+          className={`${inputCls} font-mono`}
+          rows={3}
+          value={text}
+          aria-invalid={invalid}
+          onChange={(e) => update(e.target.value)}
+        />
+      </label>
+      {invalid && <p role="alert">{t('invalidChecks')}</p>}
+    </div>
+  )
+}
+
 function StudioForm({
+  resume,
   detail,
   domains,
   csrfToken,
@@ -316,6 +405,7 @@ function StudioForm({
   onNavigate,
 }: {
   detail: MethodDraftDetail
+  resume: StudioResume
   domains: { domain_id: string; label: string }[]
   csrfToken: string
   stepTab: 'contract' | 'procedure' | 'trial' | 'freeze'
@@ -353,15 +443,42 @@ function StudioForm({
   const [inlineSourceName, setInlineSourceName] = useState('')
   const [inlineSourceKind, setInlineSourceKind] = useState<'script' | 'instruction'>('script')
   const [inlineSourceBody, setInlineSourceBody] = useState('')
+  const [graphJson, setGraphJson] = useState<string | null>(null)
+  const [graphError, setGraphError] = useState(false)
+  const [invalidChecks, setInvalidChecks] = useState<number[]>([])
   const [gapStepId, setGapStepId] = useState('')
   const [gapTitle, setGapTitle] = useState('')
   const [gapKind, setGapKind] = useState<'tool' | 'expert'>('tool')
 
   const [anchorRequestId, setAnchorRequestId] = useState<string | null>(detail.request_id)
-  const [runCmd, setRunCmd] = useState<ValidationCommand | null>(null)
+  const savedRun =
+    resume.method === detail.method_id &&
+    detail.request_id &&
+    Number(resume.revision) === detail.revision &&
+    z.uuid().safeParse(resume.run).success
+      ? { request_id: detail.request_id, revision: detail.revision, run_id: resume.run! }
+      : null
+  const [runCmd, setRunCmd] = useState<ValidationCommand | null>(savedRun)
+  const [isTrialRun, setIsTrialRun] = useState(!!savedRun && resume.execution === '1')
+  function rememberRun(cmd: ValidationCommand, trial: boolean) {
+    const url = new URL(window.location.href)
+    url.searchParams.set('method', detail.method_id)
+    url.searchParams.set('run', cmd.run_id)
+    url.searchParams.set('revision', String(cmd.revision))
+    url.searchParams.set('version', String(versionNo))
+    if (trial) url.searchParams.set('execution', '1')
+    else url.searchParams.delete('execution')
+    window.history.replaceState(null, '', url.pathname + url.search)
+    setIsTrialRun(trial)
+    setRunCmd(cmd)
+  }
   const [validation, setValidation] = useState<FormalValidation | null>(null)
   const [executionActive, setExecutionActive] = useState(false)
-  const [versionNo, setVersionNo] = useState(1)
+  const [versionNo, setVersionNo] = useState(
+    savedRun && Number.isSafeInteger(Number(resume.version)) && Number(resume.version) > 0
+      ? Number(resume.version)
+      : 1,
+  )
   const [visibility, setVisibility] = useState<'private' | 'public'>('private')
   const [frozenVersion, setFrozenVersion] = useState<FormalVersion | null>(null)
   const [selfListingState, setSelfListingState] = useState<string | null>(null)
@@ -375,7 +492,7 @@ function StudioForm({
   })
 
   const saveContract = useMutation({
-    mutationFn: (confirmAll: boolean) =>
+    mutationFn: (change: boolean | { procedure: RawObj }) =>
       patchMethodDraft(
         detail.method_id,
         {
@@ -393,9 +510,9 @@ function StudioForm({
               .filter(Boolean),
             expected_deliverables: deliverables,
             validation_rules: rules,
-            ...(procedure ? { procedure } : {}),
+            ...(typeof change === 'object' ? change : procedure ? { procedure } : {}),
           },
-          ...(confirmAll ? { confirm_paths: detail.projection.unconfirmed_paths } : {}),
+          ...(change ? { confirm_paths: detail.projection.unconfirmed_paths } : {}),
           source: selectedSource,
           allowed_callers: callers,
         },
@@ -404,6 +521,7 @@ function StudioForm({
     onSuccess: (saved) => {
       setError(null)
       setNotice(t('savedNotice', { revision: saved.revision }))
+      setGraphJson(null)
       onUpdated(saved)
     },
     onError: (exc) => setError(errorCode(exc)),
@@ -467,12 +585,12 @@ function StudioForm({
         anchorRequestId ??
         (await ensureMethodDraftRuntimeAnchor(detail.method_id, csrfToken)).request_id
       setAnchorRequestId(reqId)
-      const cmd = runCmd ?? {
+      const cmd = (!isTrialRun && runCmd) || {
         request_id: reqId,
         revision: detail.revision,
         run_id: crypto.randomUUID(),
       }
-      setRunCmd(cmd)
+      rememberRun(cmd, false)
       return validateFormalMethod(detail.method_id, cmd, csrfToken)
     },
     onSuccess: (res) => {
@@ -529,41 +647,15 @@ function StudioForm({
     onError: (exc) => setError(errorCode(exc)),
   })
 
-  const builtDraft: FormalDraft | null = (() => {
-    if (!detail.definition_digest || !procedure) return null
-    const candidate = {
-      definition: {
-        contract: 'knowlab/formal-method/v1',
-        capability_declaration: {
-          title,
-          purpose,
-          applies_when: appliesText
-            .split('\n')
-            .map((s) => s.trim())
-            .filter(Boolean),
-          excludes: excludesText
-            .split('\n')
-            .map((s) => s.trim())
-            .filter(Boolean),
-          promises: Object.fromEntries(deliverables.map((d) => [d.promise_id, d.summary])),
-        },
-        access_requirements: raw.access_ceiling ?? [],
-        procedure,
-        how_to_validate: rules.map(({ v0_checks: _v0, ...rest }) => rest),
-        what_requires_approval: (raw.approval_rules ?? []).map(
-          ({ scope: _sc, ...rest }: RawObj) => rest,
-        ),
-      },
-      source: selectedSource,
-      allowed_callers: callers,
-    }
-    const parsed = formalDraftSchema.safeParse(candidate)
-    return parsed.success ? parsed.data : null
-  })()
-
   const canFreeze =
     validation?.status === 'passed' &&
     !!validation.receipt &&
+    !!runCmd &&
+    validation.receipt.run_id === runCmd.run_id &&
+    validation.receipt.revision === detail.revision &&
+    validation.receipt.method_id === detail.method_id &&
+    validation.receipt.request_id === detail.request_id &&
+    validation.receipt.definition_digest === detail.definition_digest &&
     receiptCoversCallers(validation.receipt, callers)
 
   return (
@@ -583,7 +675,7 @@ function StudioForm({
           ) : null}
         </div>
         <span className="text-muted-foreground text-xs">
-          {String(raw.archetype_id ?? 'S1')} · {t(`kind.${String(raw.method_kind ?? 'expert')}`)} ·
+          {String(raw.archetype_id ?? '')} · {t(`kind.${String(raw.method_kind ?? 'expert')}`)} ·
           rev {detail.revision}
         </span>
       </div>
@@ -610,7 +702,9 @@ function StudioForm({
           className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:bg-amber-950/50"
         >
           <div>
-            <strong>{t('unconfirmedTitle', { count: detail.projection.unconfirmed_paths.length })}</strong>
+            <strong>
+              {t('unconfirmedTitle', { count: detail.projection.unconfirmed_paths.length })}
+            </strong>
             <p className="text-muted-foreground text-xs">
               {detail.projection.unconfirmed_paths.join(' · ')}
             </p>
@@ -714,7 +808,7 @@ function StudioForm({
                       check: t('defaultValidationCheck'),
                       evidence: t('defaultValidationEvidence'),
                       on_failure: 'fail',
-                      v0_checks: [{ kind: 'schema_and_range', target_output: pid }],
+                      v0_checks: [{ kind: 'schema_and_range', pointer: '/' + pid }],
                     },
                   ])
                 }}
@@ -723,7 +817,10 @@ function StudioForm({
               </Button>
             </div>
             {deliverables.map((item, idx) => (
-              <div key={item.promise_id} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-3">
+              <div
+                key={item.promise_id}
+                className="grid gap-2 rounded-lg border p-3 sm:grid-cols-3"
+              >
                 <label className="text-xs">
                   {t('promiseId')}
                   <input className={inputCls} value={item.promise_id} readOnly />
@@ -781,7 +878,10 @@ function StudioForm({
           <div className="space-y-3 border-t pt-4">
             <h3 className="text-sm font-semibold">{t('v0RulesTitle')}</h3>
             {rules.map((r, idx) => (
-              <div key={r.promise_id + idx} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-3">
+              <div
+                key={r.promise_id + idx}
+                className="grid gap-2 rounded-lg border p-3 sm:grid-cols-3"
+              >
                 <label className="text-xs sm:col-span-2">
                   {t('ruleCheck')} ({r.promise_id})
                   <input
@@ -794,30 +894,20 @@ function StudioForm({
                     }}
                   />
                 </label>
-                <label className="text-xs">
-                  {t('v0Operator')}
-                  <select
-                    className={inputCls}
-                    value={r.v0_checks?.[0]?.kind ?? ''}
-                    onChange={(e) => {
-                      const next = [...rules]
-                      next[idx] = {
-                        ...r,
-                        v0_checks: e.target.value
-                          ? [{ kind: e.target.value, target_output: r.outputs?.[0] ?? r.promise_id }]
-                          : [],
-                      }
-                      setRules(next)
-                    }}
-                  >
-                    <option value="">{t('v0None')}</option>
-                    {V0_KINDS.map((k) => (
-                      <option key={k} value={k}>
-                        {t(`v0.${k}`)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <ValidationChecksField
+                  rule={r}
+                  onEdit={(checks) => {
+                    setInvalidChecks((current) =>
+                      checks ? current.filter((i) => i !== idx) : [...new Set([...current, idx])],
+                    )
+                    if (checks)
+                      setRules((current) =>
+                        current.map((rule, i) =>
+                          i === idx ? { ...rule, v0_checks: checks } : rule,
+                        ),
+                      )
+                  }}
+                />
               </div>
             ))}
           </div>
@@ -825,7 +915,12 @@ function StudioForm({
           <div className="flex flex-wrap gap-2 pt-2">
             <Button
               type="button"
-              disabled={saveContract.isPending || !title.trim() || !purpose.trim()}
+              disabled={
+                saveContract.isPending ||
+                invalidChecks.length > 0 ||
+                !title.trim() ||
+                !purpose.trim()
+              }
               onClick={() => saveContract.mutate(true)}
             >
               {t('saveAndConfirm')}
@@ -854,7 +949,8 @@ function StudioForm({
                   className="space-y-3 rounded-lg border p-4"
                   onSubmit={(e) => {
                     e.preventDefault()
-                    if (inlineSourceName.trim() && inlineSourceBody.trim()) saveInlineSource.mutate()
+                    if (inlineSourceName.trim() && inlineSourceBody.trim())
+                      saveInlineSource.mutate()
                   }}
                 >
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -1098,12 +1194,37 @@ function StudioForm({
 
               <div className="space-y-3 rounded-lg border p-3 text-xs">
                 <h3 className="text-sm font-semibold">{t('rollupColumn')}</h3>
+                <label className="block">
+                  {t('graphJson')}
+                  <textarea
+                    className={`${inputCls} font-mono`}
+                    rows={10}
+                    value={graphJson ?? JSON.stringify(procedure ?? {}, null, 2)}
+                    onChange={(event) => {
+                      setGraphJson(event.target.value)
+                      setGraphError(false)
+                    }}
+                  />
+                </label>
+                {graphError && <p role="alert">{t('graphInvalid')}</p>}
                 <p className="text-muted-foreground">{t('rollupHint')}</p>
                 <Button
                   type="button"
                   size="sm"
                   disabled={saveContract.isPending}
-                  onClick={() => saveContract.mutate(true)}
+                  onClick={() => {
+                    if (graphJson === null) {
+                      saveContract.mutate(true)
+                      return
+                    }
+                    try {
+                      const graph = JSON.parse(graphJson)
+                      if (graph?.kind !== 'orchestration') throw new Error()
+                      saveContract.mutate({ procedure: graph })
+                    } catch {
+                      setGraphError(true)
+                    }
+                  }}
                 >
                   {t('saveProcedure')}
                 </Button>
@@ -1161,10 +1282,11 @@ function StudioForm({
                 methodId={detail.method_id}
                 requestId={anchorRequestId}
                 revision={detail.revision}
-                draft={builtDraft}
-                disabled={!builtDraft}
+                draft={detail.formal_method ?? null}
+                disabled={!detail.formal_method}
                 csrfToken={csrfToken}
-                onRun={(cmd) => setRunCmd(cmd)}
+                resume={isTrialRun ? runCmd : null}
+                onRun={(cmd) => rememberRun(cmd, true)}
                 onResult={(res) => setValidation(res.admission)}
                 onActiveChange={setExecutionActive}
               />
@@ -1198,13 +1320,18 @@ function StudioForm({
               </select>
             </label>
           </div>
-          <Button type="button" disabled={!canFreeze || doFreeze.isPending} onClick={() => doFreeze.mutate()}>
+          <Button
+            type="button"
+            disabled={!canFreeze || doFreeze.isPending}
+            onClick={() => doFreeze.mutate()}
+          >
             {t('confirmFreeze')}
           </Button>
           {frozenVersion ? (
-            <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+            <div className="bg-muted/30 space-y-3 rounded-lg border p-4">
               <p className="font-medium">
-                {t('frozenNotice', { version: frozenVersion.version })} · {frozenVersion.digest.slice(0, 20)}…
+                {t('frozenNotice', { version: frozenVersion.version })} ·{' '}
+                {frozenVersion.digest.slice(0, 20)}…
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -1272,7 +1399,10 @@ function StudioForm({
             <span className="text-muted-foreground font-medium">{t('viewInputs')}: </span>
             {detail.projection.public_inputs.length
               ? detail.projection.public_inputs
-                  .map((s) => `${s.name}(${s.domain_label || s.domain_id || s.schema_type || 'any'})`)
+                  .map(
+                    (s) =>
+                      `${s.name}(${domains.find((domain) => domain.domain_id === s.domain_id)?.label || s.domain_id || s.schema_type || 'any'})`,
+                  )
                   .join(' · ')
               : t('none')}
           </div>
@@ -1280,14 +1410,17 @@ function StudioForm({
             <span className="text-muted-foreground font-medium">{t('viewReturns')}: </span>
             {detail.projection.what_to_return.length
               ? detail.projection.what_to_return
-                  .map((s) => `${s.name}(${s.domain_label || s.domain_id || s.schema_type || 'any'})`)
+                  .map(
+                    (s) =>
+                      `${s.name}(${domains.find((domain) => domain.domain_id === s.domain_id)?.label || s.domain_id || s.schema_type || 'any'})`,
+                  )
                   .join(' · ')
               : t('none')}
           </div>
         </div>
-        {detail.projection.issues.length > 0 ? (
+        {detail.projection.missing_promise_sources.length > 0 ? (
           <p className="mt-1 text-amber-700 dark:text-amber-300">
-            {detail.projection.issues.join('；')}
+            {t('missingSources', { names: detail.projection.missing_promise_sources.join(', ') })}
           </p>
         ) : null}
       </aside>

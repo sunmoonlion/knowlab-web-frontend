@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test'
-import { instructionFromTemplate } from '../../lib/knowbots/delivery-template'
 
 test('runtime health endpoint is dynamic and non-cacheable', async ({ request }) => {
   const response = await request.get('/healthz')
@@ -97,7 +96,10 @@ test('opens the method directory from the signed-in sidebar before an incubation
     }),
   )
   await page.goto('/en/dashboard')
-  await page.getByRole('link', { name: 'Methods and skills', exact: true }).click()
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('link', { name: 'Methods and skills', exact: true })
+    .click()
   await expect(page).toHaveURL(/\/en\/methods$/)
   await expect(page.getByRole('heading', { name: 'Methods and skills', exact: true })).toBeVisible()
   await expect(page.getByText('Opening balance check', { exact: true })).toBeVisible()
@@ -179,93 +181,6 @@ test('sitemap uses the runtime application origin', async ({ request, baseURL })
 
   expect(response.status()).toBe(200)
   expect(await response.text()).toContain(`${baseURL}/en`)
-})
-
-test('author can adopt a fixed template and open the same design without a mode switch', async ({
-  context,
-  page,
-}) => {
-  await context.addCookies([
-    {
-      name: 'sunmoonai_knowlab_web_sid',
-      value: 'e2e-session',
-      domain: '127.0.0.1',
-      path: '/',
-      httpOnly: true,
-      sameSite: 'Lax',
-    },
-  ])
-  const requestId = '81a7fd82-9c80-41ea-8e12-973e61fca614'
-  let binding: Record<string, string> | undefined
-  await page.route('**/knowbot-requests/*/workdraft', (route) =>
-    route.fulfill({
-      json: {
-        contract_version: 1,
-        request_id: new URL(route.request().url()).pathname.split('/').at(-2),
-        title: '四行小计',
-        revision: 1,
-        body: {
-          method_template: binding,
-          name: '汇总表',
-          tagline: '',
-          scope: { does: '编制汇总表', does_not: '', elsewhere: '' },
-          data_picks: [],
-          steps: [],
-        },
-        sources: {},
-        origins: {},
-        data_formats: {},
-        updated_at: null,
-      },
-    }),
-  )
-  await page.route('**/workdraft/preview', (route) =>
-    route.fulfill({
-      json: {
-        contract_version: 1,
-        version: '1',
-        manifest: { schema: 'knowbot-manifest/v2' },
-        problems: [{ path: 'steps', message: 'add at least one step' }],
-      },
-    }),
-  )
-  await page.route('**/workdraft/incubations', (route) =>
-    route.fulfill({ json: { contract_version: 1, incubations: [] } }),
-  )
-  const path = (id: string) => '/zh-CN/names/' + id
-  await page.route('**/workdraft/cells', async (route) => {
-    binding = route.request().postDataJSON().cells[0].value
-    await route.fulfill({
-      json: {
-        contract_version: 1,
-        request_id: requestId,
-        title: '四行小计',
-        revision: 2,
-        body: {
-          name: '汇总表',
-          tagline: '',
-          scope: { does: '编制汇总表', does_not: '', elsewhere: '' },
-          steps: [],
-          data_picks: [],
-          method_template: binding,
-        },
-        sources: {},
-        origins: {},
-        updated_at: null,
-      },
-    })
-  })
-  await page.goto(path(requestId) + '/workdraft')
-  await expect(page.getByRole('switch', { name: '专业开发者模式' })).toHaveCount(0)
-  await page.getByRole('button', { name: '可核对交付 · 第 1 版' }).click()
-  await page.getByLabel('承诺交付什么').fill('逐行列出金额及合计')
-  await page.getByLabel('如何判断交付正确').fill('合计等于四行有符号金额之和')
-  await page.getByLabel('核对时使用什么依据').fill('原始样表')
-  await page.getByRole('button', { name: '确认口径，编排做法' }).click()
-  await expect(page).toHaveURL(/formal-method$/)
-  await expect(page.getByText('合计等于四行有符号金额之和', { exact: true })).toBeVisible()
-  await page.reload()
-  await expect(page.getByText('原始样表', { exact: true })).toBeVisible()
 })
 
 test('author reviews an AI proposal, checks routing and confirms an edited step', async ({
@@ -356,7 +271,51 @@ test('author reviews an AI proposal, checks routing and confirms an edited step'
     steps: [{ id: 'n1', method: 'i1', task: '核对数据', inputs: {}, cases: {}, reviews: [] }],
   }
   const method = {
-    definition: instructionFromTemplate(template, '四行小计', source),
+    definition: {
+      contract: 'knowlab/formal-method/v1',
+      capability_declaration: {
+        title: '四行小计',
+        purpose: template.goal,
+        applies_when: [template.goal],
+        excludes: [],
+        promises: { template_delivery: template.deliverable },
+      },
+      access_requirements: [],
+      what_requires_approval: [],
+      how_to_validate: [
+        {
+          promise_id: 'template_delivery',
+          outputs: ['result'],
+          check: template.check,
+          evidence: template.evidence,
+          on_failure: 'fail',
+        },
+      ],
+      procedure: {
+        kind: 'direct',
+        instructions: template.goal,
+        stop_conditions: [template.check],
+        max_model_turns: 1,
+        implementation: {
+          kind: source.kind,
+          source: source.source,
+          entry: source.entry,
+          version: source.version,
+          digest: source.digest,
+          requirement_ids: [],
+        },
+        inputs: {},
+        outputs: {
+          result: {
+            description: template.deliverable,
+            required: true,
+            meaning: {},
+            schema: { type: 'string' },
+            on_missing: 'fail',
+          },
+        },
+      },
+    },
     allowed_callers: ['host'],
     source,
   }
@@ -394,6 +353,7 @@ test('author reviews an AI proposal, checks routing and confirms an edited step'
     await r.fulfill({ json: saved })
   })
   await page.goto('/zh-CN/names/' + id + '/formal-method')
+  await expect(page).toHaveURL(new RegExp('/studio\\?workdraft=' + id))
   const confirm = page.getByRole('button', { name: '确认并存为正式工作稿' })
   await expect(page.getByText('采用方法：核对四行')).toBeVisible()
   await expect(page.getByText('查看使用的步骤模板')).toHaveCount(0)

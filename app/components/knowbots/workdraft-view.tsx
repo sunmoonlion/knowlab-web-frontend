@@ -39,8 +39,6 @@ import { diffEdits, freshId, newStep, placed, same, withoutStep } from '@/lib/kn
 import type { BindMethodCommand } from '@/contracts/author-methods'
 import { bindMethod } from '@/lib/knowbots/methods'
 
-import { MethodTemplateForm } from './method-template'
-import type { MethodTemplate } from '@/contracts/workdraft'
 import { DraftMethodDirectory } from './method-directory'
 import { FormalMethodEditor } from './formal-method-editor'
 import { Card, KEY } from './shared'
@@ -127,7 +125,7 @@ function WorkdraftContent({
       </p>
     )
   if (!loaded.data) return <p className="text-muted-foreground mt-6 text-sm">{t('loading')}</p>
-  if (loaded.data.body.formal_method)
+  if (loaded.data.studio_method_id || loaded.data.body.formal_method)
     return <FormalMethodEditor requestId={requestId} csrfToken={csrfToken} />
   return (
     <Editor
@@ -338,7 +336,7 @@ function Editor({
     }
   }
 
-  const openDesign = async (binding?: MethodTemplate | null) => {
+  const openDesign = async () => {
     setBusy(true)
     try {
       await flush()
@@ -347,19 +345,7 @@ function Editor({
         setMessage({ tone: 'bad', text: t('publish.unsaved') })
         return
       }
-      if (binding !== undefined && !same(binding, docRef.current.body.method_template ?? null)) {
-        const saved = await saveWorkdraftCells(
-          requestId,
-          {
-            revision: docRef.current.revision,
-            cells: [{ path: 'method_template', value: binding }],
-          },
-          csrfToken,
-        )
-        commit(docOf(saved))
-        client.setQueryData([...KEY, 'workdraft', requestId], { ...initial, ...saved })
-      }
-      if (binding !== null) router.push(`/names/${requestId}/formal-method`)
+      router.push(`/studio?workdraft=${encodeURIComponent(requestId)}`)
     } catch (exc) {
       if (conflict(exc)) {
         await onConflict()
@@ -881,13 +867,6 @@ function Editor({
               </ul>
             </Card>
           ) : null}
-          <MethodTemplateForm
-            body={body}
-            title={initial.idea_goal || initial.title}
-            preferred={!!initial.preferred_template}
-            disabled={busy || running || deciding}
-            onAdopt={openDesign}
-          />
           <Card title={t('expert.title')}>
             <Field label={t('expert.name')} path="name" filled={Boolean(body.name.trim())}>
               {(a11y) => (

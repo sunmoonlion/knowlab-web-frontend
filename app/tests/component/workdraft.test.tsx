@@ -570,7 +570,7 @@ describe('工作稿：顶上的按钮', () => {
     page()
     fireEvent.change(await screen.findByLabelText(w.expert.name), { target: { value: '财务' } })
     fireEvent.click(screen.getByRole('button', { name: messages.methodTemplate.design }))
-    await waitFor(() => expect(push).toHaveBeenCalledWith(`/names/${REQUEST}/formal-method`))
+    await waitFor(() => expect(push).toHaveBeenCalledWith(`/studio?workdraft=${REQUEST}`))
     expect(saveWorkdraftCells).toHaveBeenCalledTimes(1)
     expect(previewWorkdraft).not.toHaveBeenCalled()
     expect(publishWorkdraft).not.toHaveBeenCalled()
@@ -740,24 +740,14 @@ describe('平台人员的提议（专家孵化方案第十二节）', () => {
   })
 })
 
-it('keeps confirmed template bindings on the same ordinary working draft', async () => {
+it('opens a saved workdraft without requesting a new four-field template', async () => {
   const t = messages.methodTemplate
   server = workdraft({
     preferred_template: 'checked_delivery/v1',
     body: { ...emptyBody(), steps: [step('read')] },
   })
   page()
-  expect(await screen.findByRole('button', { name: t.adopt })).toBeDisabled()
-  for (const [key, value] of [
-    [t.goal, '汇总四行明细'],
-    [t.deliverable, '逐行金额与合计'],
-    [t.check, '冲减计负，按分勾稽'],
-    [t.evidence, '四行原始明细'],
-  ]) {
-    fireEvent.change(screen.getByLabelText(key), { target: { value } })
-  }
-  fireEvent.click(screen.getByRole('button', { name: t.adopt }))
-  await waitFor(() => expect(server.body.method_template?.check).toBe('冲减计负，按分勾稽'))
-  expect(server.body.steps[0].id).toBe('read')
-  expect(server.body.method_template?.template).toBe('checked_delivery/v1')
+  expect(await screen.findByRole('button', { name: t.design })).toBeVisible()
+  expect(screen.queryByRole('button', { name: t.adopt })).toBeNull()
+  expect(saveWorkdraftCells).not.toHaveBeenCalled()
 })

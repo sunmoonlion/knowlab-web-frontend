@@ -1,6 +1,6 @@
 'use client'
 
-import { useIsMutating, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { useCallback, useState } from 'react'
 import { z } from 'zod'
@@ -32,22 +32,15 @@ import {
   validateFormalMethod,
   type ValidationCommand,
 } from '@/lib/knowbots/formal-methods'
+import { MethodStudioEditor, MethodStudioHome } from './method-studio'
 import { StructuredValue } from './structured-value'
 import { DraftMethodDirectory } from './method-directory'
 import { SelectionPanel } from './selection-panel'
-import { TemplateSummary } from './method-template'
-import { withDeliveryTemplate, instructionFromTemplate } from '@/lib/knowbots/delivery-template'
-import { ExpertInputBinding } from './expert-input-binding'
-import { ExpertFromTool } from './expert-from-tool'
 import { same } from '@/lib/knowbots/workdraft'
 import { KEY } from './shared'
 import { FormalMethodExecution } from './formal-method-execution'
 import { DeliveryPromises } from './delivery-promises'
 import { ToolSlotEditor } from './tool-slot-editor'
-import { P5Choice } from './p5-choice'
-import { P4Comparison } from './p4-comparison'
-import { P2Join, P3Review } from './p2-join'
-import { P1Predecessor } from './p1-predecessor'
 import { ReviewRequirements } from './review-requirements'
 import { FormalOrchestrationSummary } from './formal-orchestration-summary'
 import type { FormalExecutionResult } from '@/contracts/formal-method-execution'
@@ -83,7 +76,30 @@ export function FormalMethodEditor({
   })
   if (loaded.isError) return <p role="alert">{t('loadFailed')}</p>
   if (!loaded.data) return <p>{t('loading')}</p>
+  if (loaded.data.studio_method_id)
+    return (
+      <MethodStudioEditor
+        methodId={loaded.data.studio_method_id}
+        csrfToken={csrfToken}
+        resume={resume}
+      />
+    )
   const body = loaded.data.body
+  if (
+    loaded.data.revision === 0 &&
+    !body.formal_method &&
+    !body.method_template &&
+    !body.steps.length &&
+    !body.planning &&
+    !body.method_refs &&
+    !body.public_capabilities
+  )
+    return (
+      <MethodStudioHome
+        csrfToken={csrfToken}
+        initial={{ title: loaded.data.title, purpose: loaded.data.idea_goal }}
+      />
+    )
   if (
     !body.formal_method &&
     !body.method_template &&
@@ -137,7 +153,6 @@ function FormalForm({
   const tt = useTranslations('methodTemplate')
   const [confirmedBrief, setConfirmedBrief] = useState(false)
   const [document, setDocument] = useState(initial)
-  const [reviewedPlan, setReviewedPlan] = useState<FormalDefinition | null>(null)
   const [definition, setDefinition] = useState<FormalDefinition | null>(
     initial.body.formal_method?.definition ?? null,
   )
@@ -184,15 +199,9 @@ function FormalForm({
     queryKey: ['formal-method-sources', initial.request_id],
     queryFn: () => formalSources(initial.request_id),
     retry: false,
-    enabled:
-      definition?.procedure.kind === 'direct' || (!definition && !!document.body.method_template),
+    enabled: definition?.procedure.kind === 'direct',
   })
   const template = document.body.method_template
-  const instructions = sources.data?.filter(
-    (s) =>
-      ['registered_instruction', 'skill_instruction'].includes(s.kind) &&
-      s.license_basis !== 'pending',
-  )
   const hasBrief = !!(
     document.body.steps.length ||
     document.body.planning ||
@@ -200,16 +209,12 @@ function FormalForm({
     document.body.method_refs
   )
   const confirmBrief = !!template && !document.body.formal_method && hasBrief
-  const applied = definition && template ? withDeliveryTemplate(definition, template) : definition
-  const draft = applied ? { definition: applied, source, allowed_callers: callers } : null
+  const draft = definition ? { definition, source, allowed_callers: callers } : null
   const [collaboration, setCollaboration] = useState(initial.body.collaboration ?? null)
   const reviewChanged = !same(collaboration, document.body.collaboration ?? null)
   const methodChanged = !same(draft, document.body.formal_method ?? null)
   const dirty = reviewChanged || methodChanged
-  const adoption = { mutationKey: ['adopt-tool', initial.request_id] }
-  const adopting = useIsMutating(adoption) > 0
   const ready =
-    !adopting &&
     (!confirmBrief || confirmedBrief) &&
     !!draft &&
     formalDraftSchema.safeParse(draft).success &&
@@ -227,7 +232,6 @@ function FormalForm({
     privateTrial ||
     Object.keys(definition?.capability_declaration.conditions ?? {}).length > 0
   const validated =
-    !adopting &&
     runtimeGaps.length === 0 &&
     !dirty &&
     run?.revision === document.revision &&
@@ -282,7 +286,10 @@ function FormalForm({
   const rememberRun = useCallback(
     (command: ValidationCommand, execution?: boolean) => {
       const url = new URL(window.location.href)
-      url.pathname = url.pathname.replace(/\/workdraft$/, '/formal-method')
+      if (url.pathname.endsWith('/workdraft')) {
+        url.pathname = url.pathname.replace(/\/names\/[^/]+\/workdraft$/, '/studio')
+        url.searchParams.set('workdraft', initial.request_id)
+      }
       url.searchParams.set('method', methodId)
       url.searchParams.set('run', command.run_id)
       url.searchParams.set('revision', String(command.revision))
@@ -293,7 +300,7 @@ function FormalForm({
       }
       window.history.replaceState(null, '', url.pathname + url.search)
     },
-    [methodId, version],
+    [initial.request_id, methodId, version],
   )
   const executionStarted = useCallback(
     (command: ValidationCommand) => {
@@ -312,7 +319,7 @@ function FormalForm({
     [executionRun, run?.run_id],
   )
   const save = async () => {
-    if (!draft || !ready || client.isMutating(adoption)) return
+    if (!draft || !ready) return
     setWorking(true)
     setError(null)
     setNotice(null)
@@ -322,7 +329,6 @@ function FormalForm({
         {
           revision: document.revision,
           ...(confirmBrief ? { confirm_brief: confirmedBrief } : {}),
-          ...(methodChanged && definition === reviewedPlan ? { adopt_plan: true } : {}),
           cells: [
             ...(methodChanged ? [{ path: 'formal_method', value: draft }] : []),
             ...(reviewChanged ? [{ path: 'collaboration', value: collaboration }] : []),
@@ -334,7 +340,6 @@ function FormalForm({
       if (!same(saved.body.collaboration ?? null, collaboration))
         throw new Error('saved_collaboration_mismatch')
       setDocument(saved)
-      setReviewedPlan(null)
       setValidation(null)
       setRun(null)
       setFrozen(null)
@@ -415,7 +420,7 @@ function FormalForm({
     setError(null)
     try {
       const result = await freezeFormalMethod(methodId, version, { ...run, visibility }, csrfToken)
-      if (result.digest !== receipt.definition_digest || !same(result.definition, applied))
+      if (result.digest !== receipt.definition_digest || !same(result.definition, definition))
         throw new Error('frozen_definition_mismatch')
       setFrozen(result)
     } catch (exc) {
@@ -459,12 +464,7 @@ function FormalForm({
           onSource={definition.procedure.kind === 'direct' ? chooseSource : undefined}
         />
       )}
-      {template && <TemplateSummary template={template} />}
-      {template && !document.body.formal_method && (
-        <Link className="text-sm underline" href={`/names/${initial.request_id}/workdraft`}>
-          {tt('editTemplate')}
-        </Link>
-      )}
+      {template && <StructuredValue label={tt('originalSteps')} value={template} />}
       {template && hasBrief && (
         <details>
           <summary>{tt('originalSteps')}</summary>
@@ -528,7 +528,7 @@ function FormalForm({
         </p>
       )}
       <fieldset
-        disabled={working || executionActive || adopting}
+        disabled={working || executionActive}
         className="space-y-2 rounded border p-4 text-sm"
       >
         <legend className="px-1 font-medium">{t('methodTarget')}</legend>
@@ -604,64 +604,13 @@ function FormalForm({
           </Button>
         </div>
       </fieldset>
-      <fieldset
-        disabled={working || executionActive || adopting}
-        className="space-y-4 rounded border p-4"
-      >
+      <fieldset disabled={working || executionActive} className="space-y-4 rounded border p-4">
         <legend className="px-1 font-medium">{t('definition')}</legend>
-        {!definition && template && (
-          <label className="block">
-            {tt('instruction')}
-            <select
-              className={input}
-              value=""
-              onChange={(e) => {
-                const selected = sources.data?.find((item) => sourceKey(item) === e.target.value)
-                if (!selected) return
-                editDefinition(
-                  instructionFromTemplate(template, initial.body.name || initial.title, selected),
-                )
-                setSource(selected)
-                setCallers(['host'])
-              }}
-            >
-              <option value="">{tt('pickInstruction')}</option>
-              {instructions?.map((s) => (
-                <option key={sourceKey(s)} value={sourceKey(s)}>
-                  {s.source} · {s.entry} · {s.version}
-                </option>
-              ))}
-            </select>
-            {sources.isError && <span role="alert">{t('sourceFailed')}</span>}
-            {instructions?.length === 0 && (
-              <span className="block text-sm">{tt('noInstruction')}</span>
-            )}
-            <span className="block text-sm">{tt('instructionScope')}</span>
-          </label>
-        )}
-        {!definition ? (
-          <ExpertFromTool
-            csrfToken={csrfToken}
-            requestId={initial.request_id}
-            targetMethodId={methodId}
-            onAdopt={(next) => {
-              editDefinition(next)
-              setSource(null)
-              setCallers(['host'])
-              setVisibility('private')
-              setRun(null)
-              setExecutionRun(false)
-              setInspected(null)
-              setError(null)
-            }}
-          />
-        ) : null}
         <ReviewRequirements
           definition={definition}
           collaboration={collaboration}
           onChange={(value) => {
             setCollaboration(value)
-            setReviewedPlan(null)
             changed()
           }}
         />
@@ -808,95 +757,6 @@ function FormalForm({
                     {t(gap.primitive, { step: gap.step })}
                   </p>
                 ))}
-                <P5Choice
-                  draft={definition}
-                  requestId={initial.request_id}
-                  methodId={methodId}
-                  csrfToken={csrfToken}
-                  revision={document.revision}
-                  key={JSON.stringify([
-                    initial.request_id,
-                    methodId,
-                    document.revision,
-                    definition,
-                  ])}
-                  onAdopt={(next) => {
-                    setReviewedPlan(next)
-                    editDefinition(next)
-                  }}
-                />
-                {!definition.procedure.steps.some((s) => !!s.candidate_choice) && (
-                  <P4Comparison
-                    draft={definition}
-                    requestId={initial.request_id}
-                    methodId={methodId}
-                    csrfToken={csrfToken}
-                    key={JSON.stringify([document.revision, definition])}
-                    onAdopt={(next) => {
-                      setReviewedPlan(next)
-                      editDefinition(next)
-                    }}
-                  />
-                )}
-                {!definition.procedure.object_batch &&
-                  !definition.procedure.steps.some((s) => !!s.candidate_choice) && (
-                    <>
-                      <P1Predecessor
-                        draft={definition}
-                        methodId={methodId}
-                        requestId={initial.request_id}
-                        csrfToken={csrfToken}
-                        revision={document.revision}
-                        onAdopt={(next) => {
-                          setReviewedPlan(next)
-                          editDefinition(next)
-                        }}
-                      />
-                      <P2Join
-                        key={JSON.stringify([document.revision, methodId, definition])}
-                        draft={definition}
-                        methodId={methodId}
-                        requestId={initial.request_id}
-                        csrfToken={csrfToken}
-                        revision={document.revision}
-                        onAdopt={(next) => {
-                          setReviewedPlan(next)
-                          editDefinition(next)
-                        }}
-                      />
-                      {!collaboration && (
-                        <P3Review
-                          key={JSON.stringify([
-                            initial.request_id,
-                            document.revision,
-                            methodId,
-                            definition,
-                          ])}
-                          draft={definition}
-                          methodId={methodId}
-                          requestId={initial.request_id}
-                          csrfToken={csrfToken}
-                          revision={document.revision}
-                          onAdopt={(next) => {
-                            if (
-                              next.procedure.kind !== 'orchestration' ||
-                              !next.procedure.collaboration
-                            )
-                              return
-                            const { collaboration: roles, ...procedure } = next.procedure
-                            const plan = { ...next, procedure }
-                            setCollaboration(roles)
-                            setReviewedPlan(plan)
-                            editDefinition(plan)
-                          }}
-                        />
-                      )}
-                      <ExpertInputBinding
-                        graph={definition.procedure}
-                        onChange={(procedure) => editDefinition({ ...definition, procedure })}
-                      />
-                    </>
-                  )}
               </>
             )}
             <div className="space-y-2 text-sm">

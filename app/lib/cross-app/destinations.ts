@@ -2,20 +2,6 @@ import { defineDestinations } from '@/lib/cross-app/links'
 
 // 这个应用会把用户带去的页面，都登记在这里。
 export const destinations = defineDestinations({
-  // 历史分支复核兼容入口
-  'knowbench.review': {
-    target: 'knowbench',
-    segments: ['workbench', 'review'],
-    params: [
-      'run_id',
-      'request_id',
-      'case_id',
-      'repetition',
-      'step',
-      'scope_digest',
-      'review_digest',
-    ],
-  },
   'knowbench.request': {
     target: 'knowbench',
     segments: ['workbench', 'projects', ':project', 'expert', 'new'],

@@ -70,18 +70,109 @@ const permission = z
     on_unavailable: z.literal('pause').default('pause'),
   })
   .strict()
-export const formalCallerBindingSchema = z.object({ source: z.literal('caller'), name }).strict()
+const lens = z
+  .object({
+    pick_fields: z.array(name).max(64).optional(),
+    rename_fields: z.record(name, name).optional(),
+  })
+  .strict()
+const objectBatch = z
+  .object({
+    max_objects: z.number().int().min(1).max(99),
+    on_missing: z.enum(['stop', 'request_partial']),
+  })
+  .strict()
+const pointer = z
+  .string()
+  .max(512)
+  .regex(/^(?:\/(?:[^~/]|~[01])*)*$/)
+const v0Check = z.discriminatedUnion('kind', [
+  z
+    .object({
+      kind: z.literal('schema_and_range'),
+      pointer,
+      min_value: z.number().optional(),
+      max_value: z.number().optional(),
+      non_empty: z.boolean().optional(),
+      allowed_values: z.array(z.string()).max(64).optional(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('numeric_identity'),
+      lhs_pointer: pointer,
+      rhs_pointer: pointer,
+      tolerance: z.number().nonnegative().optional(),
+    })
+    .strict(),
+  z
+    .object({ kind: z.literal('sourced_citation'), pointer, material_input_slot: name.optional() })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('collection_coverage'),
+      items_pointer: pointer,
+      key_field: name,
+      expected_keys_input_slot: name,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('prohibited_terms'),
+      pointer,
+      extra_terms: z.array(text).max(64).optional(),
+    })
+    .strict(),
+])
+export const formalChecksSchema = z.array(v0Check).max(16)
+const formalCallerBindingSchema = z
+  .object({
+    source: z.literal('caller'),
+    name,
+    caller_slot: slot.optional(),
+    lens: lens.optional(),
+  })
+  .strict()
 const binding = z.discriminatedUnion('source', [
   formalCallerBindingSchema,
   z.object({ source: z.literal('object_item'), name }).strict(),
   z.object({ source: z.literal('object_rows'), step: name, output: name }).strict(),
-  z.object({ source: z.literal('step'), step: name, output: name }).strict(),
+  z.object({ source: z.literal('step'), step: name, output: name, lens: lens.optional() }).strict(),
+  z
+    .object({
+      source: z.literal('collect_pack'),
+      items: z
+        .array(
+          z
+            .object({
+              tag: name,
+              step: name,
+              output: name,
+              allow_skipped: z.boolean().optional(),
+            })
+            .strict(),
+        )
+        .min(1)
+        .max(32),
+    })
+    .strict(),
   z.object({ source: z.literal('literal'), value: z.unknown() }).strict(),
   z.object({ source: z.literal('resource'), requirement_id: name, role: name }).strict(),
 ])
 const step = z
   .object({
     id: name,
+    artifact_guard: z
+      .object({
+        step: name,
+        output: name,
+        pointer: pointer.optional(),
+        op: z.enum(['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'in_set', 'is_present']),
+        value: z.unknown().optional(),
+      })
+      .strict()
+      .optional(),
+    step_batch: objectBatch.optional(),
     candidate_choice: z
       .object({
         input: name,
@@ -175,13 +266,7 @@ export const formalDefinitionSchema = z
         .object({
           kind: z.literal('orchestration'),
           collaboration: collaborationSchema,
-          object_batch: z
-            .object({
-              max_objects: z.number().int().min(1).max(99),
-              on_missing: z.enum(['stop', 'request_partial']),
-            })
-            .strict()
-            .optional(),
+          object_batch: objectBatch.optional(),
           instructions: text,
           steps: z.array(step).min(1).max(100),
           exports: z.record(
@@ -205,6 +290,7 @@ export const formalDefinitionSchema = z
       .array(
         z
           .object({
+            v0_checks: formalChecksSchema.optional(),
             promise_id: name,
             outputs: z.array(name).min(1).max(100),
             check: text,
@@ -223,6 +309,7 @@ export const formalDefinitionSchema = z
             operations: z.array(name).min(1).max(30),
             when: text,
             preview: z.array(name).min(1).max(100),
+            scope: z.enum(['envelope', 'per_action']).optional(),
             on_denied: z.enum(['pause', 'fail']),
           })
           .strict(),

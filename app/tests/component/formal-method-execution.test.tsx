@@ -973,19 +973,7 @@ it.each([false, true])(
     fireEvent.click(screen.getByLabelText(t.reviewFamily))
     fireEvent.click(screen.getByRole('button', { name: t.reviewSave }))
     expect(await screen.findByText(t.reviewWaiting)).toBeVisible()
-    const link = await screen.findByRole('link', { name: t.reviewChooseRoute })
-    const href = new URL(link.getAttribute('href')!)
-    expect(href.pathname).toMatch(/\/workbench\/review$/)
-    expect(Object.fromEntries(href.searchParams)).toEqual({
-      from: 'knowlab',
-      run_id: RUN,
-      request_id: REQUEST,
-      case_id: 'case_1',
-      repetition: '1',
-      step: 'left',
-      scope_digest: DIGEST,
-      review_digest: DIGEST,
-    })
+    expect(screen.queryByRole('link')).toBeNull()
     expect(
       fetcher.mock.calls.filter(([url]) => String(url).endsWith('/branch-review')),
     ).toHaveLength(1)

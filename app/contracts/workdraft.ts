@@ -241,6 +241,7 @@ export const dataFormatSchema = z
 export type DataFormat = z.infer<typeof dataFormatSchema>
 
 export const workdraftSchema = z.object({
+  studio_method_id: z.uuid().optional(),
   contract_version: z.literal(1),
   request_id: z.string().uuid(),
   title: z.string(),

@@ -62,7 +62,11 @@ export function FormalOrchestrationSummary({
                       ? `${binding.step}.${binding.output}`
                       : binding.source === 'resource'
                         ? `${binding.requirement_id}.${binding.role}`
-                        : JSON.stringify(binding.value)}
+                        : binding.source === 'collect_pack'
+                          ? binding.items
+                              .map((item) => `${item.tag}: ${item.step}.${item.output}`)
+                              .join(', ')
+                          : JSON.stringify(binding.value)}
                 </p>
               ))}
               {!Object.keys(step.inputs).length ? <p>{t('none')}</p> : null}
