@@ -7,7 +7,6 @@ export const destinations = defineDestinations({
     segments: ['workbench', 'projects', ':project', 'expert', 'new'],
     params: ['formal_match'],
   },
-  'knowbench.ask': { target: 'knowbench', segments: ['workbench'], params: ['knowbot'] },
   // 直达 KnowBench 正式专家准备页（携带 mode=expert 与 formal_method）
   'knowbench.summonFormal': {
     target: 'knowbench',

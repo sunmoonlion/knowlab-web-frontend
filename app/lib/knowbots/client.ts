@@ -2,16 +2,7 @@
 
 import { z } from 'zod'
 
-import {
-  computersSchema,
-  expertMovedSchema,
-  expertsSchema,
-  librarySchema,
-  type Computers,
-  type ExpertItem,
-  type ExpertStage,
-  type Material,
-} from '@/contracts/knowbots'
+import { computersSchema, librarySchema, type Computers, type Material } from '@/contracts/knowbots'
 
 import { oneRoundSchema, roundsSchema, type Round, type RoundStart } from '@/contracts/workdraft'
 
@@ -35,25 +26,8 @@ const BASE = '/api/web/v1'
 
 const enc = encodeURIComponent
 
-export async function fetchExperts(): Promise<ExpertItem[]> {
-  return parse(expertsSchema, await requestJson(`${BASE}/method-directory/listed-experts`)).items
-}
-
 export async function fetchLibrary(): Promise<Material[]> {
   return parse(librarySchema, await requestJson(`${BASE}/knowbot-library`)).materials
-}
-
-export async function stopExpert(
-  expertId: string,
-  reason: string,
-  csrfToken: string,
-): Promise<ExpertStage> {
-  const answer = await requestJson(`${BASE}/knowbot-experts/${enc(expertId)}/stop`, {
-    method: 'POST',
-    csrfToken,
-    body: { reason },
-  })
-  return parse(expertMovedSchema, answer).stage
 }
 
 const workdraftOf = (requestId: string) => `${BASE}/knowbot-requests/${enc(requestId)}/workdraft`

@@ -1,50 +1,5 @@
 import { z } from 'zod'
 
-export const TEST_STATUSES = [
-  'queued',
-  'running',
-  'waiting',
-  'passed',
-  'failed',
-  'platform_error',
-] as const
-export const EXPERT_STAGES = [
-  'to_return',
-  'awaiting_user',
-  'declined',
-  'to_review',
-  'rejected',
-  'to_deliver',
-  'listed',
-  'stopped',
-] as const
-
-const expertItemSchema = z.object({
-  expert_id: z.uuid(),
-  version: z.number().int().positive(),
-  title: z.string(),
-  name: z.string().nullable(),
-  knowbot_id: z.string().nullable(),
-  trial: z.boolean(),
-  market_status: z.string().nullable(),
-  held_reason: z.string().nullable(),
-})
-
-export const expertsSchema = z.object({
-  contract_version: z.literal(1),
-  items: z.array(expertItemSchema),
-})
-
-export const expertMovedSchema = z.object({
-  contract_version: z.literal(1),
-  expert_id: z.string().uuid(),
-  stage: z.enum(EXPERT_STAGES),
-})
-export type TestStatus = (typeof TEST_STATUSES)[number]
-
-export type ExpertStage = (typeof EXPERT_STAGES)[number]
-export type ExpertItem = z.infer<typeof expertItemSchema>
-
 // ---------- 自助测试与测试里的数据（SDD 0046 第三节，decisions ⑭） ----------
 export const computerSchema = z.object({
   environment_id: z.string().uuid(),

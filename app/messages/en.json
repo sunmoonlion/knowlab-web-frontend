@@ -210,71 +210,7 @@
     "asProposed": "As proposed"
   },
   "knowbots": {
-    "loading": "Loading…",
     "loadFailed": "Could not load. Please refresh and try again.",
-    "caseN": "Your case {n}",
-    "caseId": "Case {id}",
-    "category": "Categories",
-    "empty": "Nothing in this category.",
-    "columns": {
-      "experts": "Experts"
-    },
-    "categories": {
-      "working": "In progress",
-      "has_expert": "Has an expert",
-      "rejected": "Not accepted",
-      "answer": "To answer",
-      "review": "To review",
-      "decide": "To decide",
-      "new": "Newly returned",
-      "accepted": "Accepted by you, waiting for our review",
-      "usable": "Usable",
-      "stopped": "Stopped",
-      "not_listed": "Not listed",
-      "self": "On my own",
-      "platform": "Platform",
-      "to_test": "To test",
-      "testing": "Testing",
-      "tested": "Tested",
-      "no_draft": "No draft yet"
-    },
-    "expertVersion": "expert version {version}",
-    "expertStage": {
-      "to_return": "passed the test",
-      "awaiting_user": "waiting for your decision",
-      "declined": "declined by you",
-      "to_review": "accepted by you, waiting for our review",
-      "rejected": "did not pass our review",
-      "to_deliver": "approved, being listed",
-      "listed": "usable",
-      "stopped": "stopped"
-    },
-    "experts": {
-      "title": "Experts",
-      "intro": "The expert versions that passed and that you can see, yours alone. Once you submit one for delivery and it passes review, you can ask it in the knowbench workbench.",
-      "empty": "No experts of yours yet.",
-      "versions": "Versions of this name",
-      "hint": "Ask it in the knowbench workbench: look for “{name}” when choosing an expert.",
-      "ask": "Ask it in knowbench",
-      "askWithQuestion": "Ask it in knowbench with your original question",
-      "trial": "This version was listed in the trial period (before the two gates existed).",
-      "stopReason": "Why you stop it",
-      "stop": "Stop this version",
-      "stopFailed": "Could not stop it. Please try again later.",
-      "stoppedAt": "stopped {at}: {reason}",
-      "now": {
-        "to_return": "It passed; submit it for delivery once the platform returns it to you.",
-        "awaiting_user": "It passed; waiting for you to submit it for delivery (or decline it).",
-        "declined": "You declined this version; it is not listed.",
-        "to_review": "You submitted it; waiting for the platform to review it. Once it passes you can ask it.",
-        "rejected": "It did not pass our review and is not listed: {reason}",
-        "to_deliver": "Reviewed; being listed now.",
-        "listed": "Ready to use.",
-        "stopped": "This version is stopped."
-      },
-      "toDelivery": "Submit it in Delivery",
-      "toPublic": "Make it public in Delivery"
-    },
     "home": {
       "title": "Home",
       "intro": "Where things stand and what needs you, all here.",
@@ -306,15 +242,6 @@
       "unconfirmed": "Description unconfirmed",
       "notMine": "Bought",
       "version": "Version {n}"
-    },
-    "delivery": {
-      "held": "This version is on hold in knowmart and others cannot ask it now: {reason}. It comes back once you sort it out in knowbase; to change the data, make a new version.",
-      "heldReason": {
-        "binding_gone": "a piece of data you bound to this expert is no longer available to you",
-        "binding_disabled": "a piece of data you bound to this expert was disabled by the platform",
-        "binding_deleted": "a piece of data you bound to this expert was deleted",
-        "binding_not_shareable": "a piece of data you bound to this expert is now licensed for your use only"
-      }
     }
   },
   "workdraft": {

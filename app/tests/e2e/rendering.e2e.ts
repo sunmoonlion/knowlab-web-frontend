@@ -26,6 +26,13 @@ test('public route is rendered and indexable', async ({ page }) => {
   await expect(page.locator('meta[name="robots"]')).toHaveCount(0)
 })
 
+test('signed-in owners get 404 for the retired listed-experts page', async ({ request }) => {
+  const response = await request.get('/zh-CN/methods/listed', {
+    headers: { Cookie: 'sunmoonai_knowlab_web_sid=e2e-session' },
+  })
+  expect(response.status()).toBe(404)
+})
+
 test('anonymous workspace request is redirected by the SSR authorization boundary', async ({
   page,
 }) => {

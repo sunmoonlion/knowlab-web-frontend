@@ -210,71 +210,7 @@
     "asProposed": "按提议"
   },
   "knowbots": {
-    "loading": "正在读取……",
     "loadFailed": "读取失败，请刷新再试。",
-    "caseN": "你的第 {n} 条用例",
-    "caseId": "用例 {id}",
-    "category": "大类",
-    "empty": "这一类没有。",
-    "columns": {
-      "experts": "专家"
-    },
-    "categories": {
-      "working": "在做",
-      "has_expert": "已出专家",
-      "rejected": "没受理",
-      "answer": "等你回答",
-      "review": "等你处理",
-      "decide": "等你决定要不要",
-      "new": "新交回",
-      "accepted": "你已同意，等我们审核",
-      "usable": "能用",
-      "stopped": "停用了",
-      "not_listed": "没上架",
-      "self": "自己来",
-      "platform": "平台孵化",
-      "to_test": "待测",
-      "testing": "在测",
-      "tested": "测过了",
-      "no_draft": "还没出准专家"
-    },
-    "expertVersion": "专家第 {version} 版",
-    "expertStage": {
-      "to_return": "测试通过",
-      "awaiting_user": "等你决定",
-      "declined": "你没要",
-      "to_review": "你已同意，等我们审核",
-      "rejected": "审核没通过",
-      "to_deliver": "审过了，正在上架",
-      "listed": "能用",
-      "stopped": "停用了"
-    },
-    "experts": {
-      "title": "专家",
-      "intro": "测试通过、你看得到的各版专家，只归你自己。你提交交付、审过的，在 knowbench 工作台就能请。",
-      "empty": "还没有你的专家。",
-      "versions": "这个名称的各版",
-      "hint": "去 knowbench 工作台请它：在工作台选专家时找「{name}」。",
-      "ask": "去 knowbench 请它",
-      "askWithQuestion": "带着当初那句问题去 knowbench 请它",
-      "trial": "这一版在试行期就上架了（那时还没有这两道门）。",
-      "stopReason": "停用的原因",
-      "stop": "停用这一版",
-      "stopFailed": "没停成，请稍后再试。",
-      "stoppedAt": "{at} 停用：{reason}",
-      "now": {
-        "to_return": "测试通过了，平台交回你之后再提交交付。",
-        "awaiting_user": "测试通过了，等你提交交付（或不要这一版）。",
-        "declined": "你没要这一版，它不上架。",
-        "to_review": "你已提交交付，等平台审核；审过就能请。",
-        "rejected": "我们审核没通过，这一版不上架：{reason}",
-        "to_deliver": "审过了，正在上架。",
-        "listed": "能用了。",
-        "stopped": "这一版停用了。"
-      },
-      "toDelivery": "去「交付」提交",
-      "toPublic": "去「交付」转公开"
-    },
     "home": {
       "title": "首页",
       "intro": "到哪了、要你做什么，都在这里。",
@@ -306,15 +242,6 @@
       "unconfirmed": "描述待确认",
       "notMine": "买来的",
       "version": "第 {n} 版"
-    },
-    "delivery": {
-      "held": "这一版在 knowmart 待处理，别人现在请不了：{reason}。去 knowbase 处理好后会自动恢复；要换数据请出新一版。",
-      "heldReason": {
-        "binding_gone": "你绑给这位专家的数据有一份你已经用不了",
-        "binding_disabled": "你绑给这位专家的数据有一份被平台禁用",
-        "binding_deleted": "你绑给这位专家的数据有一份删了",
-        "binding_not_shareable": "你绑给这位专家的数据有一份许可改成了「只许本人用」"
-      }
     }
   },
   "workdraft": {
