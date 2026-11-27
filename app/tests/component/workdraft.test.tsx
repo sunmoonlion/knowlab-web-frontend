@@ -40,6 +40,14 @@ vi.mock('@/lib/knowbots/client', () => ({
 }))
 vi.mock('@/i18n/navigation', async () => (await import('./knowbot-fixtures')).linkMock())
 
+const dynamicPlanning = {
+  method_text: '按稿选择步骤',
+  final_units: ['s1'],
+  max_steps: 2,
+  max_replans: 0,
+  reserve: '1',
+  input_max_chars: 2000,
+}
 const w = messages.workdraft
 
 function emptyBody(): WorkdraftBody {
@@ -75,7 +83,7 @@ function preview(over: Partial<Preview> = {}): Preview {
   return {
     contract_version: 1,
     version: '1',
-    manifest: { schema: 'knowbot-manifest/v2' },
+    manifest: { schema: 'knowbot-manifest/v3' },
     problems: [],
     ...over,
   }
@@ -467,7 +475,7 @@ describe('工作稿：格子与自动保存（专家孵化方案第六节）', (
   })
 
   it('后端预览回来的问题按格子标红；页面上没有那一格的列在顶上', async () => {
-    server = workdraft({ body: { ...emptyBody(), steps: [step('s1')] } })
+    server = workdraft({ body: { ...emptyBody(), planning: dynamicPlanning, steps: [step('s1')] } })
     vi.mocked(previewWorkdraft).mockResolvedValue(
       preview({
         problems: [
@@ -495,7 +503,8 @@ describe('工作稿：顶上的按钮', () => {
     expect(screen.getByRole('button', { name: w.toolbar.aiRevise })).toBeEnabled()
   })
 
-  it('预览清单：弹出编出的清单与问题', async () => {
+  it('动态工作稿可预览编出的清单', async () => {
+    server = workdraft({ body: { ...emptyBody(), planning: dynamicPlanning } })
     vi.mocked(previewWorkdraft).mockResolvedValue(
       preview({ problems: [{ path: 'steps', message: 'add at least one step' }] }),
     )
@@ -507,10 +516,11 @@ describe('工作稿：顶上的按钮', () => {
     expect(screen.getByRole('button', { name: messages.methodTemplate.design })).toBeEnabled()
     expect(dialog.getByText(w.preview.source).closest('details')).not.toHaveAttribute('open')
     fireEvent.click(dialog.getByText(w.preview.source))
-    expect(dialog.getByTestId('preview-manifest')).toHaveTextContent('knowbot-manifest/v2')
+    expect(dialog.getByTestId('preview-manifest')).toHaveTextContent('knowbot-manifest/v3')
   })
 
-  it('出一版成功：提示准专家版本，回名称页', async () => {
+  it('动态工作稿可发布准专家版本', async () => {
+    server = workdraft({ body: { ...emptyBody(), planning: dynamicPlanning } })
     const push = vi.spyOn(router, 'push')
     vi.mocked(publishWorkdraft).mockResolvedValue({
       contract_version: 1,
@@ -532,7 +542,7 @@ describe('工作稿：顶上的按钮', () => {
   })
 
   it('出一版没过：重新预览，问题标到格子上', async () => {
-    server = workdraft({ body: { ...emptyBody(), steps: [step('s1')] } })
+    server = workdraft({ body: { ...emptyBody(), planning: dynamicPlanning, steps: [step('s1')] } })
     vi.mocked(publishWorkdraft).mockRejectedValue(refused('workdraft_invalid'))
     page()
     await screen.findByLabelText(w.step.does)
@@ -549,10 +559,23 @@ describe('工作稿：顶上的按钮', () => {
     vi.mocked(saveWorkdraftCells).mockRejectedValue(refused('workdraft_invalid'))
     page()
     fireEvent.change(await screen.findByLabelText(w.expert.name), { target: { value: '财务' } })
-    fireEvent.click(screen.getByRole('button', { name: w.toolbar.publish }))
+    fireEvent.click(screen.getByRole('button', { name: messages.methodTemplate.design }))
     expect(await screen.findByText(w.publish.unsaved)).toBeInTheDocument()
     expect(publishWorkdraft).not.toHaveBeenCalled()
     expect(screen.getByText('没存上（workdraft_invalid），再改一下会重存。')).toBeInTheDocument()
+  })
+
+  it('普通工作稿保存后进入正式设计，无固定包预览或发布', async () => {
+    const push = vi.spyOn(router, 'push')
+    page()
+    fireEvent.change(await screen.findByLabelText(w.expert.name), { target: { value: '财务' } })
+    fireEvent.click(screen.getByRole('button', { name: messages.methodTemplate.design }))
+    await waitFor(() => expect(push).toHaveBeenCalledWith(`/names/${REQUEST}/formal-method`))
+    expect(saveWorkdraftCells).toHaveBeenCalledTimes(1)
+    expect(previewWorkdraft).not.toHaveBeenCalled()
+    expect(publishWorkdraft).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: w.toolbar.publish })).toBeNull()
+    push.mockRestore()
   })
 
   it('离开页面时还没到点的那次照样存', async () => {
