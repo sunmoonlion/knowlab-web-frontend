@@ -2100,6 +2100,7 @@
     "cl1Verified": "C-L1 author provenance verified",
     "cl1Pending": "C-L1 awaiting author confirmation",
     "viewInputs": "View A · Public inputs (public_inputs)",
+    "missingSources": "Promises without a bound output: {names}",
     "viewReturns": "View B · Deliverables (what_to_return)",
     "none": "None"
   }

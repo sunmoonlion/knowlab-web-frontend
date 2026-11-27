@@ -53,7 +53,7 @@ describe('Method Studio & Author Method Directory', () => {
             description: '报表行',
             required: true,
             domain_id: 'fin.statement.row',
-            domain_label: '财务报表行',
+            schema_type: 'object',
           },
         ],
         what_to_return: [
@@ -62,10 +62,10 @@ describe('Method Studio & Author Method Directory', () => {
             description: '输出勾稽核验回执',
             required: true,
             domain_id: 'audit.check_receipt',
-            domain_label: '核验回执',
+            schema_type: 'object',
           },
         ],
-        issues: [],
+        missing_promise_sources: [],
         unconfirmed_paths: ['capability.purpose'],
         ready_to_freeze: false,
       },
@@ -102,7 +102,10 @@ describe('Method Studio & Author Method Directory', () => {
 
     vi.spyOn(draftApi, 'fetchSlotVocabulary').mockResolvedValue({
       vocab_version: '1',
-      domains: [{ domain_id: 'audit.check_receipt', label: '核验回执' }],
+      domains: [
+        { domain_id: 'fin.statement.row', label: '财务报表行' },
+        { domain_id: 'audit.check_receipt', label: '核验回执' },
+      ],
       presets: ['structured_record'],
       archetypes: ['S1', 'S2', 'S3', 'S4'],
     })

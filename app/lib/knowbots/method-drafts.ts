@@ -9,7 +9,12 @@ export type ArchetypeId = z.infer<typeof archetypeIdSchema>
 const slotVocabularySchema = z
   .object({
     vocab_version: z.string(),
-    domains: z.array(z.object({ domain_id: z.string(), label: z.string() })),
+    domains: z.array(
+      z.object({
+        domain_id: z.string(),
+        label: z.union([z.string(), z.object({ label: z.string() }).transform((entry) => entry.label)]),
+      }),
+    ),
     presets: z.array(z.string()),
     archetypes: z.array(archetypeIdSchema),
   })
@@ -30,7 +35,7 @@ const draftSummarySchema = z
     method_id: z.uuid(),
     request_id: z.uuid().nullable(),
     revision: z.number().int().nonnegative(),
-    archetype: archetypeIdSchema,
+    archetype: archetypeIdSchema.nullable(),
     method_kind: z.enum(['tool', 'expert']),
     title: z.string(),
     purpose: z.string(),
@@ -41,26 +46,34 @@ const draftSummarySchema = z
   .loose()
 export type MethodDraftSummary = z.infer<typeof draftSummarySchema>
 
-const publicSlotViewSchema = z
-  .object({
-    name: z.string(),
-    description: z.string(),
-    required: z.boolean(),
-    schema_type: z.string().optional(),
-    domain_id: z.string().nullable().optional(),
-    domain_label: z.string().nullable().optional(),
-  })
-  .loose()
+const projectedSlots = z
+  .record(
+    z.string(),
+    z.object({
+      slot: z.object({
+        description: z.string(),
+        required: z.boolean(),
+        schema: z.record(z.string(), z.unknown()),
+        meaning: z.record(z.string(), z.string()),
+      }),
+    }),
+  )
+  .transform((slots) =>
+    Object.entries(slots).map(([name, { slot }]) => ({
+      name,
+      description: slot.description,
+      required: slot.required,
+      schema_type: typeof slot.schema.type === 'string' ? slot.schema.type : undefined,
+      domain_id: slot.meaning.domain_id,
+    })),
+  )
 
-const projectionSchema = z
-  .object({
-    public_inputs: z.array(publicSlotViewSchema).default([]),
-    what_to_return: z.array(publicSlotViewSchema).default([]),
-    issues: z.array(z.string()).default([]),
-    unconfirmed_paths: z.array(z.string()).default([]),
-    ready_to_freeze: z.boolean(),
-  })
-  .loose()
+const projectionSchema = z.object({
+  public_inputs: projectedSlots,
+  what_to_return: projectedSlots,
+  missing_promise_sources: z.array(z.string()),
+  ready_to_freeze: z.boolean(),
+})
 
 const methodDraftDetailSchema = z
   .object({
@@ -80,6 +93,13 @@ const methodDraftDetailSchema = z
     provenance_issues: z.array(z.string()).default([]),
   })
   .loose()
+  .transform((detail) => ({
+    ...detail,
+    projection: {
+      ...detail.projection,
+      unconfirmed_paths: z.array(z.string()).parse(detail.draft_contract.unconfirmed_paths ?? []),
+    },
+  }))
 export type MethodDraftDetail = z.infer<typeof methodDraftDetailSchema>
 
 export async function fetchSlotVocabulary() {

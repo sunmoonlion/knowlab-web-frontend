@@ -2100,6 +2100,7 @@
     "cl1Verified": "C-L1 作者出处已确权",
     "cl1Pending": "C-L1 待作者确权",
     "viewInputs": "视图 A · 公开输入槽 (public_inputs)",
+    "missingSources": "缺少交付来源的承诺：{names}",
     "viewReturns": "视图 B · 返回交付槽 (what_to_return)",
     "none": "暂无"
   }

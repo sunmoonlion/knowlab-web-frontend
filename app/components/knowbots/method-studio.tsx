@@ -566,6 +566,11 @@ function StudioForm({
     !!validation.receipt &&
     receiptCoversCallers(validation.receipt, callers)
 
+  function slotLabel(slot: MethodDraftDetail['projection']['public_inputs'][number]) {
+    const domain = domains.find((item) => item.domain_id === slot.domain_id)
+    return `${slot.name}(${domain?.label ?? slot.domain_id ?? slot.schema_type ?? 'any'})`
+  }
+
   return (
     <div className="space-y-6 pb-24">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1271,23 +1276,19 @@ function StudioForm({
           <div>
             <span className="text-muted-foreground font-medium">{t('viewInputs')}: </span>
             {detail.projection.public_inputs.length
-              ? detail.projection.public_inputs
-                  .map((s) => `${s.name}(${s.domain_label || s.domain_id || s.schema_type || 'any'})`)
-                  .join(' · ')
+              ? detail.projection.public_inputs.map(slotLabel).join(' · ')
               : t('none')}
           </div>
           <div>
             <span className="text-muted-foreground font-medium">{t('viewReturns')}: </span>
             {detail.projection.what_to_return.length
-              ? detail.projection.what_to_return
-                  .map((s) => `${s.name}(${s.domain_label || s.domain_id || s.schema_type || 'any'})`)
-                  .join(' · ')
+              ? detail.projection.what_to_return.map(slotLabel).join(' · ')
               : t('none')}
           </div>
         </div>
-        {detail.projection.issues.length > 0 ? (
+        {detail.projection.missing_promise_sources.length > 0 ? (
           <p className="mt-1 text-amber-700 dark:text-amber-300">
-            {detail.projection.issues.join('；')}
+            {t('missingSources', { names: detail.projection.missing_promise_sources.join(', ') })}
           </p>
         ) : null}
       </aside>
