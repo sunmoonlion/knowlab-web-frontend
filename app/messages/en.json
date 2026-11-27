@@ -66,6 +66,7 @@
   "nav": {
     "home": "Home",
     "dashboard": "Home",
+    "studio": "Method Studio",
     "settings": "Settings",
     "experts": "Experts",
     "mainNavigation": "Main navigation",
@@ -80,6 +81,8 @@
     "delivery": "Delivery",
     "knowledge": "Knowledge",
     "groups": {
+      "primary": "Primary",
+      "archive": "Legacy archive",
       "process": "Process",
       "results": "Results"
     },
@@ -454,6 +457,10 @@
     "home": {
       "title": "Home",
       "intro": "Where things stand and what needs you, all here.",
+      "studioTitle": "Five-Element Method Studio",
+      "studioLead": "Author formal expert and tool methods with Five-Element contracts, live Two-View projection, and V0 checks.",
+      "openStudio": "Open Method Studio",
+      "openMethods": "Methods and skills",
       "passed": "Your idea “{title}” passed its test: go and confirm",
       "todo": "Waiting for you",
       "todoNone": "Nothing is waiting for you.",
@@ -1937,6 +1944,163 @@
     "pick": "Use for this step",
     "previous": "Previous",
     "next": "Next",
-    "pickSource": "Use this implementation"
+    "pickSource": "Use this implementation",
+    "openStudio": "Create in Method Studio",
+    "browseMarket": "Browse KnowMart",
+    "openShop": "Manage shop listings",
+    "registerSourceInline": "Register script or instruction inline",
+    "sourceKind": "Source type",
+    "script": "Isolated script",
+    "instruction": "Managed instruction",
+    "sourceName": "Source name",
+    "sourceContent": "Script or instruction content",
+    "saveSource": "Save and sync source",
+    "hasDeliveryTerms": "Delivery terms ready",
+    "wrapAsTool": "Create tool method from source",
+    "methodKind": {
+      "tool": "Tool method",
+      "expert": "Expert method"
+    },
+    "syncSelf": "Sync for self use",
+    "selfStatus": {
+      "listed": "Listed for self",
+      "pending": "Pending",
+      "withdrawn": "Withdrawn",
+      "rejected": "Rejected"
+    },
+    "tryInWorkbench": "Try in KnowBench",
+    "bindInstallation": "Bind local installation",
+    "chooseInstallation": "Choose installation"
+  },
+  "studio": {
+    "title": "Method Studio",
+    "lead": "Unified Five-Element contract base (Capability · Permissions · Procedure · Validation · Approval) with live Two-View projection.",
+    "editorTitle": "Five-Element & Two-View Method Studio",
+    "createTitle": "Create a Five-Element draft from an engineering archetype",
+    "createLead": "Archetypes generate an unlocked engineering skeleton; every business rule must be confirmed by you before trial and freeze.",
+    "archetypes": {
+      "S1": {
+        "title": "S1 · Deterministic Verification & Calculation",
+        "desc": "For table reconciliation, structured transforms, and deterministic computation with V0 numeric checks."
+      },
+      "S2": {
+        "title": "S2 · Authorized Data Retrieval & Conditional Delivery",
+        "desc": "For KnowBase reads, conditional routing, and partial-allowed deliverables with citation and coverage checks."
+      },
+      "S3": {
+        "title": "S3 · Isolated Blind Review & Cross-Verification",
+        "desc": "For producer output plus isolated or cross-model-family blind review with V0 gates and bounded reworks."
+      },
+      "S4": {
+        "title": "S4 · Controlled External Write / Send Action",
+        "desc": "For connector writes or external messaging with pre-send prohibited-terms checks and per-action approval."
+      }
+    },
+    "methodTitle": "Method title",
+    "titlePlaceholder": "e.g., Three-statement reconciliation checker",
+    "methodKind": "Method kind",
+    "kind": {
+      "expert": "Expert method (4-primitive orchestration)",
+      "tool": "Tool method (direct implementation source)"
+    },
+    "purposeOptional": "Core purpose (optional, editable inside Studio)",
+    "purposePlaceholder": "Briefly describe the engineering or verification task solved by this method",
+    "prefilledSource": "Prefilled source: {name} (v{version}), ready to bind in Step 2.",
+    "createAction": "Create Five-Element draft and open Studio",
+    "saveError": "Operation failed ({code}). Check your inputs and try again.",
+    "draftsTitle": "My in-progress method drafts",
+    "loading": "Loading Studio data…",
+    "loadError": "Could not load method draft. Refresh and try again.",
+    "emptyDrafts": "No active drafts yet. Pick an engineering archetype above to start.",
+    "readyBadge": "Contract closed, ready for trial and freeze",
+    "editingBadge": "Draft in progress",
+    "childOfStep": "Child draft spawned from parent step {step}",
+    "backToStudio": "Back to Method Studio",
+    "fractalGapBanner": "Filling capability gap for parent step “{step}”",
+    "openParentDraft": "Open parent draft",
+    "steps": {
+      "contract": "Five-Element contract & C-L1",
+      "procedure": "Procedure (source / 4-primitive canvas)",
+      "trial": "Trial & governance check",
+      "freeze": "Freeze, backfill & publish"
+    },
+    "unconfirmedTitle": "{count} archetype or suggestion items await your confirmation (C-L1)",
+    "confirmAllProvenance": "Review and confirm all provenance",
+    "allowedCallers": "Allowed callers",
+    "caller": {
+      "host": "Host runner",
+      "model": "Controlled model call"
+    },
+    "purpose": "Core purpose (Element ①)",
+    "appliesWhen": "Applies when (one per line)",
+    "excludes": "Explicit exclusions (one per line)",
+    "deliverablesTitle": "Expected deliverables & controlled semantic slots (Element ① → Return View)",
+    "defaultDeliverableSummary": "Structured verification output",
+    "defaultValidationCheck": "Output satisfies target slot schema and verification rules",
+    "defaultValidationEvidence": "Execution output and deterministic check receipt",
+    "addDeliverable": "Add deliverable slot",
+    "promiseId": "Promise slot ID",
+    "domainVocabulary": "Controlled semantic domain (SlotMeaningCatalog)",
+    "deliveryMode": "Delivery mode",
+    "mode": {
+      "always": "Always required",
+      "conditional": "Conditional",
+      "partial_allowed": "Partial allowed"
+    },
+    "promiseSummary": "Public promise summary",
+    "v0RulesTitle": "Validation rules & executable V0 deterministic operators (Element ④)",
+    "ruleCheck": "Acceptance check",
+    "v0Operator": "V0 deterministic operator",
+    "v0None": "Schema & assertion check only",
+    "v0": {
+      "schema_and_range": "Schema & numeric range check",
+      "numeric_identity": "Cross-field numeric identity",
+      "sourced_citation": "Source quote & citation check",
+      "collection_coverage": "Collection coverage check",
+      "prohibited_terms": "Prohibited terms gate"
+    },
+    "saveAndConfirm": "Save Five-Element contract & confirm",
+    "savedNotice": "Saved Five-Element draft revision {revision} to author provenance ledger.",
+    "toolSourceTitle": "Bind or register implementation source inline (Element ③ · Tool)",
+    "registerInlineSource": "Register script / instruction inline",
+    "sourceKind": "Source kind",
+    "script": "Isolated script",
+    "instruction": "Managed instruction",
+    "sourceName": "Source name",
+    "sourceContent": "Source content",
+    "saveInlineSource": "Register source version",
+    "sourceRegistered": "Registered source “{name}” v{version}.",
+    "selectBoundSource": "Select ready implementation source",
+    "chooseSourceOption": "Choose source version",
+    "saveProcedure": "Save procedure & update Two-View projection",
+    "canvasSteps": "4-primitive step nodes",
+    "pinnedCandidates": "Pinned {count} exact method version(s)",
+    "gapUnbound": "Awaiting method binding or child draft",
+    "spawnFromStep": "Spawn child method from gap",
+    "addStepNode": "Add orchestration step",
+    "stepBindingColumn": "Directory selection & fractal gap spawn",
+    "spawnGapTitle": "Spawn child draft for step “{step}”",
+    "confirmSpawnGap": "Create and open child draft",
+    "rollupColumn": "Permission & approval auto-rollup (Elements ②⑤)",
+    "rollupHint": "Saving the procedure rolls up child permissions and approvals under deterministic step namespaces.",
+    "anchorHint": "Attach a self-mode runtime anchor before running governance checks and live trials.",
+    "prepareRuntimeAnchor": "Initialize trial anchor",
+    "runGovernanceCheck": "Run governance admission check",
+    "refreshGovernanceCheck": "Refresh check status",
+    "freezeVersion": "Target frozen version",
+    "freezeVisibility": "Frozen visibility scope",
+    "private": "Private (self use)",
+    "public": "Public delivery scope",
+    "confirmFreeze": "Confirm and freeze formal version",
+    "frozenNotice": "Formal method version {version} frozen",
+    "syncSelfListing": "Sync to my workbench (self listing)",
+    "openKnowMartShop": "Open KnowMart shop for public review",
+    "bindBackToParent": "Bind back to parent step “{step}”",
+    "twoViewBar": "Live Two-View & contract closure status",
+    "cl1Verified": "C-L1 author provenance verified",
+    "cl1Pending": "C-L1 awaiting author confirmation",
+    "viewInputs": "View A · Public inputs (public_inputs)",
+    "viewReturns": "View B · Deliverables (what_to_return)",
+    "none": "None"
   }
 }

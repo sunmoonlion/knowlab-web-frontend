@@ -25,50 +25,46 @@ beforeEach(() => {
 })
 
 describe('web端外壳', () => {
-  it('lists the first-level pages in the user order, with no tab strip', async () => {
+  it('lists the 4 formal-first primary pages and folds legacy routes into the archive group', async () => {
     vi.mocked(fetchCounts).mockResolvedValue({ inbox: 0, experts_new: 0 })
     shell()
     const nav = screen.getByRole('navigation', { name: '主导航' })
-    const links = within(nav).getAllByRole('link')
-    // 首页之下：过程（申请 · 孵化 · 测试 · 交付 · 待办），结果（专家 · 知识库）（SDD 0046 第六节）
-    expect(links.map((a) => a.getAttribute('href'))).toEqual([
+    const primaryLinks = within(screen.getByTestId('nav-group-primary')).getAllByRole('link')
+    expect(primaryLinks.map((a) => a.getAttribute('href'))).toEqual([
       '/dashboard',
-      '/applications',
-      '/incubation',
-      '/tests',
-      '/delivery',
-      '/review',
-      '/experts',
+      '/studio',
       '/methods',
       '/knowledge',
     ])
-    expect(links.map((a) => a.textContent?.replace(/\d+$/, ''))).toEqual([
+    expect(primaryLinks.map((a) => a.textContent?.trim())).toEqual([
       '首页',
-      '申请',
-      '孵化',
-      '测试',
-      '交付',
-      '待办',
-      '专家',
+      '方法工坊',
       '方法与技能',
       '知识库',
     ])
-    expect(within(screen.getByTestId('nav-group-process')).getByText('过程')).toBeInTheDocument()
+    // fixture 默认路径在 /applications，归档组自动展开并高亮「申请」
+    const archiveGroup = screen.getByTestId('nav-group-archive')
+    expect(within(archiveGroup).getByRole('button', { name: /历史兼容归档/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
     expect(
-      within(screen.getByTestId('nav-group-results'))
+      within(archiveGroup)
         .getAllByRole('link')
         .map((a) => a.getAttribute('href')),
-    ).toEqual(['/experts', '/methods', '/knowledge'])
-    // 不叫「我的专家」
+    ).toEqual(['/applications', '/incubation', '/tests', '/delivery', '/review', '/experts'])
     expect(screen.queryByText('我的专家')).toBeNull()
     expect(within(nav).getByRole('link', { name: /申请/ })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByText('页面内容')).toBeInTheDocument()
     expect(screen.getByText('当前用户：张三')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '退出登录' })).toBeInTheDocument()
-    // 没有数字时是灰的 0
     const badge = await screen.findByTestId('nav-badge-review')
     expect(badge).toHaveTextContent('0')
     expect(badge.className).toContain('bg-muted')
+
+    // 点击折叠历史归档组后收起旧页面链接
+    fireEvent.click(within(archiveGroup).getByRole('button', { name: /历史兼容归档/ }))
+    expect(within(archiveGroup).queryByRole('link', { name: /申请/ })).toBeNull()
   })
 
   it('counts what waits for me under Review and new experts under Experts', async () => {

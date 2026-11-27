@@ -5,13 +5,11 @@ import { useTranslations } from 'next-intl'
 
 import { Link } from '@/i18n/navigation'
 import { fetchApplications, fetchExperts, fetchInbox } from '@/lib/knowbots/client'
+import { listMethodDrafts } from '@/lib/knowbots/method-drafts'
 
 import { summaryParts } from './name-view'
 import { keyOf } from './review-view'
 import { Card, KEY } from './shared'
-
-// 首页（SDD 0037 第八节）：进来先知道到哪了、要我做什么。顶上一条「你的创意『…』测试通过了，
-// 去确认」，直达审核里那一条；下面是要我做的、在做的申请、能用的专家，各几条。
 
 const FEW = 5
 
@@ -20,12 +18,42 @@ export function Overview() {
   const inbox = useQuery({ queryKey: [...KEY, 'inbox'], queryFn: fetchInbox })
   const applications = useQuery({ queryKey: [...KEY, 'applications'], queryFn: fetchApplications })
   const experts = useQuery({ queryKey: [...KEY, 'experts'], queryFn: fetchExperts })
+  const studioDrafts = useQuery({
+    queryKey: ['method-drafts'],
+    queryFn: () => listMethodDrafts().catch(() => []),
+    retry: false,
+  })
   const todo = (inbox.data?.items ?? []).filter((i) => i.state === 'todo')
   const returned = todo.filter((i) => i.type === 'expert')
   const working = (applications.data ?? []).filter((a) => a.category === 'working')
   const usable = (experts.data ?? []).filter((e) => e.category === 'usable')
   return (
     <div className="mt-6 space-y-4">
+      <Card title={t('home.studioTitle')}>
+        <p className="text-muted-foreground text-sm">{t('home.studioLead')}</p>
+        {studioDrafts.data && studioDrafts.data.length > 0 ? (
+          <ul className="mt-2 space-y-1 text-sm">
+            {studioDrafts.data.slice(0, FEW).map((d) => (
+              <li key={d.method_id} className="flex flex-wrap items-center gap-2">
+                <Link href={`/studio/${d.method_id}`} className="font-medium hover:underline">
+                  {d.title}
+                </Link>
+                <span className="text-muted-foreground text-xs">
+                  {d.archetype} · rev {d.revision}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <div className="mt-2 flex flex-wrap gap-4 text-sm">
+          <Link href="/studio" className="font-medium underline underline-offset-2">
+            {t('home.openStudio')}
+          </Link>
+          <Link href="/methods" className="underline underline-offset-2">
+            {t('home.openMethods')}
+          </Link>
+        </div>
+      </Card>
       {returned.map((item) => (
         <p
           key={keyOf(item)}

@@ -185,6 +185,42 @@ export async function formalSources(requestId?: string) {
   ).items
 }
 
+const registeredSourceReceiptSchema = z.object({
+  source: z
+    .object({
+      source_id: z.uuid(),
+      version: z.number().int().positive(),
+      kind: z.enum(['script', 'instruction']),
+      name: z.string(),
+      digest: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+    })
+    .loose(),
+})
+
+export async function registerDirectorySource(
+  sourceId: string,
+  version: number,
+  body: {
+    kind: 'script' | 'instruction'
+    name: string
+    content: string
+    request_id?: string
+  },
+  csrfToken: string,
+) {
+  return parseFormalReply(
+    registeredSourceReceiptSchema,
+    await requestJson(
+      `/api/web/v1/method-directory/sources/${encodeURIComponent(sourceId)}/versions/${version}`,
+      {
+        method: 'PUT',
+        csrfToken,
+        body,
+      },
+    ),
+  ).source
+}
+
 function checkedValidation(value: unknown, methodId: string, command: ValidationCommand) {
   const result = parseFormalReply(formalValidationSchema, value)
   const receipt = result.receipt

@@ -66,6 +66,7 @@
   "nav": {
     "home": "首页",
     "dashboard": "首页",
+    "studio": "方法工坊",
     "settings": "设置",
     "experts": "专家",
     "mainNavigation": "主导航",
@@ -80,6 +81,8 @@
     "delivery": "交付",
     "knowledge": "知识库",
     "groups": {
+      "primary": "主导航",
+      "archive": "历史兼容归档",
       "process": "过程",
       "results": "结果"
     },
@@ -454,6 +457,10 @@
     "home": {
       "title": "首页",
       "intro": "到哪了、要你做什么，都在这里。",
+      "studioTitle": "五要素方法工坊",
+      "studioLead": "以五要素契约与实时两视图孵化正式专家方法与工具方法，严守作者确权与 V0 确定性核验。",
+      "openStudio": "进入方法工坊",
+      "openMethods": "方法与技能",
       "passed": "你的创意「{title}」测试通过了，去确认",
       "todo": "要你做的",
       "todoNone": "现在没有要你做的事。",
@@ -1937,6 +1944,163 @@
     "pick": "为此步骤选用",
     "previous": "上一页",
     "next": "下一页",
-    "pickSource": "选为实现来源"
+    "pickSource": "选为实现来源",
+    "openStudio": "去方法工坊新建",
+    "browseMarket": "去 KnowMart 浏览",
+    "openShop": "管理小店上架",
+    "registerSourceInline": "内联登记脚本或指令源",
+    "sourceKind": "源类型",
+    "script": "隔离脚本",
+    "instruction": "受管指令",
+    "sourceName": "源名称",
+    "sourceContent": "源码或指令正文",
+    "saveSource": "保存并同步源",
+    "hasDeliveryTerms": "含公开交付条款",
+    "wrapAsTool": "以此源新建工具方法",
+    "methodKind": {
+      "tool": "工具方法",
+      "expert": "专家方法"
+    },
+    "syncSelf": "同步自用",
+    "selfStatus": {
+      "listed": "已自用上架",
+      "pending": "待审",
+      "withdrawn": "已撤架",
+      "rejected": "未通过"
+    },
+    "tryInWorkbench": "去工作台试用",
+    "bindInstallation": "绑定本地安装",
+    "chooseInstallation": "选择安装入口"
+  },
+  "studio": {
+    "title": "方法工坊",
+    "lead": "统一五要素契约基座（能力声明 · 所需权限 · 如何做 · 如何校验 · 审批策略）与实时输入/返回两视图。",
+    "editorTitle": "五要素与两视图方法工坊",
+    "createTitle": "按工程样板新建五要素草稿",
+    "createLead": "样板仅生成待确认的纯工程结构骨架，零锁定字段，全部业务判断须由你本人确认后方可试跑冻结。",
+    "archetypes": {
+      "S1": {
+        "title": "S1 · 确定性核验与计算交付",
+        "desc": "适用于表格勾稽、结构化转换与确定性计算，预置 V0 数值恒等与结构算子。"
+      },
+      "S2": {
+        "title": "S2 · 授权取数与多条件承诺交付",
+        "desc": "适用于 KnowBase 资料读取、按条件分流与有界缺项说明，预置引文与覆盖率检查。"
+      },
+      "S3": {
+        "title": "S3 · 隔离盲审与交叉复核交付",
+        "desc": "适用于主笔产出加独立会话或异模型家族盲审复核，预置 V0 门禁与有界返工。"
+      },
+      "S4": {
+        "title": "S4 · 受控外部写/外发动作交付",
+        "desc": "适用于连接器写入或外部消息发送，强制前置禁词检查与单步逐次强审批。"
+      }
+    },
+    "methodTitle": "方法名称",
+    "titlePlaceholder": "例如：三表资产负债与现金流勾稽核验",
+    "methodKind": "方法形态",
+    "kind": {
+      "expert": "专家方法（四原语编排）",
+      "tool": "工具方法（固定实现源）"
+    },
+    "purposeOptional": "核心用途说明（选填，可在工坊内完善）",
+    "purposePlaceholder": "用一句话说明该方法解决的具体工程或核验问题",
+    "prefilledSource": "已带入来源：{name}（v{version}），创建后可在步骤 2 直接绑定。",
+    "createAction": "创建五要素草稿并进入工坊",
+    "saveError": "操作未完成（{code}），请核对填写内容后重试。",
+    "draftsTitle": "我的在孵方法草稿",
+    "loading": "正在读取工坊数据…",
+    "loadError": "未能读取方法草稿，请刷新重试。",
+    "emptyDrafts": "暂无在孵草稿，请从上方选择一个工程样板开始创建。",
+    "readyBadge": "契约已闭合，可试跑冻结",
+    "editingBadge": "草稿完善中",
+    "childOfStep": "父方法步骤 {step} 的派生子草稿",
+    "backToStudio": "返回方法工坊列表",
+    "fractalGapBanner": "当前正在补齐父方法步骤「{step}」的能力缺口",
+    "openParentDraft": "查看父方法草稿",
+    "steps": {
+      "contract": "五要素契约与确权",
+      "procedure": "如何做（源/四原语编排）",
+      "trial": "实测与治理核验",
+      "freeze": "冻结、回填与上架"
+    },
+    "unconfirmedTitle": "有 {count} 项样板或建议内容待你本人确权（C-L1）",
+    "confirmAllProvenance": "核实无误并全部确权保存",
+    "allowedCallers": "允许发起方",
+    "caller": {
+      "host": "宿主程序",
+      "model": "模型受控调用"
+    },
+    "purpose": "核心用途（要素 ①）",
+    "appliesWhen": "适用前提（每行一条）",
+    "excludes": "明确排除边界（每行一条）",
+    "deliverablesTitle": "预期交付承诺与受控语义槽（要素 ① → 驱动返回视图）",
+    "defaultDeliverableSummary": "结构化核验结果",
+    "defaultValidationCheck": "输出满足目标槽位结构与核验约束",
+    "defaultValidationEvidence": "运行产物与确定性检查回执",
+    "addDeliverable": "新增交付承诺槽",
+    "promiseId": "承诺槽标识",
+    "domainVocabulary": "受控语义域（SlotMeaningCatalog）",
+    "deliveryMode": "交付时机",
+    "mode": {
+      "always": "每次必交",
+      "conditional": "按条件交付",
+      "partial_allowed": "允许部分交付"
+    },
+    "promiseSummary": "对外承诺说明",
+    "v0RulesTitle": "如何校验与可执行 V0 确定性算子（要素 ④）",
+    "ruleCheck": "验收口径",
+    "v0Operator": "V0 确定性算子",
+    "v0None": "仅结构与断言核验",
+    "v0": {
+      "schema_and_range": "结构与数值区间检查",
+      "numeric_identity": "跨字段数值勾稽恒等",
+      "sourced_citation": "来源摘录与引文核对",
+      "collection_coverage": "清单覆盖完整性核对",
+      "prohibited_terms": "合规禁用词拦截"
+    },
+    "saveAndConfirm": "保存五要素契约并确权",
+    "savedNotice": "已保存第 {revision} 版五要素草稿并写入作者确权账本。",
+    "toolSourceTitle": "绑定或内联登记实现源（要素 ③ · 工具方法）",
+    "registerInlineSource": "内联新建脚本/指令源",
+    "sourceKind": "源类型",
+    "script": "隔离脚本",
+    "instruction": "受管指令",
+    "sourceName": "源名称",
+    "sourceContent": "源码或指令正文",
+    "saveInlineSource": "登记源版本",
+    "sourceRegistered": "已登记来源「{name}」v{version}。",
+    "selectBoundSource": "选择已就绪实现源",
+    "chooseSourceOption": "请选择来源版本",
+    "saveProcedure": "保存做法并更新两视图投影",
+    "canvasSteps": "四原语步骤节点",
+    "pinnedCandidates": "已绑定 {count} 个精确方法版本",
+    "gapUnbound": "待绑定方法或派生子草稿",
+    "spawnFromStep": "按此缺口派生子方法",
+    "addStepNode": "添加编排步骤",
+    "stepBindingColumn": "目录选法与分形缺口派生",
+    "spawnGapTitle": "为步骤「{step}」派生子方法草稿",
+    "confirmSpawnGap": "创建并进入子方法工坊",
+    "rollupColumn": "权限与审批自动上卷（要素 ②⑤）",
+    "rollupHint": "保存做法后，子步骤权限与审批规则自动按步骤命名空间无冲突上卷至根契约。",
+    "anchorHint": "首次发起运行器治理校验与真实试跑前，需为当前草稿挂载自用运行锚点。",
+    "prepareRuntimeAnchor": "初始化试跑锚点",
+    "runGovernanceCheck": "运行治理准入校验",
+    "refreshGovernanceCheck": "刷新校验状态",
+    "freezeVersion": "目标冻结版本号",
+    "freezeVisibility": "冻结可见范围",
+    "private": "仅本人自用",
+    "public": "公开交付范围",
+    "confirmFreeze": "确认冻结正式版本",
+    "frozenNotice": "正式方法第 {version} 版已冻结",
+    "syncSelfListing": "一键同步至本人工作台（自用上架）",
+    "openKnowMartShop": "前往 KnowMart 小店提交公开审核",
+    "bindBackToParent": "一键回填至父方法步骤「{step}」",
+    "twoViewBar": "实时两视图与契约闭合状态",
+    "cl1Verified": "C-L1 作者出处已确权",
+    "cl1Pending": "C-L1 待作者确权",
+    "viewInputs": "视图 A · 公开输入槽 (public_inputs)",
+    "viewReturns": "视图 B · 返回交付槽 (what_to_return)",
+    "none": "暂无"
   }
 }

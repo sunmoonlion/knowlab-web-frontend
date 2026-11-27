@@ -1,18 +1,14 @@
 'use client'
 
-import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { ChevronRight, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { useState } from 'react'
 
 import { LogoutButton } from '@/components/auth/logout-button'
 import { SignedInAs } from '@/components/auth/signed-in-as'
 import { useCounts } from '@/components/knowbots/shared'
 import { Link, usePathname } from '@/i18n/navigation'
-import {
-  findNavigationItem,
-  webNavigation,
-  webNavigationGroups,
-  type WebNavigationItem,
-} from '@/lib/navigation'
+import { findNavigationItem, webNavigation, type WebNavigationItem } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
 import { useUiStore } from '@/store/ui'
 
@@ -24,9 +20,6 @@ type WebShellProps = {
   email?: string | null
 }
 
-// web端外壳（SDD 0037 第八节，0046 第六节分栏）：和管理端同一套——左边一级导航可收起、手机上是抽屉、顶上一行写着登录的是谁；
-// 但不照搬：没有已打开页面那一行（用户一次看一件事），导航分「过程」「结果」两组，「待办」数要你做的、「专家」数新交回的
-// （为 0 时灰、不显示数字）。
 export function WebShell({ children, locale, csrfToken, userLabel, email }: WebShellProps) {
   const t = useTranslations('nav')
   const tAuth = useTranslations('auth')
@@ -37,6 +30,12 @@ export function WebShell({ children, locale, csrfToken, userLabel, email }: WebS
   const setMobileOpen = useUiStore((state) => state.setMobileNavigationOpen)
   const counts = useCounts()
   const current = findNavigationItem(pathname)
+  const inArchive = current?.group === 'archive'
+  const [archiveToggled, setArchiveToggled] = useState<boolean | null>(null)
+  const archiveOpen = archiveToggled ?? inArchive
+  const primaryItems = webNavigation.filter((item) => item.group === 'primary')
+  const archiveItems = webNavigation.filter((item) => item.group === 'archive')
+  const archiveTotal = (counts.data?.inbox ?? 0) + (counts.data?.experts_new ?? 0)
 
   return (
     <div className="bg-background flex min-h-screen" data-route-class="authenticated-workspace">
@@ -65,22 +64,47 @@ export function WebShell({ children, locale, csrfToken, userLabel, email }: WebS
           </span>
           <strong className={cn('truncate', collapsed && 'lg:hidden')}>knowlab</strong>
         </div>
-        <nav aria-label={t('mainNavigation')} className="flex flex-col gap-1 p-2">
-          {webNavigationGroups.map((group) => (
-            <div key={group} className="flex flex-col gap-1" data-testid={`nav-group-${group}`}>
-              {group === 'home' ? null : (
-                <p
-                  className={cn(
-                    'text-muted-foreground mt-3 px-3 text-xs font-medium',
-                    collapsed && 'lg:border-t lg:pt-2',
-                  )}
-                >
-                  <span className={cn(collapsed && 'lg:sr-only')}>{t(`groups.${group}`)}</span>
-                </p>
+        <nav aria-label={t('mainNavigation')} className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
+          <div className="flex flex-col gap-1" data-testid="nav-group-primary">
+            {primaryItems.map((item) => (
+              <NavigationLink
+                key={item.key}
+                item={item}
+                label={t(item.key)}
+                active={item.key === current?.key}
+                collapsed={collapsed}
+                onNavigate={() => setMobileOpen(false)}
+              />
+            ))}
+          </div>
+
+          <div className="mt-auto border-t pt-2" data-testid="nav-group-archive">
+            <button
+              type="button"
+              aria-expanded={archiveOpen}
+              onClick={() => setArchiveToggled(!archiveOpen)}
+              className={cn(
+                'text-muted-foreground hover:bg-sidebar-accent flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                collapsed && 'lg:justify-center lg:px-0',
               )}
-              {webNavigation
-                .filter((item) => item.group === group)
-                .map((item) => (
+              title={collapsed ? t('groups.archive') : undefined}
+            >
+              <ChevronRight
+                aria-hidden
+                className={cn('size-3.5 shrink-0 transition-transform', archiveOpen && 'rotate-90')}
+              />
+              <span className={cn('truncate', collapsed && 'lg:sr-only')}>
+                {t('groups.archive')}
+              </span>
+              {archiveTotal > 0 ? (
+                <span className="ml-auto rounded-full bg-amber-500 px-1.5 text-[10px] leading-4 font-medium text-white">
+                  {archiveTotal > 99 ? '99+' : archiveTotal}
+                </span>
+              ) : null}
+            </button>
+            {archiveOpen ? (
+              <div className="mt-1 flex flex-col gap-1">
+                {archiveItems.map((item) => (
                   <NavigationLink
                     key={item.key}
                     item={item}
@@ -97,8 +121,9 @@ export function WebShell({ children, locale, csrfToken, userLabel, email }: WebS
                     onNavigate={() => setMobileOpen(false)}
                   />
                 ))}
-            </div>
-          ))}
+              </div>
+            ) : null}
+          </div>
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">

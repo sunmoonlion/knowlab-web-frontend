@@ -10,12 +10,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  await requireBrowserSession(locale, `/${locale}/methods`)
+  const session = await requireBrowserSession(locale, `/${locale}/methods`)
   const t = await getTranslations('nav')
   return (
     <>
       <h1 className="mb-4 text-2xl font-semibold">{t('methods')}</h1>
-      <MethodDirectory />
+      <MethodDirectory csrfToken={session.csrf_token} />
     </>
   )
 }
