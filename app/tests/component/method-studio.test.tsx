@@ -145,7 +145,7 @@ describe('Method Studio & Author Method Directory', () => {
     const raw = {
       method_id: REQUEST,
       workdraft_id: REQUEST,
-      request_id: null,
+      request_id: REQUEST,
       revision: 2,
       draft_contract: {
         method_kind: 'expert',
@@ -173,12 +173,20 @@ describe('Method Studio & Author Method Directory', () => {
         return Response.json({ vocab_version: '1', domains: [], presets: [], archetypes: ['S1'] })
       if (String(url).endsWith('/method-drafts/' + REQUEST))
         return Response.json({ ...raw, revision: options?.method === 'PATCH' ? 3 : 2 })
+      if (String(url).endsWith('/workdraft/incubations')) return Response.json({ incubations: [] })
       return Response.json({ items: [] })
     })
     renderWith(<MethodStudioEditor methodId={REQUEST} csrfToken={CSRF} />)
     expect(await screen.findByText(/receipt\(core.check.receipt\)/)).toBeVisible()
     expect(screen.getByText(/缺少交付来源的承诺.*summary/)).toBeVisible()
     fireEvent.click(screen.getByRole('tab', { name: '2. ' + zh.studio.steps.procedure }))
+    expect(await screen.findByRole('heading', { name: zh.selection.title })).toBeVisible()
+    expect(screen.getByRole('button', { name: zh.selection.start })).toBeEnabled()
+    await waitFor(() =>
+      expect(fetcher.mock.calls.some(([url]) =>
+        String(url).endsWith(`/knowbot-requests/${REQUEST}/workdraft/incubations`),
+      )).toBe(true),
+    )
     const field = screen.getByLabelText(zh.studio.graphJson)
     fireEvent.change(field, { target: { value: '{invalid' } })
     fireEvent.click(screen.getByRole('button', { name: zh.studio.saveProcedure }))
