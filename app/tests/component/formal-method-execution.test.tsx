@@ -226,6 +226,7 @@ async function fill() {
 it('starts a real suite without a model key and keeps assertions separate from tool input', async () => {
   const callbacks = page()
   await fill()
+  fireEvent.click(screen.getByLabelText('Return checked value'))
   fireEvent.click(screen.getByRole('button', { name: t.start }))
   await screen.findByText('Approve fixture check')
   expect(posts).toHaveLength(1)
@@ -234,6 +235,7 @@ it('starts a real suite without a model key and keeps assertions separate from t
     run_id: string
   }
   expect(body.execution.suite.digest).toBeUndefined()
+  expect(body.execution.suite.cases[0]).toMatchObject({ covers_promises: ['result'] })
   expect(body.execution.suite.cases[0].input).toEqual({ values: { message: 'input only' } })
   expect(body.execution.suite.cases[0].expected.assertions).toEqual(
     suite.cases[0].expected.assertions,
