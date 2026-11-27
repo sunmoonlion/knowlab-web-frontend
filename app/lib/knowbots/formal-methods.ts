@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import { directoryBrowseSchema, type Facet } from '@/lib/directory-facets'
 import {
-  sharedToolInterfaceSchema,
   formalSourcesSchema,
   formalMethodsSchema,
   formalValidationSchema,
@@ -51,7 +50,6 @@ const sharedToolsPage = z.object({
       reference: formalMethodRefSchema,
       title: z.string(),
       scope: z.enum(['acquired', 'platform']),
-      interface: sharedToolInterfaceSchema.optional(),
       installations: z
         .array(
           z.object({
@@ -67,31 +65,12 @@ const sharedToolsPage = z.object({
   ),
   next: z.uuid().nullable(),
 })
-export async function sharedIncubationTools(
-  ...[requestId, after, ref]:
-    | [requestId: string | undefined, after: string | null]
-    | [requestId: string, after: null, ref: z.infer<typeof formalMethodRefSchema>]
-) {
+export async function sharedIncubationTools(requestId: string | undefined, after: string | null) {
   const base = requestId
     ? `/api/web/v1/knowbot-requests/${encodeURIComponent(requestId)}/incubation-tools`
     : '/api/web/v1/method-directory/shared-tools'
-  const suffix = ref
-    ? `/${encodeURIComponent(ref.method_id)}/versions/${ref.version}?digest=${encodeURIComponent(ref.digest)}`
-    : after
-      ? `?after=${encodeURIComponent(after)}`
-      : ''
-  const page = parseFormalReply(sharedToolsPage, await requestJson(base + suffix))
-  if (
-    ref &&
-    page.items.some(
-      (item) =>
-        item.reference.method_id !== ref.method_id ||
-        item.reference.version !== ref.version ||
-        item.reference.digest !== ref.digest,
-    )
-  )
-    throw new KnowbotContractError()
-  return page
+  const suffix = after ? `?after=${encodeURIComponent(after)}` : ''
+  return parseFormalReply(sharedToolsPage, await requestJson(base + suffix))
 }
 
 export async function chooseToolInstallation(
