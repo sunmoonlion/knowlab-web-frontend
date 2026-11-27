@@ -25,15 +25,17 @@ import { DraftMethodDirectory, type DirectoryPick } from './method-directory'
 import { RoundPanel } from './workdraft-ai'
 
 type Props = {
-  document: Workdraft
+  requestId: string
+  revision: number
+  template?: MethodTemplate | null
+  goal: string
   methodId: string
   csrfToken: string
   hasBrief: boolean
-  onConfirmed: (saved: Workdraft) => void
+  onConfirmed: (saved: Workdraft) => void | Promise<void>
 }
 export function SelectionPanel(props: Props) {
-  const { document, csrfToken } = props,
-    rid = document.request_id
+  const { requestId: rid, revision, csrfToken } = props
   const t = useTranslations('selection'),
     w = useTranslations('workdraft.ai'),
     cache = useQueryClient()
@@ -102,7 +104,7 @@ export function SelectionPanel(props: Props) {
                 },
               }
             : {}),
-          selection_revision: document.revision,
+          selection_revision: revision,
         },
         csrfToken,
       )
@@ -120,7 +122,7 @@ export function SelectionPanel(props: Props) {
       <p>{t('intro')}</p>
       <DraftMethodDirectory
         requestId={rid}
-        revision={document.revision}
+        revision={revision}
         onPick={
           focus && !active
             ? (row) => {
@@ -312,7 +314,10 @@ export function SelectionPanel(props: Props) {
 }
 
 function Review({
-  document,
+  requestId,
+  revision,
+  template,
+  goal,
   methodId,
   csrfToken,
   hasBrief,
@@ -332,9 +337,9 @@ function Review({
   )
   const [binding, setBinding] = useState<MethodTemplate>(
     () =>
-      document.body.method_template ?? {
+      template ?? {
         template: 'checked_delivery/v1',
-        goal: document.idea_goal || document.title,
+        goal: goal,
         deliverable: '',
         check: '',
         evidence: '',
@@ -363,7 +368,7 @@ function Review({
             JSON.stringify(Object.keys(step.cases).sort()) === JSON.stringify(expected[step.id]),
         )
       : routing === 'no' && branches.length === 0
-  const stale = document.revision !== round.workdraft_revision
+  const stale = revision !== round.workdraft_revision
   return (
     <div className="space-y-3">
       <p>
@@ -412,7 +417,7 @@ function Review({
             ))}
           </ol>
           {proposal.object_batch && <p>{t('batch', { n: proposal.object_batch.max_objects })}</p>}
-          {!document.body.method_template && (
+          {!template && (
             <fieldset>
               <legend>{mt('overall')}</legend>
               {(['goal', 'deliverable', 'check', 'evidence'] as const).map((k) => (
@@ -484,11 +489,11 @@ function Review({
             onClick={() =>
               void act(async () => {
                 const saved = await confirmSelection(
-                  document.request_id,
+                  requestId,
                   round.incubation_id,
                   {
                     method_id: methodId,
-                    revision: document.revision,
+                    revision: revision,
                     confirmed: true,
                     confirm_brief: hasBrief,
                     cases: routing === 'yes' ? expected : {},
@@ -497,12 +502,7 @@ function Review({
                   },
                   csrfToken,
                 )
-                const location = new URL(window.location.href)
-                location.searchParams.set('method', methodId)
-                for (const old of ['run', 'revision', 'execution', 'version'])
-                  location.searchParams.delete(old)
-                window.history.replaceState(window.history.state, '', location)
-                onConfirmed(saved)
+                await onConfirmed(saved)
               })
             }
           >

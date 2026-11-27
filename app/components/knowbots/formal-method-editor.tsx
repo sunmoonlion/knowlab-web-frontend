@@ -63,6 +63,13 @@ type Resume = {
 const id = (value?: string) => (z.uuid().safeParse(value).success ? value! : null)
 const sourceKey = (source: FormalSource) => JSON.stringify(source)
 
+function rememberConfirmedMethod(methodId: string) {
+  const location = new URL(window.location.href)
+  location.searchParams.set('method', methodId)
+  for (const old of ['run', 'revision', 'execution', 'version']) location.searchParams.delete(old)
+  window.history.replaceState(window.history.state, '', location)
+}
+
 export function FormalMethodEditor({
   requestId,
   csrfToken,
@@ -92,11 +99,15 @@ export function FormalMethodEditor({
     return (
       <div className="mt-5 space-y-3">
         <SelectionPanel
-          document={loaded.data}
+          requestId={loaded.data.request_id}
+          revision={loaded.data.revision}
+          template={loaded.data.body.method_template}
+          goal={loaded.data.idea_goal || loaded.data.title}
           methodId={legacyTarget}
           csrfToken={csrfToken}
           hasBrief
           onConfirmed={(saved) => {
+            rememberConfirmedMethod(legacyTarget)
             setAdoptedMethod(legacyTarget)
             client.setQueryData([...KEY, 'workdraft', requestId], saved)
           }}
@@ -432,11 +443,15 @@ function FormalForm({
       {!definition && (
         <SelectionPanel
           key={document.revision}
-          document={document}
+          requestId={document.request_id}
+          revision={document.revision}
+          template={document.body.method_template}
+          goal={document.idea_goal || document.title}
           methodId={methodId}
           csrfToken={csrfToken}
           hasBrief={hasBrief}
           onConfirmed={(saved) => {
+            rememberConfirmedMethod(methodId)
             const method = saved.body.formal_method
             if (!method) return
             setDocument(saved)

@@ -16,7 +16,7 @@ describe('Method Studio & Author Method Directory', () => {
   it('creates an S1–S4 engineering draft and renders live Two-View + C-L1 confirmation in editor', async () => {
     const sampleDetail: draftApi.MethodDraftDetail = {
       method_id: REQUEST,
-      request_id: null,
+      request_id: REQUEST,
       workdraft_id: REQUEST,
       revision: 1,
       draft_contract: {
@@ -130,6 +130,9 @@ describe('Method Studio & Author Method Directory', () => {
         CSRF,
       ),
     )
+    fireEvent.click(screen.getByRole('tab', { name: '2. ' + zh.studio.steps.procedure }))
+    expect(await screen.findByRole('heading', { name: zh.selection.title })).toBeVisible()
+    expect(screen.getByRole('button', { name: zh.selection.start })).toBeEnabled()
   })
 
   it('registers a script source inline from KnowLab /methods without round-tripping to KnowBench', async () => {

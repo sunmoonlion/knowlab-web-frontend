@@ -41,6 +41,7 @@ import {
 } from '@/lib/knowbots/method-drafts'
 import { FormalMethodExecution } from './formal-method-execution'
 import { DraftMethodDirectory } from './method-directory'
+import { SelectionPanel } from './selection-panel'
 import { useWhen } from './shared'
 
 const ARCHETYPES: readonly ArchetypeId[] = ['S1', 'S2', 'S3', 'S4']
@@ -884,6 +885,29 @@ function StudioForm({
 
       {stepTab === 'procedure' ? (
         <section className="space-y-4 rounded-xl border p-5">
+          {raw.method_kind === 'expert' && (
+            anchorRequestId ? (
+              <SelectionPanel
+                requestId={anchorRequestId}
+                revision={detail.revision}
+                methodId={detail.method_id}
+                csrfToken={csrfToken}
+                goal={raw.purpose || raw.title}
+                template={{
+                  template: 'checked_delivery/v1',
+                  goal: raw.purpose || raw.title,
+                  deliverable: (raw.expected_deliverables ?? []).map((d: RawObj) => d.summary).join('；'),
+                  check: (raw.validation_rules ?? []).map((rule: RawObj) => rule.check).join('；'),
+                  evidence: (raw.validation_rules ?? []).map((rule: RawObj) => rule.evidence).join('；'),
+                }}
+                hasBrief
+                onConfirmed={async () => onUpdated(await fetchMethodDraft(detail.method_id))}
+              />
+            ) : (
+              <Button disabled={ensureAnchor.isPending || !detail.provenance_verified}
+                onClick={() => ensureAnchor.mutate()}>{t('prepareRuntimeAnchor')}</Button>
+            )
+          )}
           {raw.method_kind === 'tool' ? (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
