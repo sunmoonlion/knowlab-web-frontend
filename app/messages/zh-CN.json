@@ -1907,6 +1907,7 @@
     "stale": "工作稿已修改，请根据当前修订重新拟稿。",
     "step": "第 {n} 步",
     "method": "采用方法：{name}",
+    "deliverOutput": "向委托人交付「{name}」，取自本步的「{output}」。",
     "reviews": "独立判断后，由本步核对：{steps}",
     "batch": "本次按对象逐项处理，最多 {n} 项。",
     "direct": "直接采用完整方法",

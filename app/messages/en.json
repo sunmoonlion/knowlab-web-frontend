@@ -1907,6 +1907,7 @@
     "stale": "This draft has changed. Request a proposal for the new revision.",
     "step": "Step {n}",
     "method": "Selected method: {name}",
+    "deliverOutput": "Return {output} as {name} to the requester",
     "reviews": "This step reviews independent findings from: {steps}",
     "batch": "Process up to {n} objects individually.",
     "direct": "Use the complete method directly",
