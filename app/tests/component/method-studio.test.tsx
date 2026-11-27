@@ -73,7 +73,7 @@ describe('Method Studio & Author Method Directory', () => {
       definition_digest: null,
       source: null,
       allowed_callers: ['host'],
-      provenance_verified: true,
+      feedback: [], provenance_verified: true,
       provenance_issues: [],
     }
 

@@ -206,35 +206,6 @@ test('author reviews an AI proposal, checks routing and confirms an edited step'
     check: '逐行核对',
     evidence: '原表',
   }
-  const source = {
-    asset_id: null,
-    asset_revision: null,
-    kind: 'registered_instruction' as const,
-    source: id,
-    version: '1',
-    digest: 'sha256:' + 'a'.repeat(64),
-    entry: 'instruction',
-    license_basis: 'author_owned',
-  }
-  const body = {
-    method_template: template,
-    name: '汇总',
-    tagline: '',
-    scope: { does: '核对表格', does_not: '', elsewhere: '' },
-    data_picks: [],
-    steps: [],
-  }
-  const initial = {
-    contract_version: 1,
-    request_id: id,
-    title: '四行小计',
-    revision: 1,
-    body,
-    sources: {},
-    origins: {},
-    data_formats: {},
-    updated_at: null,
-  }
   const round = {
     incubation_id: roundId,
     round: 1,
@@ -270,59 +241,17 @@ test('author reviews an AI proposal, checks routing and confirms an edited step'
     },
     steps: [{ id: 'n1', method: 'i1', task: '核对数据', inputs: {}, cases: {}, reviews: [] }],
   }
-  const method = {
-    definition: {
-      contract: 'knowlab/formal-method/v1',
-      capability_declaration: {
-        title: '四行小计',
-        purpose: template.goal,
-        applies_when: [template.goal],
-        excludes: [],
-        promises: { template_delivery: template.deliverable },
-      },
-      access_requirements: [],
-      what_requires_approval: [],
-      how_to_validate: [
-        {
-          promise_id: 'template_delivery',
-          outputs: ['result'],
-          check: template.check,
-          evidence: template.evidence,
-          on_failure: 'fail',
-        },
-      ],
-      procedure: {
-        kind: 'direct',
-        instructions: template.goal,
-        stop_conditions: [template.check],
-        max_model_turns: 1,
-        implementation: {
-          kind: source.kind,
-          source: source.source,
-          entry: source.entry,
-          version: source.version,
-          digest: source.digest,
-          requirement_ids: [],
-        },
-        inputs: {},
-        outputs: {
-          result: {
-            description: template.deliverable,
-            required: true,
-            meaning: {},
-            schema: { type: 'string' },
-            on_missing: 'fail',
-          },
-        },
-      },
-    },
-    allowed_callers: ['host'],
-    source,
-  }
-  const saved = { ...initial, revision: 2, body: { ...body, formal_method: method } }
   let confirmations = 0
-  await page.route('**/knowbot-requests/*/workdraft', (r) =>
-    r.fulfill({ json: confirmations ? saved : initial }),
+  await page.route('**/method-drafts/' + id, (r) =>
+    r.fulfill({ json: {
+      method_id: id, request_id: id, workdraft_id: id, revision: confirmations ? 2 : 1,
+      draft_contract: { method_kind: 'expert', title: '四行小计', purpose: template.goal,
+        expected_deliverables: [{promise_id: 'result', summary: template.deliverable}],
+        validation_rules: [{check: template.check, evidence: template.evidence}],
+      },
+      projection: {public_inputs: {}, what_to_return: {}, missing_promise_sources: [], ready_to_freeze: false},
+      public_contract: null, definition_digest: null, provenance_verified: true,
+    } }),
   )
   await page.route('**/workdraft/incubations', (r) =>
     r.fulfill({ json: { contract_version: 1, incubations: [round] } }),
@@ -340,7 +269,7 @@ test('author reviews an AI proposal, checks routing and confirms an edited step'
       },
     }),
   )
-  await page.route('**/formal-method-sources', (r) => r.fulfill({ json: { items: [source] } }))
+  await page.route('**/formal-method-sources', (r) => r.fulfill({ json: { items: [] } }))
   await page.route('**/confirm-selection', async (r) => {
     expect(r.request().postDataJSON()).toMatchObject({
       revision: 1,
@@ -350,10 +279,10 @@ test('author reviews an AI proposal, checks routing and confirms an edited step'
       step_text: { n1: '逐行核对并留下依据' },
     })
     confirmations++
-    await r.fulfill({ json: saved })
+    await r.fulfill({ json: { revision: 2 } })
   })
-  await page.goto('/zh-CN/names/' + id + '/formal-method')
-  await expect(page).toHaveURL(new RegExp('/studio\\?workdraft=' + id))
+  await page.goto('/zh-CN/studio/' + id)
+  await page.getByRole('tab', { name: /如何做/ }).click()
   const confirm = page.getByRole('button', { name: '确认并存为正式工作稿' })
   await expect(page.getByText('采用方法：核对四行')).toBeVisible()
   await expect(page.getByText('查看使用的步骤模板')).toHaveCount(0)
@@ -380,9 +309,11 @@ test('author reviews an AI proposal, checks routing and confirms an edited step'
   expect(confirmations).toBe(0)
   await page.getByLabel('我已核对业务步骤、分派和交付口径。').check()
   await confirm.click()
-  await expect(confirm).toHaveCount(0)
-  await expect(page).toHaveURL(/method=[\da-f-]{36}/)
+  await expect.poll(() => confirmations).toBe(1)
+  await expect(confirm).toBeDisabled()
   await page.reload()
-  await expect(page.getByText('原表', { exact: true })).toBeVisible()
+  await expect(page).toHaveURL(new RegExp('/studio/' + id + '$'))
+  await page.getByRole('tab', { name: /如何做/ }).click()
+  await expect(confirm).toBeDisabled()
   expect(confirmations).toBe(1)
 })

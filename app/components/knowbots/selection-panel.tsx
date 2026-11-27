@@ -5,7 +5,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import {
   ACTIVE_ROUNDS,
-  type Workdraft,
   type Round,
   type MethodTemplate,
   type RoundStart,
@@ -25,15 +24,15 @@ import { DraftMethodDirectory, type DirectoryPick } from './method-directory'
 import { RoundPanel } from './workdraft-ai'
 
 type Props = {
-  document: Workdraft
+  requestId: string
+  revision: number
+  binding: MethodTemplate
   methodId: string
   csrfToken: string
-  hasBrief: boolean
-  onConfirmed: (saved: Workdraft) => void
+  onConfirmed: () => Promise<void>
 }
 export function SelectionPanel(props: Props) {
-  const { document, csrfToken } = props,
-    rid = document.request_id
+  const { requestId: rid, revision, csrfToken } = props
   const t = useTranslations('selection'),
     w = useTranslations('workdraft.ai'),
     cache = useQueryClient()
@@ -102,7 +101,7 @@ export function SelectionPanel(props: Props) {
                 },
               }
             : {}),
-          selection_revision: document.revision,
+          selection_revision: revision,
         },
         csrfToken,
       )
@@ -120,7 +119,7 @@ export function SelectionPanel(props: Props) {
       <p>{t('intro')}</p>
       <DraftMethodDirectory
         requestId={rid}
-        revision={document.revision}
+        revision={revision}
         onPick={
           focus && !active
             ? (row) => {
@@ -181,33 +180,10 @@ export function SelectionPanel(props: Props) {
                 {n.reason && <p>{n.reason}</p>}
                 {(n.status === 'gap' || n.status === 'split') && (
                   <Link
-                    href="/applications/new#from-planning"
-                    onClick={() => {
-                      try {
-                        const steps =
-                          n.status === 'split'
-                            ? current
-                                .selection!.steps.filter(
-                                  (s) => s.id === n.id || s.id.startsWith(n.id + '_'),
-                                )
-                                .map(
-                                  (s) =>
-                                    s.task +
-                                    ' · ' +
-                                    (current.method_titles?.[s.method] ?? s.method),
-                                )
-                            : []
-                        sessionStorage.setItem(
-                          'planning-gap',
-                          JSON.stringify({
-                            goal: n.goal,
-                            reason: [n.reason, ...steps].join('\n').slice(0, 6000),
-                          }),
-                        )
-                      } catch {
-                        // The author can enter the goal on the new application page.
-                      }
-                    }}
+                    href={{ pathname: '/studio', query: {
+                      title: n.goal, purpose: n.reason || n.goal,
+                      method_kind: n.status === 'split' ? 'expert' : 'tool',
+                    } }}
                   >
                     {t(n.status === 'split' ? 'newExpert' : 'newTool')}
                   </Link>
@@ -277,7 +253,6 @@ export function SelectionPanel(props: Props) {
       {open && (
         <RoundPanel
           requestId={rid}
-          selection
           initialInstruction={
             focus && method
               ? t('chooseMethod', {
@@ -295,7 +270,6 @@ export function SelectionPanel(props: Props) {
                 : ''
           }
           action={current?.selection ? 'revise' : 'draft'}
-          steps={[]}
           busy={busy}
           error={null}
           onStart={begin}
@@ -312,33 +286,23 @@ export function SelectionPanel(props: Props) {
 }
 
 function Review({
-  document,
+  requestId,
+  revision,
+  binding,
   methodId,
   csrfToken,
-  hasBrief,
   onConfirmed,
   round,
   busy,
   act,
 }: Props & { round: Round; busy: boolean; act: (run: () => Promise<void>) => Promise<void> }) {
   const t = useTranslations('selection'),
-    mt = useTranslations('methodTemplate'),
     proposal = round.selection!
   const [routing, setRouting] = useState(''),
     [cases, setCases] = useState<Record<string, string>>({}),
     [checked, setChecked] = useState(false)
   const [edits, setEdits] = useState(() =>
     Object.fromEntries(proposal.steps.map((s) => [s.id, s.task])),
-  )
-  const [binding, setBinding] = useState<MethodTemplate>(
-    () =>
-      document.body.method_template ?? {
-        template: 'checked_delivery/v1',
-        goal: document.idea_goal || document.title,
-        deliverable: '',
-        check: '',
-        evidence: '',
-      },
   )
   const titles = round.method_titles ?? {}
   const branches = proposal.steps.filter((step) => Object.keys(step.cases).length)
@@ -363,7 +327,7 @@ function Review({
             JSON.stringify(Object.keys(step.cases).sort()) === JSON.stringify(expected[step.id]),
         )
       : routing === 'no' && branches.length === 0
-  const stale = document.revision !== round.workdraft_revision
+  const stale = revision !== round.workdraft_revision
   return (
     <div className="space-y-3">
       <p>
@@ -412,25 +376,6 @@ function Review({
             ))}
           </ol>
           {proposal.object_batch && <p>{t('batch', { n: proposal.object_batch.max_objects })}</p>}
-          {!document.body.method_template && (
-            <fieldset>
-              <legend>{mt('overall')}</legend>
-              {(['goal', 'deliverable', 'check', 'evidence'] as const).map((k) => (
-                <label key={k} className="block">
-                  {mt(k)}
-                  <textarea
-                    className="block w-full rounded border p-2"
-                    maxLength={2000}
-                    value={binding[k]}
-                    onChange={(e) => {
-                      setBinding({ ...binding, [k]: e.target.value })
-                      setChecked(false)
-                    }}
-                  />
-                </label>
-              ))}
-            </fieldset>
-          )}
           {round.routing_alternatives?.length ? (
             <p>{t('alternatives', { names: round.routing_alternatives.join('、') })}</p>
           ) : null}
@@ -470,7 +415,7 @@ function Review({
               checked={checked}
               onChange={(e) => setChecked(e.target.checked)}
             />{' '}
-            {hasBrief ? mt('confirmBrief') : t('checked')}
+            {t('checked')}
           </label>
           <Button
             disabled={
@@ -483,14 +428,14 @@ function Review({
             }
             onClick={() =>
               void act(async () => {
-                const saved = await confirmSelection(
-                  document.request_id,
+                await confirmSelection(
+                  requestId,
                   round.incubation_id,
                   {
                     method_id: methodId,
-                    revision: document.revision,
+                    revision: revision,
                     confirmed: true,
-                    confirm_brief: hasBrief,
+                    confirm_brief: true,
                     cases: routing === 'yes' ? expected : {},
                     template: binding,
                     step_text: edits,
@@ -498,11 +443,10 @@ function Review({
                   csrfToken,
                 )
                 const location = new URL(window.location.href)
-                location.searchParams.set('method', methodId)
-                for (const old of ['run', 'revision', 'execution', 'version'])
+                for (const old of ['method', 'run', 'revision', 'execution', 'version'])
                   location.searchParams.delete(old)
                 window.history.replaceState(window.history.state, '', location)
-                onConfirmed(saved)
+                await onConfirmed()
               })
             }
           >

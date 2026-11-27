@@ -25,7 +25,7 @@ export async function listFormalMethods(offset = 0, requestId?: string) {
   return parseFormalReply(
     formalMethodsSchema,
     await requestJson(
-      `/api/web/v1/method-units?formal=true&limit=30&offset=${offset}${requestId ? '&request_id=' + encodeURIComponent(requestId) : ''}`,
+      `/api/web/v1/method-units?limit=30&offset=${offset}${requestId ? '&request_id=' + encodeURIComponent(requestId) : ''}`,
     ),
   ).items
 }

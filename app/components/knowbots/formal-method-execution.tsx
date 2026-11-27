@@ -58,7 +58,6 @@ export function FormalMethodExecution({
   requestId,
   revision,
   draft,
-  checkedDelivery = false,
   disabled,
   csrfToken,
   resume,
@@ -70,7 +69,6 @@ export function FormalMethodExecution({
   requestId: string
   revision: number
   draft: FormalDraft | null
-  checkedDelivery?: boolean
   disabled: boolean
   csrfToken: string
   resume?: ValidationCommand | null
@@ -203,10 +201,6 @@ export function FormalMethodExecution({
       }
       const declaration = draft.definition.capability_declaration
       const covered = new Set(execution.suite.cases.flatMap((c) => c.covers_promises ?? []))
-      if (checkedDelivery && !covered.has('template_delivery')) {
-        setError('method_template_examples')
-        return
-      }
       if (
         declaration.conditions &&
         Object.keys(declaration.promises).some((id) => !covered.has(id))

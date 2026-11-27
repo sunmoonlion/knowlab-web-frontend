@@ -7,7 +7,6 @@ import { CrossAppLink } from '@/components/common/cross-app-link'
 import { fetchLibrary } from '@/lib/knowbots/client'
 
 import { Badge, Card, KEY } from './shared'
-import { describe } from './workdraft-data'
 
 // 知识库（SDD 0046 第六节，右边结果的一栏）：只列你在 knowbase 展示给 knowlab 的资料，在 knowbase 管——
 // 上传、改描述、展示给哪里、许可档都在 knowbase，这里不改。孵化时在工作稿的「数据」一栏从这批里挑。
@@ -70,4 +69,14 @@ export function KnowledgeView() {
       )}
     </div>
   )
+}
+
+function describe(d: {
+  subject?: string | null
+  doc_type?: string | null
+  period_start?: string | null
+  period_end?: string | null
+}): string {
+  const period = [d.period_start, d.period_end].filter(Boolean).join(' ~ ')
+  return [d.subject, d.doc_type, period].filter(Boolean).join(' · ')
 }

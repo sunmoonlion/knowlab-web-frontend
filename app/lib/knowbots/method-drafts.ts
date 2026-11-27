@@ -89,6 +89,7 @@ const methodDraftDetailSchema = z
     allowed_callers: z.array(z.enum(['host', 'model'])).default(['host']),
     htn_state: z.record(z.string(), z.any()).nullable().optional(),
     parent_gap: parentGapSchema.nullable().optional(),
+    feedback: z.array(z.string()).default([]),
     provenance_verified: z.boolean(),
     provenance_issues: z.array(z.string()).default([]),
   })
@@ -138,10 +139,13 @@ export async function createMethodDraft(
 }
 
 export async function deleteMethodDraft(methodId: string, revision: number, csrfToken: string) {
-  await requestJson<void>(`/api/web/v1/method-drafts/${encodeURIComponent(methodId)}?revision=${revision}`, {
-    method: 'DELETE',
-    csrfToken,
-  })
+  await requestJson<void>(
+    `/api/web/v1/method-drafts/${encodeURIComponent(methodId)}?revision=${revision}`,
+    {
+      method: 'DELETE',
+      csrfToken,
+    },
+  )
 }
 
 export async function fetchMethodDraft(methodId: string) {

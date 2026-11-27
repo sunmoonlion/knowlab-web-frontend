@@ -40,6 +40,7 @@ import {
   type MethodDraftSummary,
 } from '@/lib/knowbots/method-drafts'
 import { FormalMethodExecution } from './formal-method-execution'
+import { SelectionPanel } from './selection-panel'
 import { DraftMethodDirectory } from './method-directory'
 import { useWhen } from './shared'
 
@@ -518,7 +519,7 @@ function StudioForm({
   const [validation, setValidation] = useState<FormalValidation | null>(null)
   const [executionActive, setExecutionActive] = useState(false)
   const [versionNo, setVersionNo] = useState(
-    savedRun && Number.isSafeInteger(Number(resume.version)) && Number(resume.version) > 0
+    Number.isSafeInteger(Number(resume.version)) && Number(resume.version) > 0
       ? Number(resume.version)
       : 1,
   )
@@ -703,6 +704,12 @@ function StudioForm({
 
   return (
     <div className="space-y-6 pb-24">
+      {detail.feedback.length > 0 && (
+        <section>
+          <h2 className="font-medium">{t('handoffFeedback')}</h2>
+          <ul className="list-disc pl-5">{detail.feedback.map((message, index) => <li key={index}>{message}</li>)}</ul>
+        </section>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <Link href="/studio" className="underline">
@@ -974,6 +981,23 @@ function StudioForm({
 
       {stepTab === 'procedure' ? (
         <section className="space-y-4 rounded-xl border p-5">
+          {raw.method_kind === 'expert' && (
+            anchorRequestId ? (
+              <SelectionPanel requestId={anchorRequestId} revision={detail.revision}
+                methodId={detail.method_id} csrfToken={csrfToken}
+                binding={{
+                  template: 'checked_delivery/v1', goal: raw.purpose ?? '',
+                  deliverable: (raw.expected_deliverables ?? []).map((d: RawObj) => d.summary).join('；'),
+                  check: (raw.validation_rules ?? []).map((rule: RawObj) => rule.check).join('；'),
+                  evidence: (raw.validation_rules ?? []).map((rule: RawObj) => rule.evidence).join('；'),
+                }}
+                onConfirmed={async () => onUpdated(await fetchMethodDraft(detail.method_id))}
+              />
+            ) : (
+              <Button disabled={ensureAnchor.isPending || !detail.provenance_verified}
+                onClick={() => ensureAnchor.mutate()}>{t('prepareRuntimeAnchor')}</Button>
+            )
+          )}
           {raw.method_kind === 'tool' ? (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">

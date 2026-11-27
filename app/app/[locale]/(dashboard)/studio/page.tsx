@@ -1,5 +1,3 @@
-import { z } from 'zod'
-import { FormalMethodEditor } from '@/components/knowbots/formal-method-editor'
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { MethodStudioHome, type StudioInitialParams } from '@/components/knowbots/method-studio'
@@ -17,16 +15,7 @@ export default async function StudioPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>
-  searchParams: Promise<
-    StudioInitialParams & {
-      workdraft?: string
-      method?: string
-      run?: string
-      revision?: string
-      execution?: string
-      version?: string
-    }
-  >
+  searchParams: Promise<StudioInitialParams>
 }) {
   const { locale } = await params
   const query = Object.fromEntries(
@@ -41,15 +30,7 @@ export default async function StudioPage({
     <>
       <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
       <p className="text-muted-foreground mt-1 mb-6 text-sm">{t('lead')}</p>
-      {z.uuid().safeParse(query.workdraft).success ? (
-        <FormalMethodEditor
-          requestId={query.workdraft!}
-          csrfToken={session.csrf_token}
-          resume={query}
-        />
-      ) : (
-        <MethodStudioHome csrfToken={session.csrf_token} initial={query} />
-      )}
+      <MethodStudioHome csrfToken={session.csrf_token} initial={query} />
     </>
   )
 }

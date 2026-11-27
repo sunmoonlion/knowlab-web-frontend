@@ -1,12 +1,10 @@
 'use client'
 
-import { ChevronRight, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
 
 import { LogoutButton } from '@/components/auth/logout-button'
 import { SignedInAs } from '@/components/auth/signed-in-as'
-import { useCounts } from '@/components/knowbots/shared'
 import { Link, usePathname } from '@/i18n/navigation'
 import { findNavigationItem, webNavigation, type WebNavigationItem } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
@@ -28,15 +26,7 @@ export function WebShell({ children, locale, csrfToken, userLabel, email }: WebS
   const setCollapsed = useUiStore((state) => state.setSidebarCollapsed)
   const mobileOpen = useUiStore((state) => state.mobileNavigationOpen)
   const setMobileOpen = useUiStore((state) => state.setMobileNavigationOpen)
-  const counts = useCounts()
   const current = findNavigationItem(pathname)
-  const inArchive = current?.group === 'archive'
-  const [archiveToggled, setArchiveToggled] = useState<boolean | null>(null)
-  const archiveOpen = archiveToggled ?? inArchive
-  const primaryItems = webNavigation.filter((item) => item.group === 'primary')
-  const archiveItems = webNavigation.filter((item) => item.group === 'archive')
-  const archiveTotal = (counts.data?.inbox ?? 0) + (counts.data?.experts_new ?? 0)
-
   return (
     <div className="bg-background flex min-h-screen" data-route-class="authenticated-workspace">
       {mobileOpen ? (
@@ -66,7 +56,7 @@ export function WebShell({ children, locale, csrfToken, userLabel, email }: WebS
         </div>
         <nav aria-label={t('mainNavigation')} className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
           <div className="flex flex-col gap-1" data-testid="nav-group-primary">
-            {primaryItems.map((item) => (
+            {webNavigation.map((item) => (
               <NavigationLink
                 key={item.key}
                 item={item}
@@ -78,52 +68,6 @@ export function WebShell({ children, locale, csrfToken, userLabel, email }: WebS
             ))}
           </div>
 
-          <div className="mt-auto border-t pt-2" data-testid="nav-group-archive">
-            <button
-              type="button"
-              aria-expanded={archiveOpen}
-              onClick={() => setArchiveToggled(!archiveOpen)}
-              className={cn(
-                'text-muted-foreground hover:bg-sidebar-accent flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                collapsed && 'lg:justify-center lg:px-0',
-              )}
-              title={collapsed ? t('groups.archive') : undefined}
-            >
-              <ChevronRight
-                aria-hidden
-                className={cn('size-3.5 shrink-0 transition-transform', archiveOpen && 'rotate-90')}
-              />
-              <span className={cn('truncate', collapsed && 'lg:sr-only')}>
-                {t('groups.archive')}
-              </span>
-              {archiveTotal > 0 ? (
-                <span className="ml-auto rounded-full bg-amber-500 px-1.5 text-[10px] leading-4 font-medium text-white">
-                  {archiveTotal > 99 ? '99+' : archiveTotal}
-                </span>
-              ) : null}
-            </button>
-            {archiveOpen ? (
-              <div className="mt-1 flex flex-col gap-1">
-                {archiveItems.map((item) => (
-                  <NavigationLink
-                    key={item.key}
-                    item={item}
-                    label={t(item.key)}
-                    active={item.key === current?.key}
-                    collapsed={collapsed}
-                    badge={
-                      item.key === 'review'
-                        ? (counts.data?.inbox ?? 0)
-                        : item.key === 'experts'
-                          ? (counts.data?.experts_new ?? 0)
-                          : undefined
-                    }
-                    onNavigate={() => setMobileOpen(false)}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </div>
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
@@ -178,18 +122,15 @@ function NavigationLink({
   label,
   active,
   collapsed,
-  badge,
   onNavigate,
 }: {
   item: WebNavigationItem
   label: string
   active: boolean
   collapsed: boolean
-  badge?: number
   onNavigate(): void
 }) {
   const Icon = item.icon
-  const shown = badge === undefined ? null : badge > 99 ? '99+' : String(badge)
   return (
     <Link
       href={item.path}
@@ -201,24 +142,11 @@ function NavigationLink({
         collapsed && 'lg:justify-center lg:px-0',
       )}
       aria-current={active ? 'page' : undefined}
-      title={collapsed ? (badge ? `${label} · ${shown}` : label) : undefined}
+      title={collapsed ? label : undefined}
       onClick={onNavigate}
     >
       <Icon aria-hidden className="size-4 shrink-0" />
       <span className={cn('truncate', collapsed && 'lg:hidden')}>{label}</span>
-      {shown !== null ? (
-        <span
-          data-testid={`nav-badge-${item.key}`}
-          className={cn(
-            'ml-auto rounded-full px-1.5 text-[10px] leading-4 font-medium',
-            badge ? 'bg-amber-500 text-white' : 'bg-muted text-muted-foreground',
-            collapsed && 'lg:absolute lg:top-1 lg:right-1 lg:ml-0',
-            collapsed && !badge && 'lg:hidden',
-          )}
-        >
-          {badge ? shown : '0'}
-        </span>
-      ) : null}
     </Link>
   )
 }

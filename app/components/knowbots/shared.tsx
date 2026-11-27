@@ -1,22 +1,15 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
 import { useFormatter, useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 import type { ExpertStage, TestStatus } from '@/contracts/knowbots'
-import { fetchCounts } from '@/lib/knowbots/client'
 import { cn } from '@/lib/utils'
 
 // 申请、审核、专家三栏与详情页共用（SDD 0037 第八、第九节）。状态用用户的说法。
 export const KEY = ['web', 'knowbots'] as const
 
 export type Translate = ReturnType<typeof useTranslations<'knowbots'>>
-
-/** 左边栏旁的数：审核数「要你做的」，专家数「新交回」。取不到就不显示。 */
-export function useCounts() {
-  return useQuery({ queryKey: [...KEY, 'counts'], queryFn: fetchCounts })
-}
 
 /** 「你的第 2 条用例」：按创意里用例的先后数；不知道用例时按 c2 这样的编号数，再不行写编号。 */
 export function caseName(t: Translate, caseId: string, cases?: Record<string, unknown>[]): string {
