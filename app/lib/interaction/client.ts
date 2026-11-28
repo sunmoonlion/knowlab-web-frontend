@@ -23,7 +23,7 @@ export async function fetchRunSnapshot(
   runId: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<RunSnapshot> {
-  return requestSnapshot(`/api/web/v1/runs/${encodeURIComponent(runId)}`, { method: 'GET' }, fetchImpl)
+  return requestSnapshot(`/api/web/v1/runs/${encodeURIComponent(runId)}`, { method: 'GET' }, fetchImpl, runId)
 }
 
 export async function submitRunAction(
@@ -43,6 +43,7 @@ export async function submitRunAction(
       body: JSON.stringify(action),
     },
     fetchImpl,
+    runId,
   )
 }
 
@@ -66,6 +67,7 @@ async function requestSnapshot(
   url: string,
   init: RequestInit,
   fetchImpl: typeof fetch,
+  expectedRunId?: string,
 ): Promise<RunSnapshot> {
   let response: Response
   try {
@@ -93,6 +95,9 @@ async function requestSnapshot(
   const parsed = runSnapshotSchema.safeParse(await response.json().catch(() => null))
   if (!parsed.success) {
     throw new InteractionClientError('contract_invalid', undefined, { cause: parsed.error })
+  }
+  if (expectedRunId && parsed.data.run_id.toLowerCase() !== expectedRunId.toLowerCase()) {
+    throw new InteractionClientError('contract_invalid')
   }
   return parsed.data
 }
