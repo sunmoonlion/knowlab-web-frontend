@@ -180,10 +180,14 @@ export function SelectionPanel(props: Props) {
                 {n.reason && <p>{n.reason}</p>}
                 {(n.status === 'gap' || n.status === 'split') && (
                   <Link
-                    href={{ pathname: '/studio', query: {
-                      title: n.goal, purpose: n.reason || n.goal,
-                      method_kind: n.status === 'split' ? 'expert' : 'tool',
-                    } }}
+                    href={{
+                      pathname: '/studio',
+                      query: {
+                        title: n.goal,
+                        purpose: n.reason || n.goal,
+                        method_kind: n.status === 'split' ? 'expert' : 'tool',
+                      },
+                    }}
                   >
                     {t(n.status === 'split' ? 'newExpert' : 'newTool')}
                   </Link>
@@ -299,7 +303,7 @@ function Review({
   const t = useTranslations('selection'),
     proposal = round.selection!
   const [routing, setRouting] = useState(''),
-    [cases, setCases] = useState<Record<string, string>>({}),
+    [cases, setCases] = useState<Record<string, string[]>>({}),
     [checked, setChecked] = useState(false)
   const [edits, setEdits] = useState(() =>
     Object.fromEntries(proposal.steps.map((s) => [s.id, s.task])),
@@ -307,17 +311,7 @@ function Review({
   const titles = round.method_titles ?? {}
   const branches = proposal.steps.filter((step) => Object.keys(step.cases).length)
   const expected = Object.fromEntries(
-    branches.map((step) => [
-      step.id,
-      [
-        ...new Set(
-          (cases[step.id] ?? '')
-            .split(/[,，\n]/)
-            .map((s) => s.trim())
-            .filter(Boolean),
-        ),
-      ].sort(),
-    ]),
+    branches.map((step) => [step.id, [...(cases[step.id] ?? [])].sort()]),
   )
   const matches =
     routing === 'yes'
@@ -396,17 +390,26 @@ function Review({
           </label>
           {routing === 'yes' &&
             branches.map((step) => (
-              <label key={step.id} className="block">
-                {edits[step.id]} ·{t('cases')}
-                <textarea
-                  className="block w-full rounded border p-2"
-                  value={cases[step.id] ?? ''}
-                  onChange={(e) => {
-                    setCases({ ...cases, [step.id]: e.target.value })
-                    setChecked(false)
-                  }}
-                />
-              </label>
+              <fieldset key={step.id} className="space-y-2">
+                <legend>
+                  {edits[step.id]} · {t('cases')}
+                </legend>
+                {Object.keys(step.cases).map((label, index) => (
+                  <label key={label} className="block">
+                    {t('caseEntry', { n: index + 1 })}
+                    <textarea
+                      className="block w-full rounded border p-2"
+                      value={cases[step.id]?.[index] ?? ''}
+                      onChange={(e) => {
+                        const next = [...(cases[step.id] ?? [])]
+                        next[index] = e.target.value
+                        setCases({ ...cases, [step.id]: next })
+                        setChecked(false)
+                      }}
+                    />
+                  </label>
+                ))}
+              </fieldset>
             ))}
           {routing && !matches && <p role="status">{t('mismatch')}</p>}
           <label className="block">
