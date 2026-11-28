@@ -364,6 +364,27 @@ it('restores with GET only, answers the exact approval and cancels through the r
   expect(posts[1].body).toEqual({ request_id: REQUEST })
   await screen.findByRole('button', { name: t.nextVersion })
 })
+it.each([['number', 1], ['string', '1']] as const)(
+  'preserves %s equality when saving a trial from the author form',
+  async (type, expected) => {
+    const current = structuredClone(draft)
+    const procedure = current.definition.procedure
+    if (procedure.kind !== 'direct') throw new Error('Expected a direct method')
+    procedure.outputs.ok = { ...procedure.outputs.ok, schema: { type } }
+    page(false, ['host'], current)
+    await fill()
+    fireEvent.change(screen.getByLabelText(t.assertions, { exact: false }), { target: { value: '[]' } })
+    fireEvent.change(screen.getByLabelText(messages.methodTemplate.sampleOutput + ' · ok'), {
+      target: { value: '1' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: t.start }))
+    await waitFor(() => expect(posts).toHaveLength(1))
+    expect(posts[0].body).toMatchObject({
+      execution: { suite: { cases: [{ expected: { assertions: [{ pointer: '/ok', value: expected }] } }] } },
+    })
+  },
+)
+
 it('enters a multiline input and boolean expected output through the sample form', async () => {
   const current = structuredClone(draft)
   const procedure = current.definition.procedure
