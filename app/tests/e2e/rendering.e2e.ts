@@ -324,3 +324,13 @@ test('author reviews an AI proposal, checks routing and confirms an edited step'
   await expect(confirm).toBeDisabled()
   expect(confirmations).toBe(1)
 })
+
+test('retired web shortcuts return 404 for signed-in users', async ({ request }) => {
+  for (const route of ['avatars', 'ideas', 'ideas/new', 'knowbots', 'knowbots/new', 'questions']) {
+    const response = await request.get('/zh-CN/' + route, {
+      headers: { Cookie: 'sunmoonai_knowlab_web_sid=e2e-session' },
+      maxRedirects: 0,
+    })
+    expect(response.status(), route).toBe(404)
+  }
+})
