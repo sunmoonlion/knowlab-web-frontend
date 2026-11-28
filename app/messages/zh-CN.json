@@ -587,6 +587,7 @@
     "slotDetails": "查看字段结构"
   },
   "formalExecution": {
+    "backToSuite": "返回试跑设置",
     "verifiedSteps": "已核验的步骤产物",
     "stepReceived": "已接收 {step} 的产物。",
     "branchProgress": "分支试跑结果",

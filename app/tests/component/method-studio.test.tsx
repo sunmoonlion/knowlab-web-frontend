@@ -263,3 +263,11 @@ describe('Method Studio & Author Method Directory', () => {
     )
   })
 })
+
+it.each([0, 1.5, 1000000])('rejects invalid frozen version %s before sending the command', async version => {
+  const transport=vi.spyOn(globalThis,'fetch')
+  try {
+    await expect(formalApi.freezeFormalMethod(REQUEST, version, {request_id:REQUEST,revision:1,run_id:REQUEST,visibility:'private'}, CSRF)).rejects.toThrow()
+    expect(transport).not.toHaveBeenCalled()
+  } finally { transport.mockRestore() }
+})

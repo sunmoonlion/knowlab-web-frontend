@@ -1008,3 +1008,31 @@ it.each([false, true])(
     expect(screen.getByText(t.reviewWaiting)).toBeVisible()
   },
 )
+
+it('returns to editable setup when reconciliation confirms a saved run is missing', async () => {
+  const fallback = fetcher.getMockImplementation()!
+  fetcher.mockImplementation(async (url: string, init: RequestInit = {}) =>
+    url.includes('/executions/') && init.method === 'GET'
+      ? Response.json({ code: 'run_not_found' }, { status: 404 })
+      : fallback(url, init),
+  )
+  const callbacks = page(true)
+  fireEvent.click(await screen.findByRole('button', { name: t.backToSuite }))
+  expect(callbacks.onRun).toHaveBeenCalledWith(null)
+  expect(callbacks.onActiveChange).toHaveBeenLastCalledWith(false)
+  expect(await screen.findByRole('button', { name: t.start })).toBeVisible()
+})
+it('never writes a run reference for a definitively refused start', async () => {
+  const fallback = fetcher.getMockImplementation()!
+  fetcher.mockImplementation(async (url: string, init: RequestInit = {}) =>
+    url.endsWith('/executions') && init.method === 'POST'
+      ? Response.json({ code: 'trial_invalid' }, { status: 422 })
+      : fallback(url, init),
+  )
+  const callbacks = page()
+  await fill()
+  fireEvent.click(screen.getByRole('button', { name: t.start }))
+  await screen.findByRole('alert')
+  expect(callbacks.onRun).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: t.start })).toBeVisible()
+})

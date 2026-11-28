@@ -74,7 +74,7 @@ export function FormalMethodExecution({
   disabled: boolean
   csrfToken: string
   resume?: ValidationCommand | null
-  onRun: (command: ValidationCommand) => void
+  onRun: (command: ValidationCommand | null) => void
   onResult: (result: FormalExecutionResult) => void
   onActiveChange: (active: boolean) => void
 }) {
@@ -139,10 +139,15 @@ export function FormalMethodExecution({
       getFormalExecution(methodId, command!, cache.getQueryData<FormalExecutionResult>(key)),
     enabled: !!command && !busy,
     retry: false,
-    refetchInterval: (query) => (terminal(query.state.data) ? false : 3000),
+    refetchInterval: (query) =>
+      terminal(query.state.data) ||
+      (query.state.error instanceof ApiClientError && query.state.error.status === 404)
+        ? false
+        : 3000,
   })
   const result = run.data
-  const active = !!command && !terminal(result)
+  const missing = !result && run.error instanceof ApiClientError && run.error.status === 404
+  const active = !!command && !missing && !terminal(result)
   useEffect(() => {
     onActiveChange(active)
   }, [active, onActiveChange])
@@ -162,9 +167,11 @@ export function FormalMethodExecution({
       cache.setQueryData(['formal-execution', methodId, target?.run_id], value)
     } catch (e) {
       setError(problem(e))
+      if (e instanceof ApiClientError && [400, 403, 404, 422].includes(e.status)) return false
     } finally {
       setBusy(false)
     }
+    return true
   }
   const start = async () => {
     if (!supported || disabled) return
@@ -214,8 +221,12 @@ export function FormalMethodExecution({
       const next = { ...identity, execution }
       setSubmitted(next)
       setCommand(identity)
-      onRun(identity)
-      await perform(() => startFormalExecution(methodId, next, csrfToken), next)
+      if (await perform(() => startFormalExecution(methodId, next, csrfToken), next)) {
+        onRun(identity)
+      } else {
+        setCommand(null)
+        setSubmitted(null)
+      }
     } catch (cause) {
       setError(cause instanceof UnsafeTrialInteger ? 'unsafe_integer' : 'suite_invalid')
     }
@@ -533,6 +544,19 @@ export function FormalMethodExecution({
                 }
               >
                 {t('retry')}
+              </Button>
+            ) : null}
+            {missing ? (
+              <Button
+                disabled={busy}
+                onClick={() => {
+                  setCommand(null)
+                  setSubmitted(null)
+                  setError(null)
+                  onRun(null)
+                }}
+              >
+                {t('backToSuite')}
               </Button>
             ) : null}
             {terminal(result) ? (

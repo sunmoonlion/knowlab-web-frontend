@@ -225,9 +225,12 @@ export function MethodStudioHome({
         <h2 className="text-lg font-semibold">{t('draftsTitle')}</h2>
         {remove.isError && (
           <p role="alert" className="text-destructive text-sm">
-            {t(errorCode(remove.error) === 'workdraft_revision' ? 'deleteChanged' : 'deleteFailed', {
-              name: remove.variables.title,
-            })}
+            {t(
+              errorCode(remove.error) === 'workdraft_revision' ? 'deleteChanged' : 'deleteFailed',
+              {
+                name: remove.variables.title,
+              },
+            )}
           </p>
         )}
         {drafts.isPending ? (
@@ -264,7 +267,10 @@ export function MethodStudioHome({
                     variant="outline"
                     disabled={remove.isPending}
                     onClick={() => {
-                      const prompt = t('confirmDelete', { name: d.title, id: d.method_id.slice(0, 8) })
+                      const prompt = t('confirmDelete', {
+                        name: d.title,
+                        id: d.method_id.slice(0, 8),
+                      })
                       if (window.confirm(prompt)) remove.mutate(d)
                     }}
                   >
@@ -504,8 +510,16 @@ function StudioForm({
       : null
   const [runCmd, setRunCmd] = useState<ValidationCommand | null>(savedRun)
   const [isTrialRun, setIsTrialRun] = useState(!!savedRun && resume.execution === '1')
-  function rememberRun(cmd: ValidationCommand, trial: boolean) {
+  function rememberRun(cmd: ValidationCommand | null, trial: boolean) {
     const url = new URL(window.location.href)
+    if (!cmd) {
+      for (const key of ['run', 'revision', 'execution']) url.searchParams.delete(key)
+      window.history.replaceState(null, '', url.pathname + url.search)
+      setIsTrialRun(false)
+      setRunCmd(null)
+      setValidation(null)
+      return
+    }
     url.searchParams.set('method', detail.method_id)
     url.searchParams.set('run', cmd.run_id)
     url.searchParams.set('revision', String(cmd.revision))
@@ -692,6 +706,9 @@ function StudioForm({
   })
 
   const canFreeze =
+    Number.isInteger(versionNo) &&
+    versionNo >= 1 &&
+    versionNo <= 999999 &&
     validation?.status === 'passed' &&
     !!validation.receipt &&
     !!runCmd &&
@@ -707,7 +724,11 @@ function StudioForm({
       {detail.feedback.length > 0 && (
         <section>
           <h2 className="font-medium">{t('handoffFeedback')}</h2>
-          <ul className="list-disc pl-5">{detail.feedback.map((message, index) => <li key={index}>{message}</li>)}</ul>
+          <ul className="list-disc pl-5">
+            {detail.feedback.map((message, index) => (
+              <li key={index}>{message}</li>
+            ))}
+          </ul>
         </section>
       )}
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -981,23 +1002,34 @@ function StudioForm({
 
       {stepTab === 'procedure' ? (
         <section className="space-y-4 rounded-xl border p-5">
-          {raw.method_kind === 'expert' && (
-            anchorRequestId ? (
-              <SelectionPanel requestId={anchorRequestId} revision={detail.revision}
-                methodId={detail.method_id} csrfToken={csrfToken}
+          {raw.method_kind === 'expert' &&
+            (anchorRequestId ? (
+              <SelectionPanel
+                requestId={anchorRequestId}
+                revision={detail.revision}
+                methodId={detail.method_id}
+                csrfToken={csrfToken}
                 binding={{
-                  template: 'checked_delivery/v1', goal: raw.purpose ?? '',
-                  deliverable: (raw.expected_deliverables ?? []).map((d: RawObj) => d.summary).join('；'),
+                  template: 'checked_delivery/v1',
+                  goal: raw.purpose ?? '',
+                  deliverable: (raw.expected_deliverables ?? [])
+                    .map((d: RawObj) => d.summary)
+                    .join('；'),
                   check: (raw.validation_rules ?? []).map((rule: RawObj) => rule.check).join('；'),
-                  evidence: (raw.validation_rules ?? []).map((rule: RawObj) => rule.evidence).join('；'),
+                  evidence: (raw.validation_rules ?? [])
+                    .map((rule: RawObj) => rule.evidence)
+                    .join('；'),
                 }}
                 onConfirmed={async () => onUpdated(await fetchMethodDraft(detail.method_id))}
               />
             ) : (
-              <Button disabled={ensureAnchor.isPending || !detail.provenance_verified}
-                onClick={() => ensureAnchor.mutate()}>{t('prepareRuntimeAnchor')}</Button>
-            )
-          )}
+              <Button
+                disabled={ensureAnchor.isPending || !detail.provenance_verified}
+                onClick={() => ensureAnchor.mutate()}
+              >
+                {t('prepareRuntimeAnchor')}
+              </Button>
+            ))}
           {raw.method_kind === 'tool' ? (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1371,6 +1403,7 @@ function StudioForm({
                 type="number"
                 min={1}
                 className={inputCls}
+                max={999999}
                 value={versionNo}
                 onChange={(e) => setVersionNo(Number(e.target.value))}
               />

@@ -246,6 +246,8 @@ export async function freezeFormalMethod(
   command: ValidationCommand & { visibility: 'private' | 'public' },
   csrfToken: string,
 ) {
+  if (!Number.isInteger(version) || version < 1 || version > 999999)
+    throw new KnowbotContractError()
   const result = parseFormalReply(
     formalVersionSchema,
     await requestJson(`${methodPath(id)}/formal-versions/${version}`, {

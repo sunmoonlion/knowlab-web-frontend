@@ -587,6 +587,7 @@
     "slotDetails": "View field structure"
   },
   "formalExecution": {
+    "backToSuite": "Return to trial setup",
     "verifiedSteps": "Verified step artifacts",
     "stepReceived": "Received the artifact from {step}.",
     "branchProgress": "Branch trial results",

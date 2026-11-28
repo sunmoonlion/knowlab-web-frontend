@@ -250,15 +250,30 @@ test('author reviews an AI proposal, checks routing and confirms an edited step'
   }
   let confirmations = 0
   await page.route('**/method-drafts/' + id, (r) =>
-    r.fulfill({ json: {
-      method_id: id, request_id: id, workdraft_id: id, revision: confirmations ? 2 : 1,
-      draft_contract: { method_kind: 'expert', title: '四行小计', purpose: template.goal,
-        expected_deliverables: [{promise_id: 'result', summary: template.deliverable}],
-        validation_rules: [{check: template.check, evidence: template.evidence}],
+    r.fulfill({
+      json: {
+        method_id: id,
+        request_id: id,
+        workdraft_id: id,
+        revision: confirmations ? 2 : 1,
+        draft_contract: {
+          method_kind: 'expert',
+          title: '四行小计',
+          purpose: template.goal,
+          expected_deliverables: [{ promise_id: 'result', summary: template.deliverable }],
+          validation_rules: [{ check: template.check, evidence: template.evidence }],
+        },
+        projection: {
+          public_inputs: {},
+          what_to_return: {},
+          missing_promise_sources: [],
+          ready_to_freeze: false,
+        },
+        public_contract: null,
+        definition_digest: null,
+        provenance_verified: true,
       },
-      projection: {public_inputs: {}, what_to_return: {}, missing_promise_sources: [], ready_to_freeze: false},
-      public_contract: null, definition_digest: null, provenance_verified: true,
-    } }),
+    }),
   )
   await page.route('**/workdraft/incubations', (r) =>
     r.fulfill({ json: { contract_version: 1, incubations: [round] } }),
@@ -332,5 +347,23 @@ test('retired web shortcuts return 404 for signed-in users', async ({ request })
       maxRedirects: 0,
     })
     expect(response.status(), route).toBe(404)
+  }
+})
+
+test('anonymous studio trial login retains the exact author run and version', async ({ page }) => {
+  const id = '1481707b-6b82-425b-a828-934633f29711'
+  const run = '7795a2ec-2d18-4858-8f0c-bdbcfee62de1'
+  const path = `/en/studio/${id}?method=${id}&run=${run}&revision=2&version=3&execution=1`
+  await page.route('**/api/auth/web/login?**', (route) => route.fulfill({ body: 'SSO' }))
+  await page.goto(path)
+  await expect(page).toHaveURL(/\/api\/auth\/web\/login\?/)
+  expect(new URL(page.url()).searchParams.get('return_to')).toBe(path)
+})
+
+test('archived author application, workdraft, trial and review pages have no active endpoint', async ({request}) => {
+  const id = '1481707b-6b82-425b-a828-934633f29711'
+  for (const path of ['applications/new',`applications/${id}/revise`,'incubation',`names/${id}`,`names/${id}/workdraft`,`names/${id}/formal-method`,'tests','review','delivery']) {
+    const response=await request.get('/zh-CN/'+path,{headers:{Cookie:'sunmoonai_knowlab_web_sid=e2e-session'},maxRedirects:0})
+    expect(response.status(),path).toBe(404)
   }
 })
