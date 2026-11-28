@@ -15,6 +15,20 @@ const pointer = z
 const rejection = z.enum(['authorization_denied', 'approval_denied', 'input_invalid'])
 const state = z.enum(['pending', 'running', 'waiting', 'passed', 'failed', 'cancelled'])
 
+export class UnsafeTrialInteger extends Error {}
+
+export function parseTrialJson(source: string) {
+  return JSON.parse(source, (_key, value: unknown) => {
+    if (
+      typeof value === 'number' &&
+      (!Number.isFinite(value) || (Number.isInteger(value) && !Number.isSafeInteger(value)))
+    ) {
+      throw new UnsafeTrialInteger()
+    }
+    return value
+  })
+}
+
 export function boundedExecutionJson(value: unknown): boolean {
   try {
     const visit = (item: unknown, depth: number): boolean =>

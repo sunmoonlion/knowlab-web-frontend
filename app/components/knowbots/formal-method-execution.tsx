@@ -7,6 +7,8 @@ import { PartialTrialResult } from './partial-trial-result'
 import { Button } from '@/components/ui/button'
 import {
   formalExecutionSpecSchema,
+  parseTrialJson,
+  UnsafeTrialInteger,
   suiteCoversCallers,
   type FormalExecutionResult,
 } from '@/contracts/formal-method-execution'
@@ -175,7 +177,7 @@ export function FormalMethodExecution({
             ...(c.outcome === 'succeeded' && c.covers.length ? { covers_promises: c.covers } : {}),
             ...(c.caller === 'model' ? { caller: 'model' } : {}),
             input: {
-              values: JSON.parse(c.values),
+              values: parseTrialJson(c.values),
               ...(c.caller === 'model' ? { model_prompt: c.model_prompt } : {}),
             },
             repetitions: c.repetitions,
@@ -183,7 +185,7 @@ export function FormalMethodExecution({
             expected: {
               outcome: c.outcome,
               rejection_code: c.outcome === 'rejected' ? c.rejection_code : null,
-              assertions: c.outcome === 'succeeded' ? JSON.parse(c.assertions) : [],
+              assertions: c.outcome === 'succeeded' ? parseTrialJson(c.assertions) : [],
             },
           })),
         },
@@ -214,8 +216,8 @@ export function FormalMethodExecution({
       setCommand(identity)
       onRun(identity)
       await perform(() => startFormalExecution(methodId, next, csrfToken), next)
-    } catch {
-      setError('suite_invalid')
+    } catch (cause) {
+      setError(cause instanceof UnsafeTrialInteger ? 'unsafe_integer' : 'suite_invalid')
     }
   }
   const update = (index: number, change: Partial<CaseEditor>) =>
@@ -653,9 +655,11 @@ export function FormalMethodExecution({
               ? t('templateExample')
               : error === 'promise_coverage'
                 ? t('missingPromiseCase')
-                : error === 'suite_invalid'
-                  ? t('invalid')
-                  : t('failed', { code: error ?? problem(run.error) })}
+                : error === 'unsafe_integer'
+                  ? t('unsafeInteger')
+                  : error === 'suite_invalid'
+                    ? t('invalid')
+                    : t('failed', { code: error ?? problem(run.error) })}
         </p>
       ) : null}
     </section>

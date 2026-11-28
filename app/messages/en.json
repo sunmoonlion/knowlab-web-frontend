@@ -680,6 +680,7 @@
     "accept": "Approve this call",
     "decline": "Reject this call",
     "loading": "Loading execution status…",
+    "unsafeInteger": "The browser can enter integers from -9007199254740991 through 9007199254740991. Check the inputs and expected results.",
     "invalid": "Invalid suite or settings. Check JSON, caller coverage, model prompts, repetitions and assertions.",
     "failed": "Request did not complete ({code}). Refresh its status; execution is never retried automatically.",
     "status": {

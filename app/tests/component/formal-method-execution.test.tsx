@@ -223,6 +223,25 @@ async function fill() {
   fireEvent.change(screen.getByLabelText(t.computer), { target: { value: ENV } })
   fireEvent.change(screen.getByLabelText(t.workspace), { target: { value: '/safe' } })
 }
+it.each(['values', 'assertions'] as const)(
+  'explains an unsafe integer in %s before submission',
+  async (field) => {
+    const { onRun } = page()
+    await fill()
+    fireEvent.change(screen.getByLabelText(t[field], { exact: false }), {
+      target: {
+        value:
+          field === 'values'
+            ? '{"message":9007199254740993}'
+            : '[{"kind":"equals","pointer":"/ok","value":9007199254740993}]',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: t.start }))
+    expect(await screen.findByText(t.unsafeInteger)).toBeInTheDocument()
+    expect(onRun).not.toHaveBeenCalled()
+  },
+)
+
 it('starts a real suite without a model key and keeps assertions separate from tool input', async () => {
   const callbacks = page()
   await fill()
