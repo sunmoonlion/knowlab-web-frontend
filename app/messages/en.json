@@ -281,6 +281,8 @@
       "whichStep": "Which step",
       "anyStep": "Any",
       "stepN": "Step {n} · {title}",
+      "computersFailed": "Could not load computers.",
+      "retryComputers": "Retry",
       "loadingComputers": "Listing your computers…",
       "noComputer": "You have not connected a computer yet: connect one in knowbench first.",
       "computer": "Run on which computer",

@@ -50,15 +50,16 @@ export function RoundPanel({
     list.find((c) => c.environment_id === last?.environment_id) ??
     (online.length === 1 ? online[0] : undefined)
   const env = list.find((c) => c.environment_id === (picked ?? fallback?.environment_id))
+  const remembered = last?.environment_id === env?.environment_id ? last?.workspace_root : null
   const folder =
-    root ??
-    (env && last?.environment_id === env.environment_id && last.workspace_root
-      ? last.workspace_root
-      : env?.roots[0]) ??
-    ''
+    [root, remembered].find((value) => value && env?.roots.includes(value)) ?? env?.roots[0] ?? ''
   const okBudget = BUDGET.test(budget) && Number(budget) > 0
   const ready =
-    !noKey && okBudget && Boolean(env && folder) && (action === 'draft' || instruction.trim())
+    computers.isSuccess &&
+    !noKey &&
+    okBudget &&
+    Boolean(env && folder) &&
+    (action === 'draft' || instruction.trim())
   return (
     <Panel title={action === 'draft' ? t('draftTitle') : t('reviseTitle')} onClose={onClose}>
       <p className="text-muted-foreground">{ts('roundHint')}</p>
@@ -87,6 +88,13 @@ export function RoundPanel({
       <div className="flex flex-wrap items-center gap-2">
         {computers.isPending ? (
           <span className="text-muted-foreground">{t('loadingComputers')}</span>
+        ) : computers.isError ? (
+          <span role="alert">
+            {t('computersFailed')}{' '}
+            <button type="button" onClick={() => void computers.refetch()}>
+              {t('retryComputers')}
+            </button>
+          </span>
         ) : list.length === 0 ? (
           <span className="text-amber-700">{t('noComputer')}</span>
         ) : (

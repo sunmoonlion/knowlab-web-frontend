@@ -281,6 +281,8 @@
       "whichStep": "改哪一步",
       "anyStep": "不指定",
       "stepN": "第 {n} 步 · {title}",
+      "computersFailed": "电脑清单读取失败。",
+      "retryComputers": "重新读取",
       "loadingComputers": "正在列你的电脑…",
       "noComputer": "你还没有接入电脑：先去 knowbench 接入一台。",
       "computer": "在哪台电脑上跑",
